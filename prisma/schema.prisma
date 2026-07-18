@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  username      String    @unique
+  passwordHash  String
+  /// ADMIN | USER（SQLite 无原生 enum，由应用层约束）
+  role          String    @default("USER")
+  baseCurrency  String    @default("CNY")
+  createdAt     DateTime  @default(now())
+  sessions      Session[]
+  invitesCreated Invite[] @relation("creator")
+}
+
+model Invite {
+  token     String   @id
+  creatorId String
+  creator   User     @relation("creator", fields: [creatorId], references: [id])
+  usedById  String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}

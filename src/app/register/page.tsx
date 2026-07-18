@@ -1,0 +1,57 @@
+import { registerAction } from "@/lib/auth/actions";
+
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; invite?: string }>;
+}) {
+  const { error, invite } = await searchParams;
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#E4E3E0]">
+      <form
+        action={registerAction}
+        className="w-80 border border-black bg-white p-6 f-grotesk"
+      >
+        <div className="mb-1 text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+          subtrace / register
+        </div>
+        <h1 className="mb-5 text-xl font-bold uppercase tracking-tight">注册</h1>
+        {error && (
+          <div className="mb-4 border border-black bg-[#FF5A00] px-2 py-1 text-[11px] uppercase text-white f-mono">
+            注册失败：用户名被占用或邀请无效
+          </div>
+        )}
+        <label className="mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+          用户名
+        </label>
+        <input
+          name="username"
+          required
+          autoComplete="username"
+          className="mb-4 w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white"
+        />
+        <label className="mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+          密码
+        </label>
+        <input
+          name="password"
+          type="password"
+          required
+          autoComplete="new-password"
+          className="mb-4 w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white"
+        />
+        <label className="mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+          邀请 token（首个用户留空）
+        </label>
+        <input
+          name="invite"
+          defaultValue={invite ?? ""}
+          className="mb-5 w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white f-mono"
+        />
+        <button className="w-full bg-black py-2 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800">
+          注册 →
+        </button>
+      </form>
+    </div>
+  );
+}

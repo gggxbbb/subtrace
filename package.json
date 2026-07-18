@@ -14,6 +14,10 @@
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.2.7",
     "@fontsource/space-grotesk": "^5.2.10",
+    "@node-rs/argon2": "^2.0.2",
+    "@prisma/adapter-better-sqlite3": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "better-sqlite3": "^12.11.1",
     "lucide-react": "^1.24.0",
     "next": "16.2.10",
     "react": "19.2.4",
@@ -22,11 +26,13 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "prisma": "^7.8.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
