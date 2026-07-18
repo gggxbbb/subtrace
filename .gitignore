@@ -50,3 +50,6 @@ next-env.d.ts
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
+
+# generated prisma client
+/src/generated
