@@ -4,14 +4,22 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Vitest 基建就绪（单命令跑测试）
-- [ ] 记录驱动到期日：最后一笔付费的 periodEnd 决定到期日；无记录时按锚定日期+周期推算第一个 ≥ 今天的日期
-- [ ] 日历周期跨月锚定（1月31日月付仍为31日，2月取月末）；固定天数周期正确
-- [ ] 手动模式无推算，到期日完全来自付费记录
-- [ ] 未记账推算周期按标准价计入成本段；付费记录按实付净额（扣退款）
-- [ ] 物品回本模型三态 + 残值
-- [ ] 权重分摊：改权重全局重算
-- [ ] 按区间按人盈亏与每次实际成本
-- [ ] 外币记录只读主币种快照
+- [x] Vitest 基建就绪（单命令跑测试）
+- [x] 记录驱动到期日：最后一笔付费的 periodEnd 决定到期日；无记录时按锚定日期+周期推算第一个 ≥ 今天的日期
+- [x] 日历周期跨月锚定（1月31日月付仍为31日，2月取月末）；固定天数周期正确
+- [x] 手动模式无推算，到期日完全来自付费记录
+- [x] 未记账推算周期按标准价计入成本段；付费记录按实付净额（扣退款）
+- [x] 物品回本模型三态 + 残值
+- [x] 权重分摊：改权重全局重算
+- [x] 按区间按人盈亏与每次实际成本
+- [x] 外币记录只读主币种快照
+
+## Answer
+
+实现于 `src/lib/cost-engine/`（index.ts + index.test.ts），25 条行为测试全绿，tsc 通过。
+公共 API：`currentExpiry` / `advanceCycle` / `costSegments` / `segmentDailyRate` / `currentDailyRate` / `purchaseDailyRate` / `purchaseCurrentDailyRate` / `breakevenProgress` / `shareOf` / `verdict` / `actualCostPerUse` / `dayDiff`。
+外币快照为类型级保证：`PaymentRec` 只有 `amountBase`，引擎无法接触原币与汇率。
+审查修正一处：`costSegments` 对乱序付费记录先按 periodStart 排序再合成段。
+提交：见 git log（ticket 01 提交）。
