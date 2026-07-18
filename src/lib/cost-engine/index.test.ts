@@ -94,11 +94,11 @@ describe("成本段（ADR-0001/0004：付费净额 + 未记账按标准价补齐
   it("付费记录生成段，净额 = 实付 − 退款（快照金额，与原币和当前汇率无关）", () => {
     const sub = cycleSub();
     const segs = costSegments(sub, [payment({ amountBase: 148, refundedBase: 48 })], d("2026-06-20"));
-    expect(segs).toHaveLength(1);
-    expect(segs[0].net).toBe(100);
-    expect(segs[0].estimated).toBe(false);
-    expect(segs[0].start).toEqual(d("2026-06-15"));
-    expect(segs[0].end).toEqual(d("2026-07-15"));
+    const recorded = segs.filter((s) => !s.estimated);
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0].net).toBe(100);
+    expect(recorded[0].start).toEqual(d("2026-06-15"));
+    expect(recorded[0].end).toEqual(d("2026-07-15"));
   });
 
   it("周期模式无记录时，从锚定日期按周期生成标准价估算段直到覆盖今天", () => {
@@ -114,9 +114,10 @@ describe("成本段（ADR-0001/0004：付费净额 + 未记账按标准价补齐
   it("付费记录止期之后的区间按标准价补齐（锚点被记录改写）", () => {
     const sub = cycleSub(); // 锚 1/15，但记录到 7/15 止
     const segs = costSegments(sub, [payment()], d("2026-08-20"));
-    expect(segs).toHaveLength(3);
-    expect(segs[1]).toMatchObject({ start: d("2026-07-15"), end: d("2026-08-15"), net: 25, estimated: true });
-    expect(segs[2]).toMatchObject({ start: d("2026-08-15"), end: d("2026-09-15"), net: 25, estimated: true });
+    const after = segs.filter((s) => s.estimated && dayDiff(d("2026-07-15"), s.start) >= 0);
+    expect(after).toHaveLength(2);
+    expect(after[0]).toMatchObject({ start: d("2026-07-15"), end: d("2026-08-15"), net: 25 });
+    expect(after[1]).toMatchObject({ start: d("2026-08-15"), end: d("2026-09-15"), net: 25 });
   });
 
   it("手动模式只产生付费记录段，不生成估算段", () => {
@@ -228,7 +229,34 @@ describe("输入健壮性", () => {
     const late = payment({ paidAt: d("2026-07-10"), periodStart: d("2026-07-15"), periodEnd: d("2026-08-15") });
     const early = payment({ periodEnd: d("2026-07-15") });
     const segs = costSegments(sub, [late, early], d("2026-06-20"));
-    expect(segs[0].end).toEqual(d("2026-07-15"));
-    expect(segs[1].start).toEqual(d("2026-07-15"));
+    const recorded = segs.filter((s) => !s.estimated);
+    expect(recorded[0].end).toEqual(d("2026-07-15"));
+    expect(recorded[1].start).toEqual(d("2026-07-15"));
+  });
+});
+
+describe("成本段前向补齐", () => {
+  it("首笔付费之前的未记账周期也按标准价补齐（从锚定日期起）", () => {
+    const sub = cycleSub(); // 锚 1/15 月付 25
+    // 第一笔记录从 3/15 才开始，1/15–3/15 两个周期未记账
+    const segs = costSegments(sub, [payment({ periodStart: d("2026-03-15"), periodEnd: d("2026-04-15") })], d("2026-03-20"));
+    expect(segs.map((s) => [s.start, s.net, s.estimated])).toEqual([
+      [d("2026-01-15"), 25, true],
+      [d("2026-02-15"), 25, true],
+      [d("2026-03-15"), 25, false],
+    ]);
+  });
+});
+
+describe("前向补齐截断", () => {
+  it("与首笔记录交叠的周期截断到记录起点，净额按天折算", () => {
+    const sub = cycleSub(); // 锚 1/15 月付 25
+    // 首笔记录 6/10 起：5/15→6/15 的周期与记录交叠，截断为 5/15→6/10
+    const segs = costSegments(sub, [payment({ periodStart: d("2026-06-10"), periodEnd: d("2026-07-10") })], d("2026-06-11"));
+    const estimated = segs.filter((s) => s.estimated);
+    const last = estimated[estimated.length - 1];
+    expect(last.end).toEqual(d("2026-06-10"));
+    // 5/15→6/15 共 31 天，截断 5/15→6/10 共 26 天
+    expect(last.net).toBeCloseTo(25 * (26 / 31));
   });
 });

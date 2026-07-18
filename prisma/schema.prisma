@@ -17,6 +17,7 @@ model User {
   createdAt     DateTime  @default(now())
   sessions      Session[]
   invitesCreated Invite[] @relation("creator")
+  subscriptions Subscription[]
 }
 
 model Invite {
@@ -34,4 +35,56 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model Subscription {
+  id            String   @id @default(cuid())
+  ownerId       String
+  owner         User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name          String
+  category      String?
+  /// CYCLE | MANUAL（跟踪模式）
+  trackingMode  String
+  /// CALENDAR | FIXED_DAYS（周期模式）
+  cycleKind     String?
+  /// DAY | WEEK | MONTH | YEAR（CALENDAR 时）
+  cycleUnit     String?
+  cycleCount    Int?
+  fixedDays     Int?
+  /// 锚定日期：付费记录改写锚点（ADR-0001）
+  anchorDate    DateTime?
+  /// 标准价（原币）
+  listPrice     Float?
+  listCurrency  String?
+  /// 标准价主币种快照：未记账周期计成本用
+  listPriceBase Float?
+  autoRenew     Boolean  @default(true)
+  /// JSON 数组，到期前 N 天提醒
+  remindDays    String   @default("[7,3,0]")
+  /// ACTIVE | CANCELLED | ARCHIVED
+  status        String   @default("ACTIVE")
+  startDate     DateTime
+  createdAt     DateTime @default(now())
+  payments      Payment[]
+}
+
+model Payment {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  /// 实付（原币）
+  amount         Float
+  currency       String
+  /// 主币种快照（ADR-0004）
+  amountBase     Float
+  /// 退款（主币种），成本按净额
+  refundedBase   Float        @default(0)
+  paidAt         DateTime
+  /// 服务区间 [periodStart, periodEnd)，到期日唯一事实源
+  periodStart    DateTime
+  periodEnd      DateTime
+  /// AUTO | MANUAL | PROMO | BUNDLE
+  source         String
+  note           String?
+  createdAt      DateTime     @default(now())
 }

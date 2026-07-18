@@ -114,13 +114,36 @@ export function costSegments(
   if (sub.trackingMode !== "cycle" || !sub.anchorDate || !sub.cycle || sub.listPriceBase == null) {
     return segs;
   }
+  // 前向补齐：首笔付费之前的未记账周期（从起始日起算——锚点可能已被记录改写）。
+  // 与首笔记录交叠的周期截断到记录起点，净额按天折算。
+  const backfill: CostSegment[] = [];
+  if (segs.length > 0) {
+    let cursor = sub.startDate;
+    const firstStart = segs[0].start;
+    while (dayDiff(cursor, firstStart) > 0) {
+      const next = advanceCycle(cursor, sub.cycle, 1);
+      if (dayDiff(next, firstStart) >= 0) {
+        backfill.push({ net: sub.listPriceBase, start: cursor, end: next, estimated: true });
+        cursor = next;
+      } else {
+        const full = dayDiff(cursor, next);
+        const part = dayDiff(cursor, firstStart);
+        if (part > 0) {
+          backfill.push({ net: (sub.listPriceBase * part) / full, start: cursor, end: firstStart, estimated: true });
+        }
+        break;
+      }
+    }
+  }
+  // 后向补齐：最后止期之后的推算周期，直到覆盖 today
+  const afterfill: CostSegment[] = [];
   let cursor = segs.length > 0 ? segs[segs.length - 1].end : sub.anchorDate;
   while (dayDiff(today, cursor) < 0) {
     const next = advanceCycle(cursor, sub.cycle, 1);
-    segs.push({ net: sub.listPriceBase, start: cursor, end: next, estimated: true });
+    afterfill.push({ net: sub.listPriceBase, start: cursor, end: next, estimated: true });
     cursor = next;
   }
-  return segs;
+  return segs.length > 0 ? [...backfill, ...segs, ...afterfill] : afterfill;
 }
 
 /** 段日费率 = 净额 / 覆盖天数 */

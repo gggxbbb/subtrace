@@ -8,6 +8,8 @@ export default defineConfig({
     },
   },
   test: {
+    // 仓储缝测试共享同一个测试库，禁止文件级并行避免互相清表
+    fileParallelism: false,
     env: {
       DATABASE_URL: "file:./data/test.db",
     },
