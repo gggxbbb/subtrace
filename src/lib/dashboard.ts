@@ -5,7 +5,9 @@ import {
   currentDailyRate,
   currentExpiry,
   dayDiff,
+  purchaseCurrentDailyRate,
   segmentDailyRate,
+  breakevenProgress,
 } from "./cost-engine";
 import {
   listSubscriptions,
@@ -13,6 +15,7 @@ import {
   toEngineSub,
   type SubscriptionWithPayments,
 } from "./subscriptions/service";
+import { listPurchases, toEnginePurchase } from "./purchases/service";
 
 export interface DashboardRow {
   id: string;
@@ -35,6 +38,16 @@ export interface UpcomingItem {
   auto: boolean;
 }
 
+export interface PurchaseRow {
+  id: string;
+  name: string;
+  daysHeld: number;
+  dailyCost: number;
+  progress: number | undefined;
+  amountBase: number;
+  status: string;
+}
+
 export interface DashboardData {
   totalDailyCost: number;
   totalMonthlyCost: number;
@@ -43,6 +56,8 @@ export interface DashboardData {
   activeCount: number;
   rows: DashboardRow[];
   upcoming: UpcomingItem[];
+  purchases: PurchaseRow[];
+  itemDailyCost: number;
   trend: number[];
 }
 
@@ -74,6 +89,7 @@ const atUtcMidnight = (d: Date) =>
 
 export async function getDashboardData(userId: string): Promise<DashboardData> {
   const subs = await listSubscriptions(userId);
+  const purchasesRaw = await listPurchases(userId);
   const today = atUtcMidnight(new Date());
 
   const rows: DashboardRow[] = subs.map((sub) => {
@@ -94,7 +110,20 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   });
 
   const active = rows.filter((r) => r.status === "ACTIVE");
-  const totalDailyCost = active.reduce((s, r) => s + r.dailyCost, 0);
+  const purchases: PurchaseRow[] = purchasesRaw.map((p) => {
+    const engine = toEnginePurchase(p);
+    return {
+      id: p.id,
+      name: p.name,
+      daysHeld: dayDiff(p.purchaseDate, today),
+      dailyCost: purchaseCurrentDailyRate(engine, today),
+      progress: breakevenProgress(engine, today),
+      amountBase: p.amountBase,
+      status: p.status,
+    };
+  });
+  const itemDailyCost = purchases.reduce((s, p) => s + p.dailyCost, 0);
+  const totalDailyCost = active.reduce((s, r) => s + r.dailyCost, 0) + itemDailyCost;
 
   const upcoming: UpcomingItem[] = subs
     .filter((s) => s.status === "ACTIVE")
@@ -119,11 +148,13 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   const trend: number[] = [];
   for (let i = 29; i >= 0; i--) {
     const day = new Date(today.getTime() - i * 86_400_000);
-    trend.push(
-      subs
-        .filter((s) => s.status === "ACTIVE" && dayDiff(s.startDate, day) >= 0)
-        .reduce((sum, s) => sum + rateOn(s, day), 0),
-    );
+    const subCost = subs
+      .filter((s) => s.status === "ACTIVE" && dayDiff(s.startDate, day) >= 0)
+      .reduce((sum, s) => sum + rateOn(s, day), 0);
+    const itemCost = purchasesRaw
+      .filter((p) => dayDiff(p.purchaseDate, day) >= 0)
+      .reduce((sum, p) => sum + purchaseCurrentDailyRate(toEnginePurchase(p), day), 0);
+    trend.push(subCost + itemCost);
   }
 
   const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
@@ -144,6 +175,8 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     activeCount: active.length,
     rows,
     upcoming,
+    purchases,
+    itemDailyCost,
     trend,
   };
 }

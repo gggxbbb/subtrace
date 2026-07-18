@@ -18,6 +18,7 @@ model User {
   sessions      Session[]
   invitesCreated Invite[] @relation("creator")
   subscriptions Subscription[]
+  purchases     Purchase[]
 }
 
 model Invite {
@@ -87,4 +88,27 @@ model Payment {
   source         String
   note           String?
   createdAt      DateTime     @default(now())
+}
+
+model Purchase {
+  id           String   @id @default(cuid())
+  ownerId      String
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name         String
+  category     String?
+  /// 买入价（原币）
+  amount       Float
+  currency     String
+  /// 主币种快照（ADR-0004）
+  amountBase   Float
+  purchaseDate DateTime
+  /// 预期寿命天数（回本模型）
+  expectedDays Int?
+  /// IN_USE | RETIRED | SOLD
+  status       String   @default("IN_USE")
+  /// 报废/卖出日期
+  endDate      DateTime?
+  /// 残值（主币种）
+  resaleBase   Float?
+  createdAt    DateTime @default(now())
 }

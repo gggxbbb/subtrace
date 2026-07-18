@@ -22,7 +22,7 @@ const NAV = [
       { icon: LayoutDashboard, label: "控制台", href: "/dashboard" },
       { icon: RefreshCcw, label: "订阅", href: "/subscriptions" },
       { icon: Boxes, label: "联合会员", href: "/bundles", soon: true },
-      { icon: Package, label: "物品", href: "/purchases", soon: true },
+      { icon: Package, label: "物品", href: "/purchases" },
       { icon: BarChart3, label: "报表", href: "/reports", soon: true },
     ],
   },

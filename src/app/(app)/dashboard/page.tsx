@@ -91,7 +91,7 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-4 gap-4">
           <Kpi index="A1" label="当日总日均" value={fmt(d.totalDailyCost)} sub={`≈ 每月 ${fmt(d.totalMonthlyCost)}`} led={ORANGE} />
           <Kpi index="A2" label="本月支出" value={fmt(d.monthSpent)} sub={`年度累计 ${fmt(d.yearSpent)}`} />
-          <Kpi index="A3" label="活跃订阅" value={`${d.activeCount}`} sub={`共 ${d.rows.length} 个订阅`} />
+          <Kpi index="A3" label="活跃订阅" value={`${d.activeCount}`} sub={`物品 ${d.purchases.length} 件 · 日均 ${fmt(d.itemDailyCost)}`} />
           <Kpi index="A4" label="30 天日均" value={fmt(avg)} sub="近 30 天摊销均值" />
         </div>
 
@@ -107,8 +107,7 @@ export default async function DashboardPage() {
         </Panel>
 
         <div className="grid grid-cols-1 gap-4">
-          <Panel index="03" title="即将到期" action="全部" href="/subscriptions">
-            {d.upcoming.length === 0 && (
+          <Panel index="03" title="即将到期" action="全部" href="/subscriptions">            {d.upcoming.length === 0 && (
               <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
                 未来 30 天没有到期订阅
               </div>
@@ -153,7 +152,40 @@ export default async function DashboardPage() {
           </Panel>
         </div>
 
-        <Panel index="04" title="订阅明细" action="管理" href="/subscriptions">
+        <Panel index="04" title="物品回本进度" action="物品" href="/purchases">
+          {d.purchases.length === 0 && (
+            <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
+              还没有登记物品
+            </div>
+          )}
+          <div className="grid grid-cols-3 gap-px bg-neutral-200">
+            {d.purchases.map((p) => (
+              <a key={p.id} href={`/purchases/${p.id}`} className="block bg-white px-4 py-3 hover:bg-black/[0.03]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[13px] font-medium">{p.name}</span>
+                  <span className="text-[9px] uppercase text-neutral-400 f-mono">
+                    {p.status === "IN_USE" ? `${p.daysHeld}d held` : p.status === "SOLD" ? "已卖出" : "已报废"}
+                  </span>
+                </div>
+                <div className="mt-2.5 h-1.5 w-full bg-[#E4E3E0]">
+                  <div
+                    className="h-full"
+                    style={{
+                      width: `${Math.round((p.progress ?? Math.min(1, p.daysHeld / 1095)) * 100)}%`,
+                      background: p.status === "IN_USE" ? ORANGE : "#999",
+                    }}
+                  />
+                </div>
+                <div className="mt-1.5 flex justify-between text-[9px] text-neutral-500 f-mono">
+                  <span>{p.status === "IN_USE" ? `${fmt(p.dailyCost)}/day` : "—"}</span>
+                  <span>{fmt(p.amountBase)}</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel index="05" title="订阅明细" action="管理" href="/subscriptions">
           <table className="w-full text-[13px]">
             <thead>
               <tr className="border-b border-black text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
