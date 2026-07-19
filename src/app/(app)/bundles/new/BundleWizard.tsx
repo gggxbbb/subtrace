@@ -18,20 +18,23 @@ interface Item {
   newName: string;
   listPriceBase: string;
   allocatedBase: string; // 空 = 按比例
-  periodStart: string; // 空 = 继承打包起止
+  periodStart: string;
   periodEnd: string;
   plusDays: string;
+  /** 用户手动改过起止后，不再随打包日期联动 */
+  periodTouched: boolean;
 }
 
-const newItem = (): Item => ({
+const newItem = (start: string, end: string): Item => ({
   mode: "new",
   subscriptionId: "",
   newName: "",
   listPriceBase: "",
   allocatedBase: "",
-  periodStart: "",
-  periodEnd: "",
+  periodStart: start,
+  periodEnd: end,
   plusDays: "",
+  periodTouched: false,
 });
 
 export function BundleWizard({
@@ -40,10 +43,10 @@ export function BundleWizard({
   existingSubs: { id: string; name: string; expiry: string | null }[];
 }) {
   const error = useSearchParams().get("error");
-  const [items, setItems] = useState<Item[]>([newItem()]);
-  const [total, setTotal] = useState("");
   const today = new Date().toISOString().slice(0, 10);
   const nextYear = new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10);
+  const [items, setItems] = useState<Item[]>([newItem(today, nextYear)]);
+  const [total, setTotal] = useState("");
 
   const totalNum = Number(total) || 0;
   const priceSum = items.reduce((s, it) => s + (Number(it.listPriceBase) || 0), 0);
@@ -53,9 +56,19 @@ export function BundleWizard({
   const update = (i: number, patch: Partial<Item>) =>
     setItems(items.map((it, j) => (j === i ? { ...it, ...patch } : it)));
 
-  const [bundleStart, setBundleStart] = useState(today);
-  const [bundleEnd, setBundleEnd] = useState(nextYear);
+  const [bundleStart, setBundleStartRaw] = useState(today);
+  const [bundleEnd, setBundleEndRaw] = useState(nextYear);
   const [bundlePlusDays, setBundlePlusDays] = useState("");
+
+  // 打包日期改动时，未手动改过起止的行跟着联动
+  const setBundleStart = (v: string) => {
+    setBundleStartRaw(v);
+    setItems((prev) => prev.map((it) => (it.periodTouched ? it : { ...it, periodStart: v })));
+  };
+  const setBundleEnd = (v: string) => {
+    setBundleEndRaw(v);
+    setItems((prev) => prev.map((it) => (it.periodTouched ? it : { ...it, periodEnd: v })));
+  };
 
   const applyBundlePlusDays = (v: string) => {
     setBundlePlusDays(v);
@@ -71,12 +84,11 @@ export function BundleWizard({
 
   const applyPlusDays = (i: number, v: string) => {
     const it = items[i];
-    const start = it.periodStart || bundleStart;
     const n = Number(v);
-    const patch: Partial<Item> = { plusDays: v };
-    if (Number.isFinite(n) && v.trim() !== "" && start) {
+    const patch: Partial<Item> = { plusDays: v, periodTouched: true };
+    if (Number.isFinite(n) && v.trim() !== "" && it.periodStart) {
       patch.periodEnd = new Date(
-        new Date(`${start}T00:00:00Z`).getTime() + n * 86_400_000,
+        new Date(`${it.periodStart}T00:00:00Z`).getTime() + n * 86_400_000,
       ).toISOString().slice(0, 10);
     }
     update(i, patch);
@@ -151,7 +163,7 @@ export function BundleWizard({
           <label className={`${labelCls} mb-0`}>子会员（分摊打包价）</label>
           <button
             type="button"
-            onClick={() => setItems([...items, newItem()])}
+            onClick={() => setItems([...items, newItem(bundleStart, bundleEnd)])}
             className="flex items-center gap-1 border border-black bg-white px-2 py-1 text-[10px] uppercase f-mono hover:bg-black hover:text-white"
           >
             <Plus className="h-3 w-3" /> 添加
@@ -196,6 +208,7 @@ export function BundleWizard({
                           periodStart: sub?.expiry ?? it.periodStart,
                           periodEnd: "",
                           plusDays: "",
+                          periodTouched: true,
                         });
                       }}
                       className={inputCls}
@@ -252,24 +265,21 @@ export function BundleWizard({
               </div>
               <div className="grid grid-cols-2 items-end gap-3">
                 <div>
-                  <label className={labelCls}>
-                    服务起（{it.mode === "existing" && it.subscriptionId ? "已预填当前到期日" : "留空继承打包起"}）
-                  </label>
+                  <label className={labelCls}>服务起</label>
                   <input
                     type="date"
                     value={it.periodStart}
-                    placeholder={bundleStart}
-                    onChange={(e) => update(i, { periodStart: e.target.value })}
+                    onChange={(e) => update(i, { periodStart: e.target.value, periodTouched: true })}
                     className={`${inputCls} f-mono`}
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>服务止（留空继承打包止）</label>
+                  <label className={labelCls}>服务止</label>
                   <div className="flex border border-black bg-[#E4E3E0] focus-within:bg-white">
                     <input
                       type="date"
                       value={it.periodEnd}
-                      onChange={(e) => update(i, { periodEnd: e.target.value, plusDays: "" })}
+                      onChange={(e) => update(i, { periodEnd: e.target.value, plusDays: "", periodTouched: true })}
                       className="w-full bg-transparent px-2 py-1.5 text-sm outline-none f-mono"
                     />
                     <span className="flex items-center border-l border-black px-2 text-sm text-neutral-500 f-mono">
@@ -303,8 +313,8 @@ export function BundleWizard({
             newName: it.mode === "new" ? it.newName : undefined,
             listPriceBase: it.listPriceBase === "" ? null : Number(it.listPriceBase),
             allocatedBase: it.allocatedBase === "" ? undefined : Number(it.allocatedBase),
-            periodStart: it.periodStart || undefined,
-            periodEnd: it.periodEnd || undefined,
+            periodStart: it.periodStart,
+            periodEnd: it.periodEnd,
           })),
         )}
       />
