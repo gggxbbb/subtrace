@@ -20,6 +20,7 @@ model User {
   subscriptions Subscription[]
   purchases     Purchase[]
   bundles       Bundle[]
+  usageRecords  UsageRecord[]
 }
 
 model Invite {
@@ -65,9 +66,33 @@ model Subscription {
   remindDays    String   @default("[7,3,0]")
   /// ACTIVE | CANCELLED | ARCHIVED
   status        String   @default("ACTIVE")
+  /// 用量类型：COUNT（计数型，逐条）| QUOTA（额度型，快照）
+  usageKind     String?
+  /// 用量单位：次 / 小时 / GB / 点数
+  usageUnit     String?
+  /// 替代单价（主币种）：不买订阅按次/按量付费的单价
+  altUnitPrice  Float?
+  /// 额度型：周期总额度
+  quotaTotal    Float?
   startDate     DateTime
   createdAt     DateTime @default(now())
   payments      Payment[]
+  usage         UsageRecord[]
+}
+
+model UsageRecord {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           DateTime
+  quantity       Float
+  /// DELTA（增量，计数型）| TOTAL（累计快照，额度型）
+  kind           String       @default("DELTA")
+  /// MANUAL | SCRIPT
+  source         String       @default("MANUAL")
+  createdAt      DateTime     @default(now())
 }
 
 model Payment {

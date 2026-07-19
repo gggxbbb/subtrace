@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 订阅核心链路
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 可为订阅设置用量类型（计数/额度）、单位与替代单价
 - [ ] 计数型：逐条录入/删除用量记录

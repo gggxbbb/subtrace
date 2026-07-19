@@ -233,3 +233,24 @@ export function allocateBundle(totalBase: number, listPrices: number[]): number[
   if (sum <= 0) return listPrices.map(() => 0);
   return listPrices.map((p) => (totalBase * Math.max(0, p)) / sum);
 }
+
+export interface UsageEntry {
+  date: Date;
+  quantity: number;
+  /** DELTA=增量（计数型）；TOTAL=累计快照（额度型） */
+  kind: "DELTA" | "TOTAL";
+}
+
+/**
+ * 区间 [start, end) 内的用量：有累计快照取最新快照（额度型），否则增量求和（计数型）。
+ */
+export function usageInPeriod(records: UsageEntry[], start: Date, end: Date): number {
+  const inRange = records.filter(
+    (r) => dayDiff(start, r.date) >= 0 && dayDiff(r.date, end) > 0,
+  );
+  const snapshots = inRange.filter((r) => r.kind === "TOTAL");
+  if (snapshots.length > 0) {
+    return snapshots.reduce((latest, r) => (r.date > latest.date ? r : latest)).quantity;
+  }
+  return inRange.reduce((s, r) => s + r.quantity, 0);
+}

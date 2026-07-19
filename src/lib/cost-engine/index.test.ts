@@ -14,6 +14,7 @@ import {
   purchaseDailyRate,
   segmentDailyRate,
   shareOf,
+  usageInPeriod,
   verdict,
   type CycleSpec,
   type PaymentRec,
@@ -295,5 +296,26 @@ describe("联合会员分摊（ADR-0002）", () => {
 
   it("全部未知原价时不产生分摊", () => {
     expect(allocateBundle(88, [0, 0])).toEqual([0, 0]);
+  });
+});
+
+describe("用量聚合", () => {
+  const rec = (date: string, quantity: number, kind: "DELTA" | "TOTAL" = "DELTA") => ({
+    date: d(date), quantity, kind,
+  });
+
+  it("计数型：区间内增量求和，区间外不计", () => {
+    const records = [rec("2026-07-01", 1), rec("2026-07-10", 2), rec("2026-08-01", 5)];
+    expect(usageInPeriod(records, d("2026-07-01"), d("2026-08-01"))).toBe(3);
+  });
+
+  it("额度型：取区间内最新快照", () => {
+    const records = [rec("2026-07-05", 30, "TOTAL"), rec("2026-07-15", 65, "TOTAL")];
+    expect(usageInPeriod(records, d("2026-07-01"), d("2026-08-01"))).toBe(65);
+  });
+
+  it("有快照时以快照为准，不再叠加增量", () => {
+    const records = [rec("2026-07-02", 3), rec("2026-07-15", 50, "TOTAL")];
+    expect(usageInPeriod(records, d("2026-07-01"), d("2026-08-01"))).toBe(50);
   });
 });
