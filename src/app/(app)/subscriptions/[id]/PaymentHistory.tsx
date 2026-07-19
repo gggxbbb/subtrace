@@ -60,7 +60,7 @@ export function PaymentHistory({
   }
 
   return (
-    <>
+    <div className="flex h-full flex-col">
       {payments.map((p) =>
         editingId === p.id ? (
           <form
@@ -184,7 +184,7 @@ export function PaymentHistory({
         ),
       )}
       {estimatedRows.length > 0 && (
-        <div className="border-t-2 border-dashed border-neutral-300">
+        <div className="mt-auto border-t-2 border-dashed border-neutral-300">
           {estimatedRows.map((seg) => (
             <div
               key={seg.start}
@@ -206,6 +206,6 @@ export function PaymentHistory({
           ))}
         </div>
       )}
-    </>
+    </div>
   );
 }

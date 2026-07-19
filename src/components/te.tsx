@@ -90,8 +90,8 @@ export function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border border-black bg-white">
-      <header className="flex items-center justify-between border-b border-black px-4 py-2.5">
+    <section className="flex flex-col border border-black bg-white">
+      <header className="flex shrink-0 items-center justify-between border-b border-black px-4 py-2.5">
         <span className="text-[10px] font-semibold uppercase tracking-[0.15em] f-mono">
           <span className="text-neutral-400">{index}</span> — {title}
         </span>
@@ -105,7 +105,7 @@ export function Panel({
             </a>
           ))}
       </header>
-      {children}
+      <div className="flex-1">{children}</div>
     </section>
   );
 }
