@@ -151,16 +151,15 @@ export function segmentDailyRate(seg: CostSegment): number {
   return seg.net / dayDiff(seg.start, seg.end);
 }
 
-/** 订阅当日费率：today 所在段的费率；无覆盖（过期/手动模式无记录）为 0 */
+/** 订阅当日费率：today 所有覆盖段的费率之和（重叠段相加）；无覆盖为 0 */
 export function currentDailyRate(
   sub: SubscriptionDef,
   payments: PaymentRec[],
   today: Date,
 ): number {
-  const covering = costSegments(sub, payments, today).find(
-    (s) => dayDiff(s.start, today) >= 0 && dayDiff(today, s.end) > 0,
-  );
-  return covering ? segmentDailyRate(covering) : 0;
+  return costSegments(sub, payments, today)
+    .filter((s) => dayDiff(s.start, today) >= 0 && dayDiff(today, s.end) > 0)
+    .reduce((sum, s) => sum + segmentDailyRate(s), 0);
 }
 
 /** 物品（回本模型摊销） */

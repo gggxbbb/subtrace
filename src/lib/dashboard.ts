@@ -75,13 +75,11 @@ function cycleLabel(sub: SubscriptionWithPayments): string {
   return sub.cycleCount && sub.cycleCount > 1 ? `每 ${sub.cycleCount} ${unit.replace("付", "")}` : unit;
 }
 
-/** 某订阅在 date 当天的摊销费率（当日无覆盖为 0） */
+/** 某订阅在 date 当天的摊销费率（覆盖段求和，无覆盖为 0） */
 function rateOn(sub: SubscriptionWithPayments, date: Date): number {
-  const segs = costSegments(toEngineSub(sub), toEnginePayments(sub.payments), date);
-  const covering = segs.find(
-    (s) => dayDiff(s.start, date) >= 0 && dayDiff(date, s.end) > 0,
-  );
-  return covering ? segmentDailyRate(covering) : 0;
+  return costSegments(toEngineSub(sub), toEnginePayments(sub.payments), date)
+    .filter((s) => dayDiff(s.start, date) >= 0 && dayDiff(date, s.end) > 0)
+    .reduce((sum, s) => sum + segmentDailyRate(s), 0);
 }
 
 const atUtcMidnight = (d: Date) =>

@@ -260,3 +260,19 @@ describe("前向补齐截断", () => {
     expect(last.net).toBeCloseTo(25 * (26 / 31));
   });
 });
+
+describe("重叠成本段", () => {
+  it("多条段覆盖同一天时费率为各段之和（提前续费区间交叠）", () => {
+    const sub = cycleSub({ cycle: { kind: "calendar", unit: "year", count: 1 }, listPriceBase: 160 });
+    const payments = [
+      payment({ amountBase: 160, periodStart: d("2021-01-01"), periodEnd: d("2022-01-01") }),
+      payment({ amountBase: 80, paidAt: d("2021-02-16"), periodStart: d("2021-02-16"), periodEnd: d("2022-02-16") }),
+    ];
+    // 只有第一段
+    expect(currentDailyRate(sub, payments, d("2021-01-15"))).toBeCloseTo(160 / 365);
+    // 两段叠加
+    expect(currentDailyRate(sub, payments, d("2021-06-01"))).toBeCloseTo(160 / 365 + 80 / 365);
+    // 只剩第二段
+    expect(currentDailyRate(sub, payments, d("2022-01-15"))).toBeCloseTo(80 / 365);
+  });
+});
