@@ -158,9 +158,9 @@ export default async function DashboardPage() {
               还没有登记物品
             </div>
           )}
-          <div className="grid grid-cols-3 gap-px bg-neutral-200">
+          <div className="grid grid-cols-3 gap-px bg-white">
             {d.purchases.map((p) => (
-              <a key={p.id} href={`/purchases/${p.id}`} className="block bg-white px-4 py-3 hover:bg-black/[0.03]">
+              <a key={p.id} href={`/purchases/${p.id}`} className="block border border-neutral-200 bg-white px-4 py-3 hover:bg-black/[0.03]">
                 <div className="flex items-center justify-between">
                   <span className="text-[13px] font-medium">{p.name}</span>
                   <span className="text-[9px] uppercase text-neutral-400 f-mono">
