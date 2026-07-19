@@ -105,7 +105,7 @@ export function PaymentForm({
           />
         </div>
         <div className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
-          右侧输入 +N 天快速顺延
+          止期为排他日：到期日当天起不再覆盖 · 服务起 = 上一笔止期即无缝顺延 · 右侧 +N 天快速顺延
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">

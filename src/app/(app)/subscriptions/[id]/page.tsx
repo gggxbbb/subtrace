@@ -77,7 +77,7 @@ export default async function SubscriptionDetailPage({
 
       <div className="space-y-4 px-6 py-5">
         <div className="grid grid-cols-4 gap-4">
-          <Kpi index="B1" label="当前到期日" value={expiry ? fmtDate(expiry) : "—"} sub={expiry ? `${dayDiff(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())), expiry)} 天后` : "手动模式待记录"} />
+          <Kpi index="B1" label="当前到期日" value={expiry ? fmtDate(expiry) : "—"} sub={expiry ? `${dayDiff(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())), expiry)} 天后（当天起不再覆盖）` : "手动模式待记录"} />
           <Kpi index="B2" label="当日费率" value={fmt(daily)} sub={`≈ 每月 ${fmt(daily * 30.4)}`} />
           <Kpi index="B3" label="累计实付" value={fmt(totalPaid)} sub={`${sub.payments.length} 笔付费记录`} />
           <Kpi
