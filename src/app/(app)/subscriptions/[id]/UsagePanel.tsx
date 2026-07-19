@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Led } from "@/components/te";
+import { Led, LedMatrix } from "@/components/te";
 import {
   addQuotaSnapshotAction,
   addUsageAction,
@@ -30,6 +30,7 @@ export function UsageEntryPanel({
   defaultUnitPrice,
   defaultQuotaTotal,
   records,
+  verdict,
 }: {
   subscriptionId: string;
   usageKind: "COUNT" | "QUOTA" | null;
@@ -37,6 +38,13 @@ export function UsageEntryPanel({
   defaultUnitPrice: number | null;
   defaultQuotaTotal: number | null;
   records: UsageRecordRow[];
+  verdict: {
+    periodStart: string;
+    periodEnd: string;
+    cost: number;
+    usage: number;
+    value: number;
+  } | null;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const last = records[records.length - 1];
@@ -56,6 +64,25 @@ export function UsageEntryPanel({
   const quotaPlaceholder =
     last?.quotaTotal ?? defaultQuotaTotal ?? undefined;
   const kindUnset = usageKind === null;
+
+  // 回本提示：按参考单价还差多少用量回本
+  const refPrice = last?.unitPrice ?? defaultUnitPrice;
+  const needed =
+    verdict && refPrice && refPrice > 0
+      ? Math.max(0, Math.ceil((verdict.cost - verdict.value) / refPrice))
+      : null;
+  // 区间点阵：每天一格，有用量点亮，今天白点，未到灰点
+  const matrixDays: { used: boolean; today: boolean; future: boolean }[] = [];
+  if (verdict) {
+    const start = new Date(`${verdict.periodStart}T00:00:00Z`).getTime();
+    const end = new Date(`${verdict.periodEnd}T00:00:00Z`).getTime();
+    const todayMs = new Date(`${today}T00:00:00Z`).getTime();
+    const usedDates = new Set(records.map((r) => r.date));
+    for (let t = start; t < end && matrixDays.length < 42; t += 86_400_000) {
+      const iso = new Date(t).toISOString().slice(0, 10);
+      matrixDays.push({ used: usedDates.has(iso), today: t === todayMs, future: t > todayMs });
+    }
+  }
 
   return (
     <div className="px-4 py-4">
@@ -190,6 +217,44 @@ export function UsageEntryPanel({
             留空继承上一条记录{quotaPlaceholder != null ? `（总额度 ${quotaPlaceholder}）` : ""}
           </div>
         </form>
+      )}
+
+      {verdict && (
+        <div className="mt-3 border-t border-dashed border-neutral-300 pt-3">
+          {needed !== null && (
+            <div className="mb-2 flex items-center gap-2 text-[11px]">
+              <Led color={needed === 0 ? "#22c55e" : "#FF5A00"} />
+              {needed === 0 ? (
+                <span>已回本，多用都是赚</span>
+              ) : (
+                <span>
+                  再去 <strong className="tabular-nums">{needed}</strong> {usageUnit ?? "次"}回本
+                  <span className="text-neutral-400">（按 {refPrice}/{usageUnit ?? "次"}）</span>
+                </span>
+              )}
+            </div>
+          )}
+          <LedMatrix
+            rows={Math.ceil(matrixDays.length / 7)}
+            cols={7}
+            size={7}
+            gap={5}
+            lit={(r, c) => {
+              const day = matrixDays[r * 7 + c];
+              if (!day) return false;
+              if (day.today) return "#111";
+              if (day.used) return true;
+              return false;
+            }}
+            dark={false}
+            stretch
+          />
+          <div className="mt-1 flex justify-between text-[9px] uppercase text-neutral-400 f-mono">
+            <span>{verdict.periodStart}</span>
+            <span>点 = 有用量 · 白 = 今天</span>
+            <span>{verdict.periodEnd}</span>
+          </div>
+        </div>
       )}
     </div>
   );

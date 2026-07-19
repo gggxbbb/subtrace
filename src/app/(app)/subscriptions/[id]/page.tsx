@@ -144,6 +144,17 @@ export default async function SubscriptionDetailPage({
               defaultUnitPrice={sub.altUnitPrice}
               defaultQuotaTotal={sub.quotaTotal}
               records={usageRecordRows}
+              verdict={
+                verdictData
+                  ? {
+                      periodStart: verdictData.periodStart,
+                      periodEnd: verdictData.periodEnd,
+                      cost: verdictData.cost,
+                      usage: verdictData.usage,
+                      value: verdictData.value,
+                    }
+                  : null
+              }
             />
           </Panel>
           <Panel index="04" title="盈亏 · 当前区间">
