@@ -12,10 +12,14 @@ import {
   RefreshCcw,
   Settings,
   SquareTerminal,
+  type LucideIcon,
 } from "lucide-react";
 import { Led } from "./te";
 
-const NAV = [
+const NAV: {
+  group: string;
+  items: { icon: LucideIcon; label: string; href: string; soon?: boolean }[];
+}[] = [
   {
     group: "WORKBENCH / 工作台",
     items: [
@@ -23,7 +27,7 @@ const NAV = [
       { icon: RefreshCcw, label: "订阅", href: "/subscriptions" },
       { icon: Boxes, label: "联合会员", href: "/bundles" },
       { icon: Package, label: "物品", href: "/purchases" },
-      { icon: BarChart3, label: "报表", href: "/reports", soon: true },
+      { icon: BarChart3, label: "报表", href: "/reports" },
     ],
   },
   {
