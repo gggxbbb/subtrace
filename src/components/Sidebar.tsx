@@ -33,9 +33,7 @@ const NAV: {
   {
     group: "ACCOUNT / 账户",
     items: [
-      { icon: Settings, label: "设置", href: "/settings", soon: true },
-      { icon: Bell, label: "通知渠道", href: "/settings/channels" },
-      { icon: SquareTerminal, label: "用量脚本", href: "/settings/scripts", soon: true },
+      { icon: Settings, label: "设置", href: "/settings" },
     ],
   },
 ];
