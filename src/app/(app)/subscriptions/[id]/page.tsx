@@ -52,6 +52,17 @@ export default async function SubscriptionDetailPage({
   // 覆盖今天的只有推算段（记录止期已过）→ 费率是标准价估计，不是实付
   const coveringEstimated = covering.length > 0 && covering.every((s) => s.estimated);
   const daysToExpiry = expiry ? dayDiff(today, expiry) : null;
+  // 推算段（未记账）：最后记录止期之后的 estimated 段，在付费历史底部强区分展示
+  const lastRecordedEnd = sub.payments.length > 0
+    ? sub.payments.reduce((max, p) => (p.periodEnd > max ? p.periodEnd : max), sub.payments[0].periodEnd)
+    : null;
+  const estimatedRows = costSegments(engineSub, payments, today)
+    .filter((seg) => seg.estimated && (lastRecordedEnd === null || seg.start >= lastRecordedEnd))
+    .map((seg) => ({
+      start: seg.start.toISOString().slice(0, 10),
+      end: seg.end.toISOString().slice(0, 10),
+      net: seg.net,
+    }));
   const totalPaid = sub.payments.reduce((s, p) => s + (p.amountBase ?? 0) - p.refundedBase, 0);
   const unknownPayments = sub.payments.filter((p) => p.amountBase === null).length;
   const prefillRaw = paymentPrefill(sub, sub.payments);
@@ -224,9 +235,23 @@ export default async function SubscriptionDetailPage({
           <Kpi
             index="B4"
             label="状态"
-            value={sub.status === "ACTIVE" ? "活跃" : sub.status === "CANCELLED" ? "已取消" : "已归档"}
-            sub={sub.autoRenew ? "自动续费" : "手动续费"}
-            led={sub.status === "ACTIVE" ? "#22c55e" : "#ef4444"}
+            value={
+              coveringEstimated
+                ? "推算中"
+                : sub.status === "ACTIVE"
+                  ? "活跃"
+                  : sub.status === "CANCELLED"
+                    ? "已取消"
+                    : "已归档"
+            }
+            sub={
+              coveringEstimated
+                ? `${sub.status === "ACTIVE" ? "活跃" : "已取消"} · 未记账，按标准价估计`
+                : sub.autoRenew
+                  ? "自动续费"
+                  : "手动续费"
+            }
+            led={coveringEstimated ? "#FF6B00" : sub.status === "ACTIVE" ? "#22c55e" : "#ef4444"}
           />
         </div>
 
@@ -256,6 +281,7 @@ export default async function SubscriptionDetailPage({
             <PaymentHistory
               subscriptionId={sub.id}
               canEdit={isOwner}
+              estimatedRows={estimatedRows}
               payments={[...sub.payments].reverse().map((p): HistoryPayment => ({
                 id: p.id,
                 amount: p.amount,

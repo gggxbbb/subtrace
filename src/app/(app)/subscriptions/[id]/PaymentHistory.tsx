@@ -40,11 +40,14 @@ export function PaymentHistory({
   subscriptionId,
   payments,
   canEdit = true,
+  estimatedRows = [],
 }: {
   subscriptionId: string;
   payments: HistoryPayment[];
   /** 仅所有者可编辑/删除（受益用户只读） */
   canEdit?: boolean;
+  /** 未记账的推算段（ticket 09  polish）：底部强区分展示，非真实付费记录 */
+  estimatedRows?: { start: string; end: string; net: number }[];
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -179,6 +182,29 @@ export function PaymentHistory({
             </div>
           </div>
         ),
+      )}
+      {estimatedRows.length > 0 && (
+        <div className="border-t-2 border-dashed border-neutral-300">
+          {estimatedRows.map((seg) => (
+            <div
+              key={seg.start}
+              className="flex items-center justify-between border-b border-dashed border-neutral-200 bg-neutral-100/60 px-4 py-2.5 last:border-0"
+            >
+              <div>
+                <div className="text-[13px] font-medium text-neutral-400">
+                  {fmtMoney(seg.net)}
+                  <span className="ml-2 inline-block border border-dashed border-neutral-400 px-1.5 py-0.5 text-[9px] uppercase tracking-wider f-mono">
+                    推算 · 未记账
+                  </span>
+                </div>
+                <div className="text-[9px] uppercase tracking-wider text-neutral-400 f-mono">
+                  {seg.start} → {seg.end} · 按标准价估计
+                </div>
+              </div>
+              <Led color="#d4d4d4" />
+            </div>
+          ))}
+        </div>
       )}
     </>
   );
