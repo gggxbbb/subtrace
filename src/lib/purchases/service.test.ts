@@ -4,7 +4,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "../db";
 import { breakevenProgress, purchaseCurrentDailyRate, purchaseDailyRate } from "../cost-engine";
 import {
+  addPurchaseEvent,
   addPurchaseIncome,
+  deletePurchaseEvent,
+  listPurchaseEvents,
+  updatePurchaseEvent,
   deletePurchaseIncome,
   listPurchaseIncomes,
   updatePurchase,
@@ -199,5 +203,50 @@ describe("归档与删除", () => {
     expect(await listPurchases(ownerId)).toHaveLength(1);
     await deletePurchase(ownerId, p.id);
     expect(await getPurchase(ownerId, p.id)).toBeNull();
+  });
+});
+
+describe("追加费用事件", () => {
+  it("手机 8000 + 维修 500 → 净额 8500 按同窗口摊销", async () => {
+    const p = await createPurchase(ownerId, {
+      name: "手机", amount: 8000, currency: "CNY", amountBase: 8000,
+      purchaseDate: d("2026-01-01"), expectedDays: 800,
+    });
+    await addPurchaseEvent(ownerId, p.id, {
+      kind: "REPAIR", amount: 500, date: d("2026-03-01"), note: "换屏",
+    });
+    const fresh = await getPurchase(ownerId, p.id);
+    expect(purchaseDailyRate(toEnginePurchase(fresh!), d("2026-06-01"))).toBeCloseTo(8500 / 800);
+  });
+
+  it("维修延长寿命 extendDays 联动费率与回本进度", async () => {
+    const p = await createPurchase(ownerId, {
+      name: "手机", amount: 8000, currency: "CNY", amountBase: 8000,
+      purchaseDate: d("2026-01-01"), expectedDays: 800,
+    });
+    await addPurchaseEvent(ownerId, p.id, {
+      kind: "REPAIR", amount: 500, date: d("2026-03-01"), extendDays: 100,
+    });
+    const fresh = await getPurchase(ownerId, p.id);
+    const engine = toEnginePurchase(fresh!);
+    expect(purchaseDailyRate(engine, d("2026-06-01"))).toBeCloseTo(8500 / 900);
+    expect(breakevenProgress(engine, d("2026-04-11"))).toBeCloseTo(100 / 900, 2);
+  });
+
+  it("事件可编辑/删除，净额联动重算", async () => {
+    const p = await createPurchase(ownerId, {
+      name: "手机", amount: 8000, currency: "CNY", amountBase: 8000,
+      purchaseDate: d("2026-01-01"), expectedDays: 800,
+    });
+    const ev = await addPurchaseEvent(ownerId, p.id, {
+      kind: "ACCESSORY", amount: 300, date: d("2026-02-01"), note: "手机壳",
+    });
+    await updatePurchaseEvent(ownerId, ev.id, { amountBase: 200 });
+    let fresh = await getPurchase(ownerId, p.id);
+    expect(purchaseDailyRate(toEnginePurchase(fresh!), d("2026-06-01"))).toBeCloseTo(8200 / 800);
+    await deletePurchaseEvent(ownerId, ev.id);
+    fresh = await getPurchase(ownerId, p.id);
+    expect(purchaseDailyRate(toEnginePurchase(fresh!), d("2026-06-01"))).toBeCloseTo(8000 / 800);
+    expect(await listPurchaseEvents(p.id)).toHaveLength(0);
   });
 });

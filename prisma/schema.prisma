@@ -186,6 +186,26 @@ model Purchase {
   createdAt    DateTime @default(now())
   beneficiaries Beneficiary[]
   incomes      PurchaseIncome[]
+  events       PurchaseEvent[]
+}
+
+/// 一次性追加费用事件（配件/维修等）：计入物品净额、与买入价共用同一摊销窗口
+model PurchaseEvent {
+  id         String   @id @default(cuid())
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  /// ACCESSORY | REPAIR | OTHER
+  kind       String
+  /// 金额（原币）
+  amount     Float
+  currency   String   @default("CNY")
+  /// 主币种快照（ADR-0004）
+  amountBase Float
+  date       DateTime
+  /// 维修可选：延长预期寿命（天）
+  extendDays Int?
+  note       String?
+  createdAt  DateTime @default(now())
 }
 
 /// 物品创造的收益（出租、返利等），抵减 TCO

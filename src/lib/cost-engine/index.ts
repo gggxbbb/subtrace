@@ -167,7 +167,11 @@ export function currentDailyRate(
 /** 物品（回本模型摊销） */
 export interface PurchaseDef {
   amountBase: number;
-  /** 残值（主币种），卖出/报废时从买入价扣除 */
+  /** 追加费用事件合计（配件/维修等，主币种），与买入价共用同一摊销窗口 */
+  extraBase?: number;
+  /** 事件带来的寿命延长合计（天） */
+  extraDays?: number;
+  /** 残值（主币种），卖出/报废时从累计净额扣除 */
   resaleBase?: number;
   purchaseDate: Date;
   expectedDays?: number;
@@ -176,14 +180,20 @@ export interface PurchaseDef {
 }
 
 /**
- * 物品模型费率 = (金额 − 残值) / 摊销天数。
- * 摊销止期：卖出/报废日；预期寿命内 → 购买日 + 寿命（固定费率）；超期或未定寿命 → today（递减）。
+ * 物品模型费率 = (金额 + 追加事件 − 残值) / 摊销天数。
+ * 摊销止期：卖出/报废日；预期寿命（含事件延长）内 → 购买日 + 寿命（固定费率）；超期或未定寿命 → today（递减）。
  */
+/** 物品累计净额 = 买入 + 追加事件 − 残值 */
+export function purchaseNet(p: PurchaseDef): number {
+  return p.amountBase + (p.extraBase ?? 0) - (p.resaleBase ?? 0);
+}
+
 export function purchaseDailyRate(p: PurchaseDef, today: Date): number {
-  const net = p.amountBase - (p.resaleBase ?? 0);
+  const net = purchaseNet(p);
+  const lifeDays = p.expectedDays != null ? p.expectedDays + (p.extraDays ?? 0) : undefined;
   const expectedEnd =
-    p.expectedDays != null
-      ? new Date(atUtcMidnight(p.purchaseDate).getTime() + p.expectedDays * DAY_MS)
+    lifeDays != null
+      ? new Date(atUtcMidnight(p.purchaseDate).getTime() + lifeDays * DAY_MS)
       : undefined;
   const end =
     p.status !== "in_use" && p.endDate
@@ -199,10 +209,10 @@ export function purchaseCurrentDailyRate(p: PurchaseDef, today: Date): number {
   return p.status === "in_use" ? purchaseDailyRate(p, today) : 0;
 }
 
-/** 回本进度 = 已持有天数 / 预期寿命（封顶 1）；未定寿命为 undefined */
+/** 回本进度 = 已持有天数 / 预期寿命（含事件延长，封顶 1）；未定寿命为 undefined */
 export function breakevenProgress(p: PurchaseDef, today: Date): number | undefined {
   if (p.expectedDays == null) return undefined;
-  return Math.min(1, dayDiff(p.purchaseDate, today) / p.expectedDays);
+  return Math.min(1, dayDiff(p.purchaseDate, today) / (p.expectedDays + (p.extraDays ?? 0)));
 }
 
 /** 受益人份额 = 总额 × 我的权重 / Σ权重（改权重全局重算，ADR-0003） */

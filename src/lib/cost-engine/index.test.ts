@@ -19,6 +19,7 @@ import {
   verdict,
   type CycleSpec,
   type PaymentRec,
+  type PurchaseDef,
   type SubscriptionDef,
 } from "./index";
 
@@ -367,5 +368,31 @@ describe("锚点即今天的推算段（off-by-one）", () => {
       (s) => s.start <= d("2026-07-19") && d("2026-07-19") < s.end,
     );
     expect(covering.filter((s) => !s.estimated)).toHaveLength(0);
+  });
+});
+
+describe("追加费用事件（ticket 13）", () => {
+  const base: PurchaseDef = {
+    amountBase: 8000,
+    purchaseDate: d("2026-01-01"),
+    expectedDays: 800,
+    status: "in_use",
+  };
+
+  it("净额 = 买入 + 追加 − 残值，共用同一摊销窗口", () => {
+    // 手机 8000 + 维修 500 → 按 8500 / 800 天摊
+    const r = purchaseDailyRate({ ...base, extraBase: 500 }, d("2026-06-01"));
+    expect(r).toBeCloseTo(8500 / 800);
+  });
+
+  it("维修延长寿命：费率与回本进度按延长后窗口", () => {
+    const r = purchaseDailyRate({ ...base, extraBase: 500, extraDays: 100 }, d("2026-06-01"));
+    expect(r).toBeCloseTo(8500 / 900);
+    expect(breakevenProgress({ ...base, extraDays: 100 }, d("2026-04-11"))).toBeCloseTo(100 / 900, 2);
+  });
+
+  it("残值从累计净额（含事件）扣除", () => {
+    const r = purchaseDailyRate({ ...base, extraBase: 500, resaleBase: 1000 }, d("2026-06-01"));
+    expect(r).toBeCloseTo((8000 + 500 - 1000) / 800);
   });
 });

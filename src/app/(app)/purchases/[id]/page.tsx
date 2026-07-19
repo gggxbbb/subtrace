@@ -6,10 +6,13 @@ import {
   dayDiff,
   purchaseCurrentDailyRate,
   purchaseDailyRate,
+  purchaseNet,
 } from "@/lib/cost-engine";
-import { getPurchase, listPurchaseIncomes, subscriptionShareCost, toEnginePurchase } from "@/lib/purchases/service";
+import { EVENT_KIND_LABEL } from "@/lib/purchases/kinds";
+import { getPurchase, listPurchaseEvents, listPurchaseIncomes, subscriptionShareCost, toEnginePurchase } from "@/lib/purchases/service";
 import { closePurchaseAction } from "@/lib/purchases/actions";
 import { PurchaseHeaderActions, PurchaseIncomePanel } from "./PurchasePanels";
+import { PurchaseEventsPanel } from "./PurchaseEventsPanel";
 
 export default async function PurchaseDetailPage({
   params,
@@ -32,7 +35,8 @@ export default async function PurchaseDetailPage({
   const subShareTotal = shareLines.reduce((s, l) => l.amount, 0);
   const incomes = await listPurchaseIncomes(purchase.id);
   const incomeTotal = incomes.reduce((s, i) => s + i.amountBase, 0);
-  const itemNet = purchase.amountBase - (purchase.resaleBase ?? 0);
+  const events = await listPurchaseEvents(purchase.id);
+  const itemNet = purchaseNet(engine);
   const tco = itemNet + subShareTotal - incomeTotal;
 
   return (
@@ -50,7 +54,11 @@ export default async function PurchaseDetailPage({
       <div className="space-y-4 px-6 py-5">
         <div className="grid grid-cols-4 gap-4">
           <Kpi index="C1" label="买入价" value={fmt(purchase.amountBase)} sub={`购于 ${fmtDate(purchase.purchaseDate)}`} />
-          <Kpi index="C2" label="持有天数" value={`${dayDiff(purchase.purchaseDate, today)}`} sub={purchase.expectedDays ? `预期寿命 ${purchase.expectedDays} 天` : "未定寿命"} />
+          <Kpi index="C2" label="持有天数" value={`${dayDiff(purchase.purchaseDate, today)}`} sub={
+            purchase.expectedDays
+              ? `预期寿命 ${purchase.expectedDays + (engine.extraDays ?? 0)} 天${engine.extraDays ? `（含延长 +${engine.extraDays}d）` : ""}`
+              : "未定寿命"
+          } />
           <Kpi
             index="C3"
             label="当前费率"
@@ -74,14 +82,18 @@ export default async function PurchaseDetailPage({
           </div>
           <div className="px-4 py-3 text-[12px]">
             <div className="flex justify-between border-b border-dashed border-neutral-200 py-1">
-              <span className="text-neutral-500">物品净额（买入 − 残值）</span>
+              <span className="text-neutral-500">
+                物品净额（买入{events.length > 0 ? ` + 追加 ${events.length} 笔` : ""} − 残值）
+              </span>
               <span className="tabular-nums f-mono">{fmt(itemNet)}</span>
             </div>
             {shareLines.map((l) => (
               <div key={l.subscriptionId} className="flex justify-between border-b border-dashed border-neutral-200 py-1">
                 <span className="text-neutral-500">
                   <a href={`/subscriptions/${l.subscriptionId}`} className="underline decoration-dotted hover:text-black">{l.name}</a>
-                  <span className="ml-1 text-[10px] text-neutral-400 f-mono">份额 {Math.round(l.share * 100)}%</span>
+                  <span className="ml-1 text-[10px] text-neutral-400 f-mono">
+                    份额 {Math.round(l.share * 100)}% · {l.expiry ? `到期 ${fmtDate(l.expiry)}` : "—"} · {fmt(l.dailyRateShare)}/日
+                  </span>
                 </span>
                 <span className="tabular-nums f-mono">{fmt(l.amount)}</span>
               </div>
@@ -96,11 +108,30 @@ export default async function PurchaseDetailPage({
               <div className="py-1 text-[11px] text-neutral-400">无订阅份额——可在订阅详情页把本物品加为受益实体</div>
             )}
           </div>
+          <div className="border-t border-dashed border-neutral-300 px-4 py-2.5 text-[10px] text-neutral-500 f-mono">
+            时间线：{fmtDate(purchase.purchaseDate)} 买入
+            {events.map((e) => ` → ${fmtDate(e.date)} ${EVENT_KIND_LABEL[e.kind] ?? "费用"}`).join("")}
+            {purchase.endDate ? ` → ${fmtDate(purchase.endDate)} ${purchase.status === "SOLD" ? "卖出" : "报废"}` : " → 持有中"}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4">
+          <Panel index="01" title={`追加费用 / ${events.length}`}>
+            <PurchaseEventsPanel
+              purchaseId={purchase.id}
+              events={events.map((e) => ({
+                id: e.id,
+                kind: e.kind,
+                amount: e.amount,
+                amountBase: e.amountBase,
+                date: e.date.toISOString().slice(0, 10),
+                extendDays: e.extendDays,
+                note: e.note,
+              }))}
+            />
+          </Panel>
           <Panel
-            index="01"
+            index="02"
             title={`收益记录 / ${incomes.length}`}
             actions={
               <a href={`/purchases/${purchase.id}/incomes`} className="text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-black">
@@ -123,7 +154,7 @@ export default async function PurchaseDetailPage({
 
         {inUse && (
           <div className="grid grid-cols-2 gap-4">
-            <Panel index="02" title="卖出登记">
+            <Panel index="03" title="卖出登记">
               <form action={closePurchaseAction.bind(null, purchase.id)} className="space-y-4 px-4 py-4">
                 <input type="hidden" name="status" value="SOLD" />
                 <div className="grid grid-cols-2 gap-4">
@@ -141,7 +172,7 @@ export default async function PurchaseDetailPage({
                 </button>
               </form>
             </Panel>
-            <Panel index="03" title="报废登记">
+            <Panel index="04" title="报废登记">
               <form action={closePurchaseAction.bind(null, purchase.id)} className="space-y-4 px-4 py-4">
                 <input type="hidden" name="status" value="RETIRED" />
                 <div>

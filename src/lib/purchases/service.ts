@@ -1,10 +1,13 @@
 // 物品（ticket 04）：CRUD 与卖出/报废登记；TCO 含订阅份额（ticket 07，ADR-0003）。
 
 import { prisma } from "../db";
-import { costSegments, type PurchaseDef } from "../cost-engine";
+import { costSegments, currentDailyRate, currentExpiry, type PurchaseDef } from "../cost-engine";
 import { shareFor } from "../beneficiaries/service";
 import { toEnginePayments, toEngineSub } from "../subscriptions/service";
-import type { Purchase } from "@/generated/prisma/client";
+import type { Purchase, PurchaseEvent } from "@/generated/prisma/client";
+
+/** 含事件的物品 */
+type PurchaseWithEvents = Purchase & { events?: PurchaseEvent[] };
 
 export interface PurchaseInput {
   name: string;
@@ -16,9 +19,11 @@ export interface PurchaseInput {
   expectedDays?: number;
 }
 
-export function toEnginePurchase(p: Purchase): PurchaseDef {
+export function toEnginePurchase(p: PurchaseWithEvents): PurchaseDef {
   return {
     amountBase: p.amountBase,
+    extraBase: p.events?.reduce((s, e) => s + e.amountBase, 0) || undefined,
+    extraDays: p.events?.reduce((s, e) => s + (e.extendDays ?? 0), 0) || undefined,
     resaleBase: p.resaleBase ?? undefined,
     purchaseDate: p.purchaseDate,
     expectedDays: p.expectedDays ?? undefined,
@@ -42,15 +47,16 @@ export async function createPurchase(ownerId: string, input: PurchaseInput): Pro
   });
 }
 
-export async function listPurchases(ownerId: string): Promise<Purchase[]> {
+export async function listPurchases(ownerId: string): Promise<PurchaseWithEvents[]> {
   return prisma.purchase.findMany({
     where: { ownerId, archived: false },
+    include: { events: true },
     orderBy: { purchaseDate: "desc" },
   });
 }
 
-export async function getPurchase(ownerId: string, id: string): Promise<Purchase | null> {
-  return prisma.purchase.findFirst({ where: { id, ownerId } });
+export async function getPurchase(ownerId: string, id: string): Promise<PurchaseWithEvents | null> {
+  return prisma.purchase.findFirst({ where: { id, ownerId }, include: { events: true } });
 }
 
 /** 物品作为受益实体分担的订阅成本行 */
@@ -59,8 +65,12 @@ export interface SubscriptionShareLine {
   name: string;
   /** 该物品在订阅中的份额（0–1） */
   share: number;
-  /** 持有期内的份额成本（段按重叠天数折算） */
+  /** 与持有期重叠的成本段 × 份额（段全额计入） */
   amount: number;
+  /** 订阅当前到期日（无记录推算不出为 null） */
+  expiry: Date | null;
+  /** 订阅当日费率 × 份额（主币种/天） */
+  dailyRateShare: number;
 }
 
 /** 物品 TCO 的订阅部分：与持有期重叠的成本段 × 份额（段全额计入——该份额是既成义务，不按天折算） */
@@ -93,7 +103,14 @@ export async function subscriptionShareCost(
       // 与持有期有交集即整段计入
       if (seg.start < holdingEnd && holdingStart < seg.end) amount += seg.net;
     }
-    lines.push({ subscriptionId: sub.id, name: sub.name, share, amount: amount * share });
+    lines.push({
+      subscriptionId: sub.id,
+      name: sub.name,
+      share,
+      amount: amount * share,
+      expiry: currentExpiry(toEngineSub(sub), toEnginePayments(sub.payments), today),
+      dailyRateShare: currentDailyRate(toEngineSub(sub), toEnginePayments(sub.payments), today) * share,
+    });
   }
   return lines;
 }
@@ -175,6 +192,74 @@ export async function setPurchaseArchived(ownerId: string, id: string, archived:
 /** 硬删除物品（受益人/收益级联删除，不可恢复） */
 export async function deletePurchase(ownerId: string, id: string): Promise<void> {
   await prisma.purchase.deleteMany({ where: { id, ownerId } });
+}
+
+/** 追加费用事件（配件/维修等）：计入净额共用摊销窗口；维修可延长寿命 */
+export async function addPurchaseEvent(
+  ownerId: string,
+  purchaseId: string,
+  input: {
+    kind: "ACCESSORY" | "REPAIR" | "OTHER";
+    amount: number;
+    currency?: string;
+    amountBase?: number;
+    date: Date;
+    extendDays?: number;
+    note?: string;
+  },
+): Promise<PurchaseEvent> {
+  const p = await prisma.purchase.findFirst({ where: { id: purchaseId, ownerId } });
+  if (!p) throw new Error("物品不存在 purchase_not_found");
+  return prisma.purchaseEvent.create({
+    data: {
+      purchaseId,
+      kind: input.kind,
+      amount: input.amount,
+      currency: input.currency ?? "CNY",
+      amountBase: input.amountBase ?? input.amount,
+      date: input.date,
+      extendDays: input.extendDays,
+      note: input.note,
+    },
+  });
+}
+
+export async function updatePurchaseEvent(
+  ownerId: string,
+  eventId: string,
+  input: {
+    kind?: "ACCESSORY" | "REPAIR" | "OTHER";
+    amount?: number;
+    amountBase?: number;
+    date?: Date;
+    extendDays?: number | null;
+    note?: string | null;
+  },
+): Promise<void> {
+  await prisma.purchaseEvent.updateMany({
+    where: { id: eventId, purchase: { ownerId } },
+    data: {
+      ...(input.kind !== undefined && { kind: input.kind }),
+      ...(input.amount !== undefined && { amount: input.amount }),
+      ...(input.amountBase !== undefined && { amountBase: input.amountBase }),
+      ...(input.date !== undefined && { date: input.date }),
+      ...(input.extendDays !== undefined && { extendDays: input.extendDays }),
+      ...(input.note !== undefined && { note: input.note }),
+    },
+  });
+}
+
+export async function deletePurchaseEvent(ownerId: string, eventId: string): Promise<void> {
+  await prisma.purchaseEvent.deleteMany({
+    where: { id: eventId, purchase: { ownerId } },
+  });
+}
+
+export async function listPurchaseEvents(purchaseId: string): Promise<PurchaseEvent[]> {
+  return prisma.purchaseEvent.findMany({
+    where: { purchaseId },
+    orderBy: { date: "asc" },
+  });
 }
 
 /** 编辑收益记录 */

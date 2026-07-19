@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "../auth/session";
 import {
+  addPurchaseEvent,
   addPurchaseIncome,
+  deletePurchaseEvent,
+  updatePurchaseEvent,
   closePurchase,
   createPurchase,
   deletePurchase,
@@ -133,4 +136,53 @@ export async function updatePurchaseIncomeAction(purchaseId: string, incomeId: s
   });
   revalidatePath(`/purchases/${purchaseId}`);
   redirect(`/purchases/${purchaseId}/incomes?${formData.get("back") ?? ""}`);
+}
+
+export async function addPurchaseEventAction(purchaseId: string, formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const amount = Number(formData.get("amount"));
+  if (!Number.isFinite(amount) || amount <= 0) redirect(`/purchases/${purchaseId}`);
+  await addPurchaseEvent(user.id, purchaseId, {
+    kind: String(formData.get("kind") ?? "OTHER") as "ACCESSORY" | "REPAIR" | "OTHER",
+    amount,
+    currency: String(formData.get("currency") ?? "CNY"),
+    amountBase: parseNum(formData.get("amountBase")) ?? amount,
+    date: parseDate(formData.get("date")),
+    extendDays: parseNum(formData.get("extendDays")),
+    note: String(formData.get("note") ?? "") || undefined,
+  });
+  revalidatePath(`/purchases/${purchaseId}`);
+  revalidatePath("/purchases");
+  revalidatePath("/dashboard");
+  redirect(`/purchases/${purchaseId}`);
+}
+
+export async function updatePurchaseEventAction(purchaseId: string, eventId: string, formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const amount = Number(formData.get("amount"));
+  if (!Number.isFinite(amount) || amount <= 0) redirect(`/purchases/${purchaseId}`);
+  await updatePurchaseEvent(user.id, eventId, {
+    kind: String(formData.get("kind") ?? "OTHER") as "ACCESSORY" | "REPAIR" | "OTHER",
+    amount,
+    amountBase: parseNum(formData.get("amountBase")) ?? amount,
+    date: parseDate(formData.get("date")),
+    extendDays: parseNum(formData.get("extendDays")) ?? null,
+    note: String(formData.get("note") ?? "") || null,
+  });
+  revalidatePath(`/purchases/${purchaseId}`);
+  revalidatePath("/purchases");
+  revalidatePath("/dashboard");
+  redirect(`/purchases/${purchaseId}`);
+}
+
+export async function deletePurchaseEventAction(purchaseId: string, eventId: string) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await deletePurchaseEvent(user.id, eventId);
+  revalidatePath(`/purchases/${purchaseId}`);
+  revalidatePath("/purchases");
+  revalidatePath("/dashboard");
+  redirect(`/purchases/${purchaseId}`);
 }
