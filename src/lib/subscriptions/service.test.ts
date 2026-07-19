@@ -5,6 +5,7 @@ import { prisma } from "../db";
 import { currentExpiry, costSegments } from "../cost-engine";
 import {
   createSubscription,
+  deletePayment,
   getSubscription,
   listSubscriptions,
   paymentPrefill,
@@ -12,6 +13,7 @@ import {
   setStatus,
   toEnginePayments,
   toEngineSub,
+  updatePayment,
 } from "./service";
 
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
@@ -144,5 +146,36 @@ describe("付费记录（ADR-0001 记录驱动）", () => {
     expect((await getSubscription(ownerId, sub.id))!.status).toBe("CANCELLED");
     await setStatus(ownerId, sub.id, "ARCHIVED");
     expect((await getSubscription(ownerId, sub.id))!.status).toBe("ARCHIVED");
+  });
+});
+
+describe("付费记录编辑与删除", () => {
+  it("编辑记录：补登退款与修改区间，锚点按最新最大止期重算", async () => {
+    const sub = await createSubscription(ownerId, cycleInput);
+    const p1 = await recordPayment(ownerId, sub.id, {
+      amount: 148, currency: "CNY", amountBase: 148,
+      paidAt: d("2026-01-22"), periodStart: d("2026-01-22"), periodEnd: d("2027-01-22"), source: "AUTO",
+    });
+    await updatePayment(ownerId, p1.id, { refundedBase: 100, periodEnd: d("2026-05-01") });
+    const fresh = await getSubscription(ownerId, sub.id);
+    expect(fresh!.payments[0].refundedBase).toBe(100);
+    expect(fresh!.payments[0].periodEnd).toEqual(d("2026-05-01"));
+    expect(fresh!.anchorDate).toEqual(d("2026-05-01"));
+  });
+
+  it("删除记录后锚点回退到剩余记录的最大止期", async () => {
+    const sub = await createSubscription(ownerId, cycleInput);
+    await recordPayment(ownerId, sub.id, {
+      amount: 148, currency: "CNY", amountBase: 148,
+      paidAt: d("2026-01-22"), periodStart: d("2026-01-22"), periodEnd: d("2027-01-22"), source: "AUTO",
+    });
+    const p2 = await recordPayment(ownerId, sub.id, {
+      amount: 108, currency: "CNY", amountBase: 108,
+      paidAt: d("2027-01-10"), periodStart: d("2027-01-22"), periodEnd: d("2028-01-22"), source: "PROMO",
+    });
+    await deletePayment(ownerId, p2.id);
+    const fresh = await getSubscription(ownerId, sub.id);
+    expect(fresh!.payments).toHaveLength(1);
+    expect(fresh!.anchorDate).toEqual(d("2027-01-22"));
   });
 });

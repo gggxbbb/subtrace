@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Kpi, Led, Panel, fmt, fmtDate } from "@/components/te";
+import { Kpi, Panel, fmt, fmtDate } from "@/components/te";
 import { getCurrentUser } from "@/lib/auth/session";
 import { currentDailyRate, currentExpiry, dayDiff } from "@/lib/cost-engine";
 import {
@@ -10,13 +10,7 @@ import {
 } from "@/lib/subscriptions/service";
 import { setStatusAction } from "@/lib/subscriptions/actions";
 import { PaymentForm } from "./PaymentForm";
-
-const SOURCE_LABEL: Record<string, string> = {
-  AUTO: "自动扣费",
-  MANUAL: "手动续费",
-  PROMO: "活动价",
-  BUNDLE: "联合会员",
-};
+import { PaymentHistory, type HistoryPayment } from "./PaymentHistory";
 
 export default async function SubscriptionDetailPage({
   params,
@@ -95,30 +89,21 @@ export default async function SubscriptionDetailPage({
           </Panel>
 
           <Panel index="02" title={`付费历史 / ${sub.payments.length}`}>
-            {sub.payments.length === 0 && (
-              <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
-                还没有付费记录
-              </div>
-            )}
-            {[...sub.payments].reverse().map((p) => (
-              <div key={p.id} className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 last:border-0">
-                <div>
-                  <div className="text-[13px] font-medium">
-                    {fmt(p.amountBase)}
-                    {p.refundedBase > 0 && (
-                      <span className="ml-2 text-[10px] text-neutral-400 f-mono">
-                        退 {fmt(p.refundedBase)} · 净 {fmt(p.amountBase - p.refundedBase)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[9px] uppercase tracking-wider text-neutral-400 f-mono">
-                    {fmtDate(p.periodStart)} → {fmtDate(p.periodEnd)} · {SOURCE_LABEL[p.source] ?? p.source}
-                    {p.note ? ` · ${p.note}` : ""}
-                  </div>
-                </div>
-                <Led color={p.source === "PROMO" ? "#FF5A00" : "#22c55e"} />
-              </div>
-            ))}
+            <PaymentHistory
+              subscriptionId={sub.id}
+              payments={[...sub.payments].reverse().map((p): HistoryPayment => ({
+                id: p.id,
+                amount: p.amount,
+                currency: p.currency,
+                amountBase: p.amountBase,
+                refundedBase: p.refundedBase,
+                paidAt: p.paidAt.toISOString().slice(0, 10),
+                periodStart: p.periodStart.toISOString().slice(0, 10),
+                periodEnd: p.periodEnd.toISOString().slice(0, 10),
+                source: p.source,
+                note: p.note,
+              }))}
+            />
           </Panel>
         </div>
       </div>

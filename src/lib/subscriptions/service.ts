@@ -156,6 +156,57 @@ export async function recordPayment(
   return payment;
 }
 
+/** 重算锚点：周期模式订阅的锚定日期 = 剩余付费记录的最大止期，无记录时回退起始日 */
+async function recomputeAnchor(subscriptionId: string) {
+  const sub = await prisma.subscription.findUniqueOrThrow({
+    where: { id: subscriptionId },
+    include: { payments: true },
+  });
+  if (sub.trackingMode !== "CYCLE") return;
+  const anchor =
+    sub.payments.length > 0
+      ? sub.payments.reduce((max, p) => (p.periodEnd > max ? p.periodEnd : max), sub.payments[0].periodEnd)
+      : sub.startDate;
+  await prisma.subscription.update({ where: { id: subscriptionId }, data: { anchorDate: anchor } });
+}
+
+/** 编辑付费记录（补登退款、修正区间等），周期模式锚点按最新最大止期重算 */
+export async function updatePayment(
+  ownerId: string,
+  paymentId: string,
+  input: Partial<PaymentInput>,
+): Promise<void> {
+  const payment = await prisma.payment.findFirst({
+    where: { id: paymentId, subscription: { ownerId } },
+  });
+  if (!payment) throw new Error("付费记录不存在 payment_not_found");
+  await prisma.payment.update({
+    where: { id: paymentId },
+    data: {
+      amount: input.amount,
+      currency: input.currency,
+      amountBase: input.amountBase,
+      refundedBase: input.refundedBase,
+      paidAt: input.paidAt,
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      source: input.source,
+      note: input.note,
+    },
+  });
+  await recomputeAnchor(payment.subscriptionId);
+}
+
+/** 删除付费记录，锚点回退到剩余记录的最大止期 */
+export async function deletePayment(ownerId: string, paymentId: string): Promise<void> {
+  const payment = await prisma.payment.findFirst({
+    where: { id: paymentId, subscription: { ownerId } },
+  });
+  if (!payment) return;
+  await prisma.payment.delete({ where: { id: paymentId } });
+  await recomputeAnchor(payment.subscriptionId);
+}
+
 /** 新付费的预填区间：从最后止期（或锚定日期）起一个周期，金额为标准价 */
 export function paymentPrefill(
   sub: Subscription,

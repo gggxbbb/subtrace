@@ -5,8 +5,10 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "../auth/session";
 import {
   createSubscription,
+  deletePayment,
   recordPayment,
   setStatus,
+  updatePayment,
   type PaymentInput,
   type SubscriptionInput,
 } from "./service";
@@ -90,4 +92,41 @@ export async function setStatusAction(
   revalidatePath("/subscriptions");
   revalidatePath("/dashboard");
   redirect("/subscriptions");
+}
+
+const paymentInputFrom = (formData: FormData): PaymentInput => {
+  const amount = Number(formData.get("amount"));
+  return {
+    amount,
+    currency: String(formData.get("currency") ?? "CNY"),
+    amountBase: parseNum(formData.get("amountBase")) ?? amount,
+    refundedBase: parseNum(formData.get("refundedBase")) ?? 0,
+    paidAt: parseDate(formData.get("paidAt")),
+    periodStart: parseDate(formData.get("periodStart")),
+    periodEnd: parseDate(formData.get("periodEnd")),
+    source: String(formData.get("source") ?? "MANUAL") as PaymentInput["source"],
+    note: String(formData.get("note") ?? "") || undefined,
+  };
+};
+
+export async function updatePaymentAction(
+  subscriptionId: string,
+  paymentId: string,
+  formData: FormData,
+) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await updatePayment(user.id, paymentId, paymentInputFrom(formData));
+  revalidatePath(`/subscriptions/${subscriptionId}`);
+  revalidatePath("/dashboard");
+  redirect(`/subscriptions/${subscriptionId}`);
+}
+
+export async function deletePaymentAction(subscriptionId: string, paymentId: string) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await deletePayment(user.id, paymentId);
+  revalidatePath(`/subscriptions/${subscriptionId}`);
+  revalidatePath("/dashboard");
+  redirect(`/subscriptions/${subscriptionId}`);
 }
