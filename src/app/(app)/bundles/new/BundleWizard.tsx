@@ -55,6 +55,19 @@ export function BundleWizard({
 
   const [bundleStart, setBundleStart] = useState(today);
   const [bundleEnd, setBundleEnd] = useState(nextYear);
+  const [bundlePlusDays, setBundlePlusDays] = useState("");
+
+  const applyBundlePlusDays = (v: string) => {
+    setBundlePlusDays(v);
+    const n = Number(v);
+    if (Number.isFinite(n) && v.trim() !== "" && bundleStart) {
+      setBundleEnd(
+        new Date(new Date(`${bundleStart}T00:00:00Z`).getTime() + n * 86_400_000)
+          .toISOString()
+          .slice(0, 10),
+      );
+    }
+  };
 
   const applyPlusDays = (i: number, v: string) => {
     const it = items[i];
@@ -105,7 +118,31 @@ export function BundleWizard({
         </div>
         <div>
           <label className={labelCls}>权益止</label>
-          <input name="periodEnd" type="date" value={bundleEnd} onChange={(e) => setBundleEnd(e.target.value)} required className={`${inputCls} f-mono`} />
+          <div className="flex border border-black bg-[#E4E3E0] focus-within:bg-white">
+            <input
+              name="periodEnd"
+              type="date"
+              value={bundleEnd}
+              onChange={(e) => {
+                setBundleEnd(e.target.value);
+                setBundlePlusDays("");
+              }}
+              required
+              className="w-full bg-transparent px-2 py-1.5 text-sm outline-none f-mono"
+            />
+            <span className="flex items-center border-l border-black px-2 text-sm text-neutral-500 f-mono">
+              +
+            </span>
+            <input
+              type="number"
+              min="1"
+              placeholder="N 天"
+              value={bundlePlusDays}
+              onChange={(e) => applyBundlePlusDays(e.target.value)}
+              className="w-20 shrink-0 bg-transparent px-1 py-1.5 text-sm outline-none f-mono"
+              title="权益止 = 权益起 + N 天"
+            />
+          </div>
         </div>
       </div>
 
