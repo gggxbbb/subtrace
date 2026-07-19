@@ -135,9 +135,10 @@ export default function NewSubscriptionPage() {
           </p>
         </div>
 
+        {mode === "CYCLE" && (
         <div className="border border-black">
           <label className="flex items-center gap-2 border-b border-black bg-[#E4E3E0] px-3 py-2 text-[12px]">
-            <input type="checkbox" name="firstPayment" defaultChecked={mode === "CYCLE"} className="h-4 w-4 accent-black" />
+            <input type="checkbox" name="firstPayment" defaultChecked className="h-4 w-4 accent-black" />
             <span>
               <strong>同时记一笔付费</strong>
               <span className="ml-1 text-[10px] text-neutral-500">推荐：到期日与成本立刻以实付为准，不再靠推算</span>
@@ -168,11 +169,12 @@ export default function NewSubscriptionPage() {
               <label className={labelCls}>服务止（到期日）</label>
               <input name="firstPeriodEnd" type="date" className={`${inputCls} f-mono`} />
               <p className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
-                {mode === "CYCLE" ? "留空 = 服务起 + 一个周期" : "手动模式必填"}
+                留空 = 服务起 + 一个周期
               </p>
             </div>
           </div>
         </div>
+        )}
 
         <button className="w-full bg-black py-2.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800">
           创建 →
