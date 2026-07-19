@@ -60,8 +60,10 @@ model Subscription {
   status       SubStatus @default(ACTIVE)   // ACTIVE | CANCELLED（到期即止）| ARCHIVED
   startDate    DateTime
 
-  bundleId String?                          // 所属联合会员
+  bundleId String?                          // 所属联合会员（新建子会员时）
   bundle   Bundle?  @relation(fields: [bundleId], references: [id])
+  // 归属关系主要挂在 Payment.bundleId：已有订阅被关联进联合会员时，
+  // 向其追加 source=BUNDLE 的付费记录（同一订阅可多次参与）
 
   // 用量盈亏（可量化订阅）
   usageUnit    String?                      // 次 / 小时 / GB
@@ -90,6 +92,8 @@ model Payment {                             // 付费记录（一等实体）
   periodStart    DateTime   // 服务区间 [start, end)
   periodEnd      DateTime   // = 到期日的唯一事实源
   source         PaySource  // AUTO | MANUAL | PROMO | BUNDLE
+  bundleId       String?    // BUNDLE 来源时指向联合会员（已有订阅被关联时也是这条路径）
+  bundle         Bundle?  @relation(fields: [bundleId], references: [id])
   note           String?
 }
 
