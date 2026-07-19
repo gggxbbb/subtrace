@@ -16,6 +16,7 @@ import {
   type SubscriptionWithPayments,
 } from "./subscriptions/service";
 import { listPurchases, toEnginePurchase } from "./purchases/service";
+import { getUsageVerdict, listUsage } from "./usage/service";
 
 export interface DashboardRow {
   id: string;
@@ -48,6 +49,13 @@ export interface PurchaseRow {
   status: string;
 }
 
+export interface UsageBoardRow {
+  id: string;
+  name: string;
+  detail: string;
+  verdictAmount: number;
+}
+
 export interface DashboardData {
   totalDailyCost: number;
   totalMonthlyCost: number;
@@ -57,6 +65,7 @@ export interface DashboardData {
   rows: DashboardRow[];
   upcoming: UpcomingItem[];
   purchases: PurchaseRow[];
+  usageBoard: UsageBoardRow[];
   itemDailyCost: number;
   trend: number[];
 }
@@ -123,6 +132,20 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   const itemDailyCost = purchases.reduce((s, p) => s + p.dailyCost, 0);
   const totalDailyCost = active.reduce((s, r) => s + r.dailyCost, 0) + itemDailyCost;
 
+  // 用量红黑榜：配置了用量的订阅按当前区间盈亏排序
+  const usageBoard: UsageBoardRow[] = [];
+  for (const sub of subs.filter((s) => s.usageKind && s.altUnitPrice != null)) {
+    const v = getUsageVerdict(sub, await listUsage(sub.id), today);
+    if (!v) continue;
+    usageBoard.push({
+      id: sub.id,
+      name: sub.name,
+      detail: `${v.usage} ${sub.usageUnit ?? ""} × ${v.value > 0 && v.usage > 0 ? (v.value / v.usage).toFixed(2) : sub.altUnitPrice} − ${v.cost.toFixed(2)}`,
+      verdictAmount: v.verdictAmount,
+    });
+  }
+  usageBoard.sort((a, b) => b.verdictAmount - a.verdictAmount);
+
   const upcoming: UpcomingItem[] = subs
     .filter((s) => s.status === "ACTIVE")
     .map((sub): UpcomingItem | null => {
@@ -174,6 +197,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     rows,
     upcoming,
     purchases,
+    usageBoard,
     itemDailyCost,
     trend,
   };

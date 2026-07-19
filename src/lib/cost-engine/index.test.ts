@@ -15,6 +15,7 @@ import {
   segmentDailyRate,
   shareOf,
   usageInPeriod,
+  usageValue,
   verdict,
   type CycleSpec,
   type PaymentRec,
@@ -317,5 +318,22 @@ describe("用量聚合", () => {
   it("有快照时以快照为准，不再叠加增量", () => {
     const records = [rec("2026-07-02", 3), rec("2026-07-15", 50, "TOTAL")];
     expect(usageInPeriod(records, d("2026-07-01"), d("2026-08-01"))).toBe(50);
+  });
+});
+
+describe("用量价值（单价跟记录走）", () => {
+  const rec = (date: string, quantity: number, unitPrice?: number, kind: "DELTA" | "TOTAL" = "DELTA") => ({
+    date: d(date), quantity, kind, unitPrice,
+  });
+
+  it("每条记录可按本次单价计价，空单价回退默认替代单价", () => {
+    const records = [rec("2026-07-01", 1, 30), rec("2026-07-10", 1, 40), rec("2026-07-12", 1)];
+    // 30 + 40 + 25（默认）
+    expect(usageValue(records, d("2026-07-01"), d("2026-08-01"), 25)).toBeCloseTo(95);
+  });
+
+  it("额度型快照也按快照上的本次单价计", () => {
+    const records = [rec("2026-07-15", 800, 0.12, "TOTAL")];
+    expect(usageValue(records, d("2026-07-01"), d("2026-08-01"), 0.1)).toBeCloseTo(96);
   });
 });

@@ -117,3 +117,16 @@ describe("额度型用量", () => {
     expect(v!.value).toBeCloseTo(96);
   });
 });
+
+describe("记录级单价", () => {
+  it("不同记录不同本次单价：30×1 + 40×1 + 默认 30×1 = 100", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次", altUnitPrice: 30 });
+    await addUsage(ownerId, sub.id, ownerId, { date: d("2026-07-01"), quantity: 1, unitPrice: 30 });
+    await addUsage(ownerId, sub.id, ownerId, { date: d("2026-07-05"), quantity: 1, unitPrice: 40 });
+    await addUsage(ownerId, sub.id, ownerId, { date: d("2026-07-08"), quantity: 1 });
+    const v = getUsageVerdict((await getSubscription(ownerId, sub.id))!, await listUsage(sub.id), d("2026-07-18"));
+    expect(v!.value).toBeCloseTo(100);
+    expect(v!.verdictAmount).toBeCloseTo(100 - 217);
+  });
+});

@@ -254,3 +254,24 @@ export function usageInPeriod(records: UsageEntry[], start: Date, end: Date): nu
   }
   return inRange.reduce((s, r) => s + r.quantity, 0);
 }
+
+/**
+ * 区间 [start, end) 内的用量价值 = Σ 用量 × 单价。
+ * 单价跟记录走：记录上的本次单价优先，空则回退默认替代单价（ADR 货币快照哲学：记录即事实）。
+ */
+export function usageValue(
+  records: (UsageEntry & { unitPrice?: number })[],
+  start: Date,
+  end: Date,
+  defaultUnitPrice: number,
+): number {
+  const inRange = records.filter(
+    (r) => dayDiff(start, r.date) >= 0 && dayDiff(r.date, end) > 0,
+  );
+  const snapshots = inRange.filter((r) => r.kind === "TOTAL");
+  if (snapshots.length > 0) {
+    const latest = snapshots.reduce((l, r) => (r.date > l.date ? r : l));
+    return latest.quantity * (latest.unitPrice ?? defaultUnitPrice);
+  }
+  return inRange.reduce((s, r) => s + r.quantity * (r.unitPrice ?? defaultUnitPrice), 0);
+}

@@ -17,8 +17,9 @@ const parseDate = (v: FormDataEntryValue | null) =>
   new Date(`${String(v)}T00:00:00Z`);
 
 const parseNum = (v: FormDataEntryValue | null) => {
+  if (v == null || String(v).trim() === "") return undefined;
   const n = Number(v);
-  return Number.isFinite(n) && String(v).trim() !== "" ? n : undefined;
+  return Number.isFinite(n) ? n : undefined;
 };
 
 export async function createSubscriptionAction(formData: FormData) {

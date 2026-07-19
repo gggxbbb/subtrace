@@ -106,7 +106,7 @@ export default async function DashboardPage() {
           </div>
         </Panel>
 
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <Panel index="03" title="即将到期" action="全部" href="/subscriptions">            {d.upcoming.length === 0 && (
               <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
                 未来 30 天没有到期订阅
@@ -150,9 +150,29 @@ export default async function DashboardPage() {
               </div>
             ))}
           </Panel>
+
+          <Panel index="04" title="用量盈亏红黑榜" action="本区间">
+            {d.usageBoard.length === 0 && (
+              <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
+                还没有配置用量追踪的订阅
+              </div>
+            )}
+            {d.usageBoard.map((u) => (
+              <a key={u.id} href={`/subscriptions/${u.id}`} className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 last:border-0 hover:bg-black/[0.03]">
+                <div>
+                  <div className="text-[13px] font-medium">{u.name}</div>
+                  <div className="text-[9px] text-neutral-400 f-mono">{u.detail}</div>
+                </div>
+                <span className="flex items-center gap-1.5 text-sm font-bold tabular-nums f-mono">
+                  {u.verdictAmount >= 0 ? "+" : "−"}{fmt(Math.abs(u.verdictAmount))}
+                  <Led color={u.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
+                </span>
+              </a>
+            ))}
+          </Panel>
         </div>
 
-        <Panel index="04" title="物品回本进度" action="物品" href="/purchases">
+        <Panel index="05" title="物品回本进度" action="物品" href="/purchases">
           {d.purchases.length === 0 && (
             <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
               还没有登记物品
@@ -185,7 +205,7 @@ export default async function DashboardPage() {
           </div>
         </Panel>
 
-        <Panel index="05" title="订阅明细" action="管理" href="/subscriptions">
+        <Panel index="06" title="订阅明细" action="管理" href="/subscriptions">
           <table className="w-full text-[13px]">
             <thead>
               <tr className="border-b border-black text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">

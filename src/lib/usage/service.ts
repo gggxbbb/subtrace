@@ -5,6 +5,7 @@ import {
   actualCostPerUse,
   costSegments,
   usageInPeriod,
+  usageValue,
   verdict,
 } from "../cost-engine";
 import {
@@ -37,35 +38,36 @@ export async function setUsageConfig(
   });
 }
 
-/** 计数型：逐条录入用量 */
+/** 计数型：逐条录入用量（本次单价可选，默认继承订阅替代单价） */
 export async function addUsage(
   ownerId: string,
   subscriptionId: string,
   userId: string,
-  input: { date: Date; quantity: number },
+  input: { date: Date; quantity: number; unitPrice?: number },
 ): Promise<UsageRecord> {
   await assertOwned(ownerId, subscriptionId);
   return prisma.usageRecord.create({
-    data: { subscriptionId, userId, date: input.date, quantity: input.quantity, kind: "DELTA" },
+    data: { subscriptionId, userId, date: input.date, quantity: input.quantity, unitPrice: input.unitPrice, kind: "DELTA" },
   });
 }
 
-/** 额度型：录入已用量或百分比（百分比按总额度折算），存累计快照 */
+/** 额度型：录入已用量或百分比（百分比按当月总额度折算），单价/总额度可选快照 */
 export async function addQuotaSnapshot(
   ownerId: string,
   subscriptionId: string,
   userId: string,
-  input: { date: Date; used?: number; percent?: number },
+  input: { date: Date; used?: number; percent?: number; unitPrice?: number; quotaTotal?: number },
 ): Promise<UsageRecord> {
   const sub = await assertOwned(ownerId, subscriptionId);
+  const quotaTotal = input.quotaTotal ?? sub.quotaTotal;
   let quantity = input.used;
   if (quantity == null && input.percent != null) {
-    if (!sub.quotaTotal) throw new Error("未设置总额度 quota_total_required");
-    quantity = (input.percent / 100) * sub.quotaTotal;
+    if (!quotaTotal) throw new Error("需要当月总额度 quota_total_required");
+    quantity = (input.percent / 100) * quotaTotal;
   }
   if (quantity == null) throw new Error("需要已用量或百分比 usage_required");
   return prisma.usageRecord.create({
-    data: { subscriptionId, userId, date: input.date, quantity, kind: "TOTAL" },
+    data: { subscriptionId, userId, date: input.date, quantity, unitPrice: input.unitPrice, quotaTotal, kind: "TOTAL" },
   });
 }
 
@@ -116,14 +118,24 @@ export function getUsageVerdict(
     covering.start,
     covering.end,
   );
-  const value = usage * sub.altUnitPrice;
+  const value = usageValue(
+    records.map((r) => ({
+      date: r.date,
+      quantity: r.quantity,
+      kind: r.kind as "DELTA" | "TOTAL",
+      unitPrice: r.unitPrice ?? undefined,
+    })),
+    covering.start,
+    covering.end,
+    sub.altUnitPrice ?? 0,
+  );
   return {
     periodStart: covering.start,
     periodEnd: covering.end,
     cost: covering.net,
     usage,
     value,
-    verdictAmount: verdict(covering.net, usage, sub.altUnitPrice),
+    verdictAmount: value - covering.net,
     costPerUse: actualCostPerUse(covering.net, usage),
   };
 }

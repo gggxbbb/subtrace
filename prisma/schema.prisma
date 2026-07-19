@@ -90,6 +90,10 @@ model UsageRecord {
   quantity       Float
   /// DELTA（增量，计数型）| TOTAL（累计快照，额度型）
   kind           String       @default("DELTA")
+  /// 本次单价（主币种快照）；为空用订阅默认替代单价
+  unitPrice      Float?
+  /// 额度型：当月总额度（快照）；为空用订阅默认
+  quotaTotal     Float?
   /// MANUAL | SCRIPT
   source         String       @default("MANUAL")
   createdAt      DateTime     @default(now())

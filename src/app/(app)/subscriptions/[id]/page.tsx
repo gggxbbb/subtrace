@@ -9,8 +9,14 @@ import {
   toEngineSub,
 } from "@/lib/subscriptions/service";
 import { setStatusAction } from "@/lib/subscriptions/actions";
+import { getUsageVerdict, listUsage } from "@/lib/usage/service";
 import { PaymentForm } from "./PaymentForm";
 import { PaymentHistory, type HistoryPayment } from "./PaymentHistory";
+import {
+  UsageEntryPanel,
+  UsageVerdictPanel,
+  type UsageRecordRow,
+} from "./UsagePanel";
 
 export default async function SubscriptionDetailPage({
   params,
@@ -37,6 +43,28 @@ export default async function SubscriptionDetailPage({
     amount: prefillRaw.amountBase,
     currency: sub.listCurrency ?? "CNY",
   };
+
+  const usageRecords = sub.usageKind ? await listUsage(sub.id) : [];
+  const v = sub.usageKind ? getUsageVerdict(sub, usageRecords, today) : null;
+  const usageRecordRows: UsageRecordRow[] = usageRecords.map((r) => ({
+    id: r.id,
+    date: r.date.toISOString().slice(0, 10),
+    quantity: r.quantity,
+    kind: r.kind,
+    unitPrice: r.unitPrice,
+    quotaTotal: r.quotaTotal,
+  }));
+  const verdictData = v
+    ? {
+        periodStart: iso(v.periodStart),
+        periodEnd: iso(v.periodEnd),
+        cost: v.cost,
+        usage: v.usage,
+        value: v.value,
+        verdictAmount: v.verdictAmount,
+        costPerUse: v.costPerUse,
+      }
+    : null;
 
   return (
     <>
@@ -103,6 +131,27 @@ export default async function SubscriptionDetailPage({
                 source: p.source,
                 note: p.note,
               }))}
+            />
+          </Panel>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Panel index="03" title="用量录入">
+            <UsageEntryPanel
+              subscriptionId={sub.id}
+              usageKind={(sub.usageKind as "COUNT" | "QUOTA" | null) ?? null}
+              usageUnit={sub.usageUnit}
+              defaultUnitPrice={sub.altUnitPrice}
+              defaultQuotaTotal={sub.quotaTotal}
+              records={usageRecordRows}
+            />
+          </Panel>
+          <Panel index="04" title="盈亏 · 当前区间">
+            <UsageVerdictPanel
+              verdict={verdictData}
+              usageUnit={sub.usageUnit}
+              subscriptionId={sub.id}
+              records={usageRecordRows}
             />
           </Panel>
         </div>
