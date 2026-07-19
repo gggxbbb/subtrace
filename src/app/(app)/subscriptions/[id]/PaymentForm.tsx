@@ -48,8 +48,8 @@ export function PaymentForm({
       )}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={labelCls}>实付金额</label>
-          <input name="amount" type="number" step="0.01" min="0" defaultValue={prefill.amount ?? undefined} required className={inputCls} />
+          <label className={labelCls}>实付金额（留空 = 金额未知，只记区间）</label>
+          <input name="amount" type="number" step="0.01" min="0" defaultValue={prefill.amount ?? undefined} className={inputCls} />
         </div>
         <div>
           <label className={labelCls}>币种</label>
@@ -57,7 +57,7 @@ export function PaymentForm({
         </div>
       </div>
       <div>
-        <label className={labelCls}>折算主币种金额（快照，默认同实付）</label>
+        <label className={labelCls}>折算主币种金额（快照，默认同实付；实付留空则同未知）</label>
         <input name="amountBase" type="number" step="0.01" min="0" placeholder="留空 = 实付金额" className={inputCls} />
       </div>
       <div className="grid grid-cols-2 gap-4">

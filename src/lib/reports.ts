@@ -123,7 +123,7 @@ export async function getReportData(
   for (const sub of subs.filter((s) => s.ownerId === userId)) {
     for (const p of sub.payments) {
       const ms = atUtc(p.paidAt);
-      if (ms >= startMs && ms < endMs) totalPaid += p.amountBase - p.refundedBase;
+      if (ms >= startMs && ms < endMs) totalPaid += (p.amountBase ?? 0) - p.refundedBase;
     }
   }
   for (const p of purchases) {

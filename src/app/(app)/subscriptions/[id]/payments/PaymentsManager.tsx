@@ -25,9 +25,9 @@ const fmtMoney = (n: number) =>
 
 export interface PaymentRow {
   id: string;
-  amount: number;
-  currency: string;
-  amountBase: number;
+  amount: number | null;
+  currency: string | null;
+  amountBase: number | null;
   refundedBase: number;
   paidAt: string;
   periodStart: string;
@@ -45,7 +45,7 @@ function PaymentFields({ row, defaultCurrency }: { row?: PaymentRow; defaultCurr
       <div className="grid grid-cols-4 gap-2">
         <div>
           <label className={labelCls}>实付</label>
-          <input name="amount" type="number" step="0.01" min="0" defaultValue={row?.amount} required className={inputCls} />
+          <input name="amount" type="number" step="0.01" min="0" defaultValue={row?.amount ?? ""} placeholder="留空 = 未知" className={inputCls} />
         </div>
         <div>
           <label className={labelCls}>币种</label>
@@ -53,7 +53,7 @@ function PaymentFields({ row, defaultCurrency }: { row?: PaymentRow; defaultCurr
         </div>
         <div>
           <label className={labelCls}>折算主币种</label>
-          <input name="amountBase" type="number" step="0.01" min="0" defaultValue={row?.amountBase} placeholder="默认同实付" className={inputCls} />
+          <input name="amountBase" type="number" step="0.01" min="0" defaultValue={row?.amountBase ?? ""} placeholder="留空 = 未知" className={inputCls} />
         </div>
         <div>
           <label className={labelCls}>退款</label>
@@ -194,10 +194,18 @@ export function PaymentsManager({
             <div key={p.id} className="group flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 last:border-0">
               <div>
                 <div className="text-[13px] font-medium">
-                  {fmtMoney(p.amountBase)}
-                  {p.refundedBase > 0 && (
-                    <span className="ml-2 text-[10px] text-neutral-400 f-mono">
-                      退 {fmtMoney(p.refundedBase)} · 净 {fmtMoney(p.amountBase - p.refundedBase)}
+                  {p.amountBase !== null ? (
+                    <>
+                      {fmtMoney(p.amountBase)}
+                      {p.refundedBase > 0 && (
+                        <span className="ml-2 text-[10px] text-neutral-400 f-mono">
+                          退 {fmtMoney(p.refundedBase)} · 净 {fmtMoney(p.amountBase - p.refundedBase)}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="inline-block border border-dashed border-neutral-400 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-neutral-400 f-mono">
+                      金额未知
                     </span>
                   )}
                 </div>

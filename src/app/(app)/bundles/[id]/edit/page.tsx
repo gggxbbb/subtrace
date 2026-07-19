@@ -31,7 +31,7 @@ export default async function EditBundlePage({ params }: { params: Promise<{ id:
     subscriptionId: p.subscriptionId,
     newName: "",
     listPriceBase: "", // 原价当时未物化，留空按比例重新分摊
-    allocatedBase: p.amountBase.toString(),
+    allocatedBase: (p.amountBase ?? 0).toString(),
     periodStart: iso(p.periodStart),
     periodEnd: iso(p.periodEnd),
     plusDays: "",

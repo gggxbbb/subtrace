@@ -163,10 +163,14 @@ export default async function DashboardPage() {
                   <div className="text-[13px] font-medium">{u.name}</div>
                   <div className="text-[9px] text-neutral-400 f-mono">{u.detail}</div>
                 </div>
-                <span className="flex items-center gap-1.5 text-sm font-bold tabular-nums f-mono">
-                  {u.verdictAmount >= 0 ? "+" : "−"}{fmt(Math.abs(u.verdictAmount))}
-                  <Led color={u.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
-                </span>
+                {u.costUnknown ? (
+                  <span className="text-sm font-bold text-neutral-400 f-mono">成本未知</span>
+                ) : (
+                  <span className="flex items-center gap-1.5 text-sm font-bold tabular-nums f-mono">
+                    {u.verdictAmount >= 0 ? "+" : "−"}{fmt(Math.abs(u.verdictAmount))}
+                    <Led color={u.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
+                  </span>
+                )}
               </a>
             ))}
           </Panel>
@@ -241,8 +245,16 @@ export default async function DashboardPage() {
                   <td className="px-4 py-2.5 text-[11px] tabular-nums text-neutral-500 f-mono">
                     {s.expiry ? fmtDate(s.expiry) : "—"}
                   </td>
-                  <td className="px-4 py-2.5 text-right text-[11px] font-semibold tabular-nums f-mono">{fmt(s.dailyCost)}</td>
-                  <td className="px-4 py-2.5 text-right text-[11px] tabular-nums text-neutral-500 f-mono">{fmt(s.monthlyCost)}</td>
+                  <td className="px-4 py-2.5 text-right text-[11px] font-semibold tabular-nums f-mono">
+                    {s.costUnknown && s.dailyCost === 0 ? (
+                      <span className="text-neutral-400">未知</span>
+                    ) : (
+                      fmt(s.dailyCost)
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-right text-[11px] tabular-nums text-neutral-500 f-mono">
+                    {s.costUnknown && s.dailyCost === 0 ? "—" : fmt(s.monthlyCost)}
+                  </td>
                   <td className="px-4 py-2.5">
                     {s.status === "CANCELLED" ? (
                       <span className="flex w-fit items-center gap-1.5 px-1.5 py-0.5 text-[9px] uppercase f-mono">

@@ -238,3 +238,51 @@ describe("链式重排（退款缩期/删笔后的后续调整）", () => {
     expect(plan!.shifts[0].deltaDays).toBe(-91); // p3 前移到 04-01（4~6月=91天）
   });
 });
+
+describe("金额未知的付费记录（ticket 12）", () => {
+  it("金额可缺省：记录落 null，到期日/区间照常，成本段费率为 0", async () => {
+    const sub = await createSubscription(ownerId, {
+      name: "只知道到期日的老订阅",
+      trackingMode: "MANUAL",
+      startDate: d("2026-01-01"),
+    });
+    const p = await recordPayment(ownerId, sub.id, {
+      amount: null,
+      amountBase: null,
+      paidAt: d("2026-06-15"),
+      periodStart: d("2026-06-15"),
+      periodEnd: d("2026-07-15"),
+      source: "MANUAL",
+    });
+    expect(p.amount).toBeNull();
+    expect(p.amountBase).toBeNull();
+    expect(p.currency).toBeNull();
+
+    const fresh = await getSubscription(ownerId, sub.id);
+    const engineSub = toEngineSub(fresh!);
+    const payments = toEnginePayments(fresh!.payments);
+    expect(currentExpiry(engineSub, payments, d("2026-06-20"))).toEqual(d("2026-07-15"));
+    const segs = costSegments(engineSub, payments, d("2026-06-20"));
+    expect(segs[0]).toMatchObject({ amountUnknown: true, net: 0 });
+  });
+
+  it("补录金额：updatePayment 填回金额后段恢复费率", async () => {
+    const sub = await createSubscription(ownerId, {
+      name: "补录",
+      trackingMode: "MANUAL",
+      startDate: d("2026-01-01"),
+    });
+    const p = await recordPayment(ownerId, sub.id, {
+      amount: null,
+      amountBase: null,
+      paidAt: d("2026-06-15"),
+      periodStart: d("2026-06-15"),
+      periodEnd: d("2026-07-15"),
+      source: "MANUAL",
+    });
+    await updatePayment(ownerId, p.id, { amount: 30, currency: "CNY", amountBase: 30 });
+    const fresh = await getSubscription(ownerId, sub.id);
+    const segs = costSegments(toEngineSub(fresh!), toEnginePayments(fresh!.payments), d("2026-06-20"));
+    expect(segs[0]).toMatchObject({ amountUnknown: false, net: 30 });
+  });
+});

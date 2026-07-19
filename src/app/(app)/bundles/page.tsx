@@ -58,7 +58,7 @@ export default async function BundlesPage() {
                         {p.subscription.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-2.5 text-right tabular-nums f-mono text-[11px]">{fmt(p.amountBase)}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums f-mono text-[11px]">{fmt(p.amountBase ?? 0)}</td>
                     <td className="px-4 py-2.5 text-[11px] tabular-nums text-neutral-500 f-mono">
                       {fmtDate(p.periodStart)} → {fmtDate(p.periodEnd)}
                     </td>

@@ -107,6 +107,8 @@ export interface CountVerdict {
   periodEnd: Date;
   /** 当前服务区间净额（全额） */
   cost: number;
+  /** 覆盖段金额未知（ticket 12）：成本为 0 是「没记」，盈亏不可信 */
+  costUnknown?: boolean;
   usage: number;
   /** 用量 × 替代单价（逐条记录级单价） */
   value: number;
@@ -120,6 +122,8 @@ export interface QuotaVerdict {
   periodEnd: Date;
   /** 当前服务区间净额（全额） */
   cost: number;
+  /** 覆盖段金额未知（ticket 12）：成本为 0 是「没记」，盈亏不可信 */
+  costUnknown?: boolean;
   /** 最新快照的已用额度 */
   used: number;
   /** 最新快照的总额度 */
@@ -153,6 +157,7 @@ export function getUsageVerdict(
   if (!covering) return null;
   const share = forUserId ? shareForViewer(sub.beneficiaries ?? [], sub.ownerId, forUserId) : 1;
   const costShare = covering.net * share;
+  const costUnknown = covering.amountUnknown === true;
   const myRecords = forUserId ? records.filter((r) => r.userId === forUserId) : records;
 
   if (sub.usageKind === "QUOTA") {
@@ -177,6 +182,7 @@ export function getUsageVerdict(
       periodStart: covering.start,
       periodEnd: covering.end,
       cost: costShare,
+      costUnknown,
       used,
       total,
       usageRate,
@@ -209,6 +215,7 @@ export function getUsageVerdict(
     periodStart: covering.start,
     periodEnd: covering.end,
     cost: costShare,
+    costUnknown,
     usage,
     value,
     verdictAmount: value - costShare,

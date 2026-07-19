@@ -35,9 +35,11 @@ export interface SubscriptionInput {
 }
 
 export interface PaymentInput {
-  amount: number;
-  currency: string;
-  amountBase: number;
+  /** 实付（原币）；null/缺省 = 金额未知（ticket 12），区间仍必填 */
+  amount?: number | null;
+  currency?: string | null;
+  /** 主币种快照；null/缺省 = 金额未知 */
+  amountBase?: number | null;
   refundedBase?: number;
   paidAt: Date;
   periodStart: Date;
@@ -157,9 +159,9 @@ export async function recordPayment(
     prisma.payment.create({
       data: {
         subscriptionId,
-        amount: input.amount,
-        currency: input.currency,
-        amountBase: input.amountBase,
+        amount: input.amount ?? null,
+        currency: input.currency ?? null,
+        amountBase: input.amountBase ?? null,
         refundedBase: input.refundedBase ?? 0,
         paidAt: input.paidAt,
         periodStart: input.periodStart,

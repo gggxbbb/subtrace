@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Kpi, Panel, fmt, fmtDate } from "@/components/te";
 import { getCurrentUser } from "@/lib/auth/session";
-import { currentDailyRate, currentExpiry, dayDiff } from "@/lib/cost-engine";
+import { costSegments, currentDailyRate, currentExpiry, dayDiff } from "@/lib/cost-engine";
 import {
   getSubscription,
   paymentPrefill,
@@ -45,7 +45,11 @@ export default async function SubscriptionDetailPage({
   const payments = toEnginePayments(sub.payments);
   const expiry = currentExpiry(engineSub, payments, today);
   const daily = currentDailyRate(engineSub, payments, today);
-  const totalPaid = sub.payments.reduce((s, p) => s + p.amountBase - p.refundedBase, 0);
+  const coveringUnknown = costSegments(engineSub, payments, today).some(
+    (s) => s.amountUnknown === true && s.start <= today && today < s.end,
+  );
+  const totalPaid = sub.payments.reduce((s, p) => s + (p.amountBase ?? 0) - p.refundedBase, 0);
+  const unknownPayments = sub.payments.filter((p) => p.amountBase === null).length;
   const prefillRaw = paymentPrefill(sub, sub.payments);
   const iso = (d: Date) => d.toISOString().slice(0, 10);
   const prefill = {
@@ -105,6 +109,7 @@ export default async function SubscriptionDetailPage({
           value: v.value,
           verdictAmount: v.verdictAmount,
           costPerUse: v.costPerUse,
+          costUnknown: v.costUnknown,
         }
       : {
           kind: "QUOTA",
@@ -118,6 +123,7 @@ export default async function SubscriptionDetailPage({
           wastedAmount: v.wastedAmount,
           costPerUnit: v.costPerUnit,
           verdictAmount: v.verdictAmount,
+          costUnknown: v.costUnknown,
         }
     : null;
 
@@ -184,8 +190,19 @@ export default async function SubscriptionDetailPage({
         })()}
         <div className="grid grid-cols-4 gap-4">
           <Kpi index="B1" label="当前到期日" value={expiry ? fmtDate(expiry) : "—"} sub={expiry ? `${dayDiff(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())), expiry)} 天后（当天起不再覆盖）` : "手动模式待记录"} />
-          <Kpi index="B2" label="当日费率" value={fmt(daily)} sub={sub.beneficiaries.length > 0 ? `我的份额 ${Math.round(myShare * 100)}% · ${fmt(daily * myShare)}/日` : `≈ 每月 ${fmt(daily * 30.4)}`} />
-          <Kpi index="B3" label="累计实付" value={fmt(totalPaid)} sub={`${sub.payments.length} 笔付费记录`} />
+          <Kpi
+            index="B2"
+            label="当日费率"
+            value={daily === 0 && coveringUnknown ? "未知" : fmt(daily)}
+            sub={
+              daily === 0 && coveringUnknown
+                ? "当前区间金额未记录，成本不计"
+                : sub.beneficiaries.length > 0
+                  ? `我的份额 ${Math.round(myShare * 100)}% · ${fmt(daily * myShare)}/日`
+                  : `≈ 每月 ${fmt(daily * 30.4)}`
+            }
+          />
+          <Kpi index="B3" label="累计实付" value={fmt(totalPaid)} sub={`${sub.payments.length} 笔付费记录${unknownPayments > 0 ? ` · ${unknownPayments} 笔金额未知` : ""}`} />
           <Kpi
             index="B4"
             label="状态"

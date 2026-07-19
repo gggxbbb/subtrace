@@ -33,6 +33,7 @@ export type VerdictData =
       value: number;
       verdictAmount: number;
       costPerUse: number | null;
+      costUnknown?: boolean;
     }
   | {
       kind: "QUOTA";
@@ -46,6 +47,7 @@ export type VerdictData =
       wastedAmount: number;
       costPerUnit: number | null;
       verdictAmount: number;
+      costUnknown?: boolean;
     };
 
 /** 用量录入卡：类型/单位可就地设定；本次用量、本次单价、当月总额度逐条可调，默认继承上一条记录 */
@@ -95,7 +97,7 @@ export function UsageEntryPanel({
   // 回本提示：计数型按参考单价还差多少用量回本；额度型看距用满还差多少
   const refPrice = last?.unitPrice ?? defaultUnitPrice;
   const needed =
-    verdict?.kind === "COUNT" && refPrice && refPrice > 0
+    verdict?.kind === "COUNT" && !verdict.costUnknown && refPrice && refPrice > 0
       ? Math.max(0, Math.ceil((verdict.cost - verdict.value) / refPrice))
       : null;
   const quotaHint =
@@ -355,10 +357,17 @@ export function UsageVerdictPanel({
             </div>
             <div>
               <div className="text-[9px] uppercase text-neutral-400 f-mono">盈亏</div>
-              <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.verdictAmount >= 0 ? "text-teal-700" : "text-red-700"}`}>
-                {v.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(v.verdictAmount))}
-                <Led color={v.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
-              </div>
+              {v.costUnknown ? (
+                <div className="text-lg font-bold text-neutral-400">未知</div>
+              ) : (
+                <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.verdictAmount >= 0 ? "text-teal-700" : "text-red-700"}`}>
+                  {v.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(v.verdictAmount))}
+                  <Led color={v.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
+                </div>
+              )}
+              {v.costUnknown && (
+                <div className="text-[9px] text-neutral-400 f-mono">成本未记录，盈亏不可信</div>
+              )}
             </div>
           </>
         ) : (

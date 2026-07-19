@@ -55,8 +55,16 @@ export default async function SubscriptionsPage() {
                   <td className="px-4 py-2.5 text-[11px] tabular-nums text-neutral-500 f-mono">
                     {s.expiry ? fmtDate(s.expiry) : "—"}
                   </td>
-                  <td className="px-4 py-2.5 text-right text-[11px] font-semibold tabular-nums f-mono">{fmt(s.dailyCost)}</td>
-                  <td className="px-4 py-2.5 text-right text-[11px] tabular-nums text-neutral-500 f-mono">{fmt(s.monthlyCost)}</td>
+                  <td className="px-4 py-2.5 text-right text-[11px] font-semibold tabular-nums f-mono">
+                    {s.costUnknown && s.dailyCost === 0 ? (
+                      <span className="text-neutral-400">未知</span>
+                    ) : (
+                      fmt(s.dailyCost)
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-right text-[11px] tabular-nums text-neutral-500 f-mono">
+                    {s.costUnknown && s.dailyCost === 0 ? "—" : fmt(s.monthlyCost)}
+                  </td>
                   <td className="px-4 py-2.5">
                     {s.status === "CANCELLED" ? (
                       <span className="flex w-fit items-center gap-1.5 px-1.5 py-0.5 text-[9px] uppercase f-mono">

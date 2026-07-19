@@ -157,11 +157,11 @@ model Payment {
   id             String       @id @default(cuid())
   subscriptionId String
   subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  /// 实付（原币）
-  amount         Float
-  currency       String
-  /// 主币种快照（ADR-0004）
-  amountBase     Float
+  /// 实付（原币）；null = 金额未知（ticket 12，只记区间的存量订阅）
+  amount         Float?
+  currency       String?
+  /// 主币种快照（ADR-0004）；null = 金额未知
+  amountBase     Float?
   /// 退款（主币种），成本按净额
   refundedBase   Float        @default(0)
   paidAt         DateTime

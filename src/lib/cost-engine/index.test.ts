@@ -396,3 +396,49 @@ describe("追加费用事件（ticket 13）", () => {
     expect(r).toBeCloseTo((8000 + 500 - 1000) / 800);
   });
 });
+
+describe("金额未知的付费记录（ticket 12）", () => {
+  const unknownPayment = (over: Partial<PaymentRec> = {}): PaymentRec => ({
+    amountBase: null,
+    refundedBase: 0,
+    paidAt: d("2026-06-15"),
+    periodStart: d("2026-06-15"),
+    periodEnd: d("2026-07-15"),
+    ...over,
+  });
+
+  it("未知金额照常决定到期日（记录驱动不变）", () => {
+    const sub: SubscriptionDef = { trackingMode: "manual", startDate: d("2026-01-01") };
+    expect(currentExpiry(sub, [unknownPayment()], d("2026-06-20"))).toEqual(d("2026-07-15"));
+  });
+
+  it("未知金额段费率为 0 且打 amountUnknown 标记", () => {
+    const sub: SubscriptionDef = { trackingMode: "manual", startDate: d("2026-01-01") };
+    const segs = costSegments(sub, [unknownPayment()], d("2026-06-20"));
+    expect(segs).toHaveLength(1);
+    expect(segs[0]).toMatchObject({ net: 0, amountUnknown: true });
+    expect(segmentDailyRate(segs[0])).toBe(0);
+    expect(currentDailyRate(sub, [unknownPayment()], d("2026-06-20"))).toBe(0);
+  });
+
+  it("已知段照常计费，未知段不稀释其费率（按段独立）", () => {
+    const sub: SubscriptionDef = { trackingMode: "manual", startDate: d("2026-01-01") };
+    const payments = [
+      unknownPayment(),
+      payment({ paidAt: d("2026-07-10"), periodStart: d("2026-07-15"), periodEnd: d("2026-08-15") }), // 25/31天
+    ];
+    const segs = costSegments(sub, payments, d("2026-07-20"));
+    expect(segs.map((s) => s.amountUnknown ?? false)).toEqual([true, false]);
+    expect(currentDailyRate(sub, payments, d("2026-06-20"))).toBe(0); // 未知段覆盖期
+    expect(currentDailyRate(sub, payments, d("2026-07-20"))).toBeCloseTo(25 / 31); // 已知段覆盖期
+  });
+
+  it("周期模式的推算段不受未知记录影响：未知段之后仍按标准价推算", () => {
+    const sub = cycleSub(); // 月付 25
+    const segs = costSegments(sub, [unknownPayment({ periodEnd: d("2026-07-15") })], d("2026-07-20"));
+    // 前向补齐（记录前的未记账周期按标准价）+ 未知段后的推算段
+    const after = segs[segs.length - 1];
+    expect(after).toMatchObject({ estimated: true, net: 25, start: d("2026-07-15"), end: d("2026-08-15") });
+    expect(currentDailyRate(sub, [unknownPayment({ periodEnd: d("2026-07-15") })], d("2026-07-20"))).toBeCloseTo(25 / 31);
+  });
+});

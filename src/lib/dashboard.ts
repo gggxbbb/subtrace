@@ -23,6 +23,8 @@ export interface DashboardRow {
   id: string;
   name: string;
   category: string | null;
+  /** 当前覆盖段金额未知（ticket 12）：费率为 0，UI 标「未知」而非 ¥0 */
+  costUnknown: boolean;
   cycleLabel: string;
   expiry: Date | null;
   daysUntilExpiry: number | null;
@@ -59,6 +61,8 @@ export interface UsageBoardRow {
   name: string;
   detail: string;
   verdictAmount: number;
+  /** 覆盖段金额未知（ticket 12）：盈亏不可信，UI 灰显 */
+  costUnknown?: boolean;
 }
 
 export interface DashboardData {
@@ -110,11 +114,15 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     const expiry = currentExpiry(engineSub, payments, today);
     // 份额切片（ADR-0003）：共享订阅只计我的份额
     const share = shareForViewer(sub.beneficiaries, sub.ownerId, userId);
-    const daily = currentDailyRate(engineSub, payments, today) * share;
+    const covering = costSegments(engineSub, payments, today).filter(
+      (s) => s.start <= today && today < s.end,
+    );
+    const daily = covering.reduce((sum, s) => sum + segmentDailyRate(s), 0) * share;
     return {
       id: sub.id,
       name: sub.name,
       category: sub.category,
+      costUnknown: covering.some((s) => s.amountUnknown === true),
       cycleLabel: cycleLabel(sub),
       expiry,
       daysUntilExpiry: expiry ? dayDiff(today, expiry) : null,
@@ -155,6 +163,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
           ? `${v.usage} ${sub.usageUnit ?? ""} × ${v.value > 0 && v.usage > 0 ? (v.value / v.usage).toFixed(2) : sub.altUnitPrice} − ${v.cost.toFixed(2)}`
           : `已用 ${Math.round(v.usageRate * 100)}%（${v.used}/${v.total} ${sub.usageUnit ?? ""}）${v.hit100At ? " · 已用满" : ""}`,
       verdictAmount: v.verdictAmount,
+      costUnknown: v.costUnknown,
     });
   }
   usageBoard.sort((a, b) => b.verdictAmount - a.verdictAmount);
@@ -197,10 +206,10 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   const spent = subs.filter((s) => s.ownerId === userId).flatMap((s) => s.payments);
   const monthSpent = spent
     .filter((p) => p.paidAt >= monthStart)
-    .reduce((s, p) => s + p.amountBase - p.refundedBase, 0);
+    .reduce((s, p) => s + (p.amountBase ?? 0) - p.refundedBase, 0);
   const yearSpent = spent
     .filter((p) => p.paidAt >= yearStart)
-    .reduce((s, p) => s + p.amountBase - p.refundedBase, 0);
+    .reduce((s, p) => s + (p.amountBase ?? 0) - p.refundedBase, 0);
 
   return {
     totalDailyCost,

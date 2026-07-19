@@ -17,8 +17,8 @@ export interface SubscriptionDef {
 }
 
 export interface PaymentRec {
-  /** 实付（主币种快照） */
-  amountBase: number;
+  /** 实付（主币种快照）；null = 金额未知（ticket 12） */
+  amountBase: number | null;
   /** 退款（主币种），成本按净额 */
   refundedBase: number;
   paidAt: Date;
@@ -89,6 +89,8 @@ export interface CostSegment {
   net: number;
   start: Date;
   end: Date;
+  /** 金额未知（ticket 12）：净额置 0，费率为 0 不计入合计 */
+  amountUnknown?: boolean;
   estimated: boolean;
 }
 
@@ -106,9 +108,10 @@ export function costSegments(
     .slice()
     .sort((a, b) => a.periodStart.getTime() - b.periodStart.getTime())
     .map((p) => ({
-      net: p.amountBase - p.refundedBase,
+      net: (p.amountBase ?? 0) - p.refundedBase,
       start: p.periodStart,
       end: p.periodEnd,
+      amountUnknown: p.amountBase === null,
       estimated: false,
     }));
   if (sub.trackingMode !== "cycle" || !sub.anchorDate || !sub.cycle || sub.listPriceBase == null) {

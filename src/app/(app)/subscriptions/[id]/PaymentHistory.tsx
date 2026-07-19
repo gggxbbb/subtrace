@@ -24,9 +24,10 @@ const fmtMoney = (n: number) =>
 
 export interface HistoryPayment {
   id: string;
-  amount: number;
-  currency: string;
-  amountBase: number;
+  /** null = 金额未知（ticket 12） */
+  amount: number | null;
+  currency: string | null;
+  amountBase: number | null;
   refundedBase: number;
   paidAt: string;
   periodStart: string;
@@ -69,15 +70,15 @@ export function PaymentHistory({
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className={labelCls}>实付</label>
-                <input name="amount" type="number" step="0.01" min="0" defaultValue={p.amount} required className={inputCls} />
+                <input name="amount" type="number" step="0.01" min="0" defaultValue={p.amount ?? ""} placeholder="留空 = 未知" className={inputCls} />
               </div>
               <div>
                 <label className={labelCls}>币种</label>
-                <input name="currency" defaultValue={p.currency} className={`${inputCls} f-mono`} />
+                <input name="currency" defaultValue={p.currency ?? ""} className={`${inputCls} f-mono`} />
               </div>
               <div>
                 <label className={labelCls}>折算主币种</label>
-                <input name="amountBase" type="number" step="0.01" min="0" defaultValue={p.amountBase} className={inputCls} />
+                <input name="amountBase" type="number" step="0.01" min="0" defaultValue={p.amountBase ?? ""} placeholder="留空 = 未知" className={inputCls} />
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
@@ -133,10 +134,18 @@ export function PaymentHistory({
           >
             <div>
               <div className="text-[13px] font-medium">
-                {fmtMoney(p.amountBase)}
-                {p.refundedBase > 0 && (
-                  <span className="ml-2 text-[10px] text-neutral-400 f-mono">
-                    退 {fmtMoney(p.refundedBase)} · 净 {fmtMoney(p.amountBase - p.refundedBase)}
+                {p.amountBase !== null ? (
+                  <>
+                    {fmtMoney(p.amountBase)}
+                    {p.refundedBase > 0 && (
+                      <span className="ml-2 text-[10px] text-neutral-400 f-mono">
+                        退 {fmtMoney(p.refundedBase)} · 净 {fmtMoney(p.amountBase - p.refundedBase)}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="inline-block border border-dashed border-neutral-400 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-neutral-400 f-mono">
+                    金额未知
                   </span>
                 )}
               </div>

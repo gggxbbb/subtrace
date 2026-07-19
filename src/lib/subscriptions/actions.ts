@@ -105,10 +105,11 @@ export async function recordPaymentAction(subscriptionId: string, formData: Form
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const amount = Number(formData.get("amount"));
+  // 金额留空 = 金额未知（ticket 12）：只记服务区间，成本不计
+  const amount = parseNum(formData.get("amount")) ?? null;
   const input: PaymentInput = {
     amount,
-    currency: String(formData.get("currency") ?? "CNY"),
+    currency: amount === null ? null : String(formData.get("currency") ?? "") || null,
     amountBase: parseNum(formData.get("amountBase")) ?? amount,
     refundedBase: parseNum(formData.get("refundedBase")) ?? 0,
     paidAt: parseDate(formData.get("paidAt")),
@@ -142,10 +143,10 @@ export async function setStatusAction(
 }
 
 const paymentInputFrom = (formData: FormData): PaymentInput => {
-  const amount = Number(formData.get("amount"));
+  const amount = parseNum(formData.get("amount")) ?? null;
   return {
     amount,
-    currency: String(formData.get("currency") ?? "CNY"),
+    currency: amount === null ? null : String(formData.get("currency") ?? "") || null,
     amountBase: parseNum(formData.get("amountBase")) ?? amount,
     refundedBase: parseNum(formData.get("refundedBase")) ?? 0,
     paidAt: parseDate(formData.get("paidAt")),
