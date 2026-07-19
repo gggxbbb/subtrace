@@ -179,6 +179,8 @@ model Purchase {
   endDate      DateTime?
   /// 残值（主币种）
   resaleBase   Float?
+  /// 归档（隐藏于列表与统计，不影响状态机）
+  archived     Boolean  @default(false)
   createdAt    DateTime @default(now())
   beneficiaries Beneficiary[]
   incomes      PurchaseIncome[]

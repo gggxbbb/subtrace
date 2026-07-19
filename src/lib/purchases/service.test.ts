@@ -188,3 +188,16 @@ describe("物品收益与编辑", () => {
     expect(fresh!.expectedDays).toBe(1500);
   });
 });
+
+describe("归档与删除", () => {
+  it("归档后从列表消失，删除后查无此物", async () => {
+    const p = await createPurchase(ownerId, laptopInput);
+    const { setPurchaseArchived, deletePurchase } = await import("./service");
+    await setPurchaseArchived(ownerId, p.id, true);
+    expect(await listPurchases(ownerId)).toHaveLength(0);
+    await setPurchaseArchived(ownerId, p.id, false);
+    expect(await listPurchases(ownerId)).toHaveLength(1);
+    await deletePurchase(ownerId, p.id);
+    expect(await getPurchase(ownerId, p.id)).toBeNull();
+  });
+});

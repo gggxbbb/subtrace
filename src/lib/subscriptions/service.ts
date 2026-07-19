@@ -267,3 +267,27 @@ export async function setStatus(
 ) {
   await prisma.subscription.updateMany({ where: { id, ownerId }, data: { status } });
 }
+
+/** 编辑订阅基本信息（创建后仍可改；trackingMode 不可切换） */
+export async function updateSubscription(
+  ownerId: string,
+  id: string,
+  input: Partial<Omit<SubscriptionInput, "trackingMode">>,
+): Promise<void> {
+  await prisma.subscription.updateMany({
+    where: { id, ownerId },
+    data: {
+      ...(input.name !== undefined && { name: input.name }),
+      ...(input.category !== undefined && { category: input.category }),
+      ...(input.cycleKind !== undefined && { cycleKind: input.cycleKind }),
+      ...(input.cycleUnit !== undefined && { cycleUnit: input.cycleUnit }),
+      ...(input.cycleCount !== undefined && { cycleCount: input.cycleCount }),
+      ...(input.fixedDays !== undefined && { fixedDays: input.fixedDays }),
+      ...(input.listPrice !== undefined && { listPrice: input.listPrice }),
+      ...(input.listCurrency !== undefined && { listCurrency: input.listCurrency }),
+      ...(input.listPriceBase !== undefined && { listPriceBase: input.listPriceBase }),
+      ...(input.autoRenew !== undefined && { autoRenew: input.autoRenew }),
+      ...(input.startDate !== undefined && { startDate: input.startDate }),
+    },
+  });
+}

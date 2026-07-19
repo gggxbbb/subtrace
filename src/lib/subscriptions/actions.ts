@@ -10,6 +10,7 @@ import {
   recordPayment,
   setStatus,
   toEngineSub,
+  updateSubscription,
   updatePayment,
   type PaymentInput,
   type SubscriptionInput,
@@ -169,4 +170,25 @@ export async function deleteSubscriptionAction(subscriptionId: string) {
   revalidatePath("/subscriptions");
   revalidatePath("/dashboard");
   redirect("/subscriptions");
+}
+
+export async function updateSubscriptionAction(subscriptionId: string, formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await updateSubscription(user.id, subscriptionId, {
+    name: String(formData.get("name") ?? ""),
+    category: String(formData.get("category") ?? ""),
+    cycleKind: (String(formData.get("cycleKind") ?? "") || undefined) as "CALENDAR" | "FIXED_DAYS" | undefined,
+    cycleUnit: (String(formData.get("cycleUnit") ?? "") || undefined) as "DAY" | "WEEK" | "MONTH" | "YEAR" | undefined,
+    cycleCount: parseNum(formData.get("cycleCount")),
+    fixedDays: parseNum(formData.get("fixedDays")),
+    listPriceBase: parseNum(formData.get("listPriceBase")),
+    listCurrency: String(formData.get("listCurrency") ?? "") || undefined,
+    autoRenew: formData.get("autoRenew") !== null,
+    startDate: parseDate(formData.get("startDate")),
+  });
+  revalidatePath(`/subscriptions/${subscriptionId}`);
+  revalidatePath("/subscriptions");
+  revalidatePath("/dashboard");
+  redirect(`/subscriptions/${subscriptionId}`);
 }

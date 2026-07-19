@@ -44,7 +44,7 @@ export async function createPurchase(ownerId: string, input: PurchaseInput): Pro
 
 export async function listPurchases(ownerId: string): Promise<Purchase[]> {
   return prisma.purchase.findMany({
-    where: { ownerId },
+    where: { ownerId, archived: false },
     orderBy: { purchaseDate: "desc" },
   });
 }
@@ -165,4 +165,14 @@ export async function closePurchase(
       resaleBase: input.status === "SOLD" ? (input.resaleBase ?? 0) : null,
     },
   });
+}
+
+/** 归档/取消归档（隐藏于列表与统计） */
+export async function setPurchaseArchived(ownerId: string, id: string, archived: boolean): Promise<void> {
+  await prisma.purchase.updateMany({ where: { id, ownerId }, data: { archived } });
+}
+
+/** 硬删除物品（受益人/收益级联删除，不可恢复） */
+export async function deletePurchase(ownerId: string, id: string): Promise<void> {
+  await prisma.purchase.deleteMany({ where: { id, ownerId } });
 }

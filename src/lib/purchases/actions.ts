@@ -7,7 +7,9 @@ import {
   addPurchaseIncome,
   closePurchase,
   createPurchase,
+  deletePurchase,
   deletePurchaseIncome,
+  setPurchaseArchived,
   updatePurchase,
   type PurchaseInput,
 } from "./service";
@@ -97,4 +99,22 @@ export async function deletePurchaseIncomeAction(purchaseId: string, incomeId: s
   await deletePurchaseIncome(user.id, incomeId);
   revalidatePath(`/purchases/${purchaseId}`);
   redirect(`/purchases/${purchaseId}`);
+}
+
+export async function setPurchaseArchivedAction(purchaseId: string, archived: boolean) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await setPurchaseArchived(user.id, purchaseId, archived);
+  revalidatePath("/purchases");
+  revalidatePath("/dashboard");
+  redirect("/purchases");
+}
+
+export async function deletePurchaseAction(purchaseId: string) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await deletePurchase(user.id, purchaseId);
+  revalidatePath("/purchases");
+  revalidatePath("/dashboard");
+  redirect("/purchases");
 }

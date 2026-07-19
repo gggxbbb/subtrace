@@ -9,7 +9,7 @@ import {
 } from "@/lib/cost-engine";
 import { getPurchase, listPurchaseIncomes, subscriptionShareCost, toEnginePurchase } from "@/lib/purchases/service";
 import { closePurchaseAction } from "@/lib/purchases/actions";
-import { PurchaseEditForm, PurchaseIncomePanel } from "./PurchasePanels";
+import { PurchaseHeaderActions, PurchaseIncomePanel } from "./PurchasePanels";
 
 export default async function PurchaseDetailPage({
   params,
@@ -44,6 +44,7 @@ export default async function PurchaseDetailPage({
           </div>
           <h1 className="text-xl font-bold uppercase tracking-tight">{purchase.name}</h1>
         </div>
+        <PurchaseHeaderActions purchaseId={purchase.id} archived={purchase.archived} />
       </header>
 
       <div className="space-y-4 px-6 py-5">
@@ -97,22 +98,8 @@ export default async function PurchaseDetailPage({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Panel index="01" title="物品信息">
-            <PurchaseEditForm
-              purchaseId={purchase.id}
-              initial={{
-                name: purchase.name,
-                category: purchase.category,
-                amount: purchase.amount,
-                currency: purchase.currency,
-                amountBase: purchase.amountBase,
-                purchaseDate: purchase.purchaseDate.toISOString().slice(0, 10),
-                expectedDays: purchase.expectedDays,
-              }}
-            />
-          </Panel>
-          <Panel index="02" title={`收益记录 / ${incomes.length}`}>
+        <div className="grid grid-cols-1 gap-4">
+          <Panel index="01" title={`收益记录 / ${incomes.length}`}>
             <PurchaseIncomePanel
               purchaseId={purchase.id}
               incomes={incomes.map((i) => ({
@@ -128,7 +115,7 @@ export default async function PurchaseDetailPage({
 
         {inUse && (
           <div className="grid grid-cols-2 gap-4">
-            <Panel index="03" title="卖出登记">
+            <Panel index="02" title="卖出登记">
               <form action={closePurchaseAction.bind(null, purchase.id)} className="space-y-4 px-4 py-4">
                 <input type="hidden" name="status" value="SOLD" />
                 <div className="grid grid-cols-2 gap-4">
@@ -146,7 +133,7 @@ export default async function PurchaseDetailPage({
                 </button>
               </form>
             </Panel>
-            <Panel index="04" title="报废登记">
+            <Panel index="03" title="报废登记">
               <form action={closePurchaseAction.bind(null, purchase.id)} className="space-y-4 px-4 py-4">
                 <input type="hidden" name="status" value="RETIRED" />
                 <div>

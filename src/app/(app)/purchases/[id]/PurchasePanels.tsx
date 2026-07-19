@@ -3,90 +3,59 @@
 import { useState } from "react";
 import {
   addPurchaseIncomeAction,
+  deletePurchaseAction,
   deletePurchaseIncomeAction,
-  updatePurchaseAction,
+  setPurchaseArchivedAction,
 } from "@/lib/purchases/actions";
 
 const inputCls =
   "w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white";
 const labelCls =
   "mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
+const btnCls =
+  "border border-black bg-white px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-black hover:text-white";
 
 const fmtMoney = (n: number) =>
   n.toLocaleString("zh-CN", { style: "currency", currency: "CNY" });
 
-/** 编辑物品（创建后仍可改） */
-export function PurchaseEditForm({
+/** 顶栏操作：编辑（独立页）、归档、删除（二次确认） */
+export function PurchaseHeaderActions({
   purchaseId,
-  initial,
+  archived,
 }: {
   purchaseId: string;
-  initial: {
-    name: string;
-    category: string | null;
-    amount: number;
-    currency: string;
-    amountBase: number;
-    purchaseDate: string;
-    expectedDays: number | null;
-  };
+  archived: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="w-full border border-black bg-white py-2.5 text-[11px] font-semibold uppercase tracking-wider hover:bg-black hover:text-white"
-      >
-        编辑物品信息 →
-      </button>
-    );
-  }
+  const [confirmDelete, setConfirmDelete] = useState(false);
   return (
-    <form action={updatePurchaseAction.bind(null, purchaseId)} className="space-y-3 px-4 py-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={labelCls}>名称</label>
-          <input name="name" defaultValue={initial.name} required className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>分类</label>
-          <input name="category" defaultValue={initial.category ?? ""} className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>买入价</label>
-          <input name="amount" type="number" step="0.01" min="0" defaultValue={initial.amount} required className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>币种</label>
-          <input name="currency" defaultValue={initial.currency} className={`${inputCls} f-mono`} />
-        </div>
-        <div>
-          <label className={labelCls}>折算主币种</label>
-          <input name="amountBase" type="number" step="0.01" min="0" defaultValue={initial.amountBase} className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>购买日期</label>
-          <input name="purchaseDate" type="date" defaultValue={initial.purchaseDate} required className={`${inputCls} f-mono`} />
-        </div>
-        <div className="col-span-2">
-          <label className={labelCls}>预期寿命（天，留空=未定）</label>
-          <input name="expectedDays" type="number" min="1" defaultValue={initial.expectedDays ?? ""} className={inputCls} />
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <button className="bg-black px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800">
-          保存 →
-        </button>
+    <div className="flex items-center gap-2.5">
+      <a href={`/purchases/${purchaseId}/edit`} className={btnCls}>
+        编辑 →
+      </a>
+      <button onClick={async () => setPurchaseArchivedAction(purchaseId, !archived)} className={`${btnCls} text-neutral-500`}>
+        {archived ? "取消归档" : "归档"}
+      </button>
+      {confirmDelete ? (
+        <>
+          <button
+            onClick={async () => deletePurchaseAction(purchaseId)}
+            className="bg-red-700 px-3 py-2 text-[10px] uppercase tracking-wider text-white f-mono hover:bg-red-800"
+          >
+            确认删除（不可恢复）
+          </button>
+          <button onClick={() => setConfirmDelete(false)} className={btnCls}>
+            算了
+          </button>
+        </>
+      ) : (
         <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="border border-black bg-white px-4 py-1.5 text-[11px] uppercase tracking-wider hover:bg-black hover:text-white"
+          onClick={() => setConfirmDelete(true)}
+          className="border border-red-700 bg-white px-3 py-2 text-[10px] uppercase tracking-wider text-red-700 f-mono hover:bg-red-700 hover:text-white"
         >
-          取消
+          删除
         </button>
-      </div>
-    </form>
+      )}
+    </div>
   );
 }
 
