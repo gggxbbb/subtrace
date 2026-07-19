@@ -72,7 +72,7 @@ export async function revokeInviteAction(token: string) {
   const user = await getCurrentUser();
   if (!user || user.role !== "ADMIN") throw new Error("forbidden");
   await revokeInvite(token);
-  revalidatePath("/users");
+  revalidatePath("/settings/users");
 }
 
 const assertAdmin = async () => {
@@ -85,19 +85,19 @@ const assertAdmin = async () => {
 export async function setUserRoleAction(targetId: string, role: "ADMIN" | "USER") {
   const user = await assertAdmin();
   await setUserRole(user.id, targetId, role);
-  revalidatePath("/users");
+  revalidatePath("/settings/users");
 }
 
 /** 重置用户密码（仅 ADMIN；改密后踢掉其全部会话） */
 export async function resetUserPasswordAction(targetId: string, newPassword: string) {
   const user = await assertAdmin();
   await resetUserPassword(user.id, targetId, newPassword);
-  revalidatePath("/users");
+  revalidatePath("/settings/users");
 }
 
 /** 删除用户（仅 ADMIN；级联删除其全部数据） */
 export async function deleteUserAction(targetId: string) {
   const user = await assertAdmin();
   await deleteUser(user.id, targetId);
-  revalidatePath("/users");
+  revalidatePath("/settings/users");
 }

@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ArrowLeftRight,
   BarChart3,
   Bell,
   Boxes,
   LayoutDashboard,
   Package,
   RefreshCcw,
-  Settings,
   SquareTerminal,
   Users,
   type LucideIcon,
@@ -31,10 +31,12 @@ const NAV: {
     ],
   },
   {
-    group: "ACCOUNT / 账户",
+    group: "SETTINGS / 设置",
     items: [
-      { icon: Settings, label: "设置", href: "/settings" },
-      { icon: Users, label: "用户管理", href: "/users", adminOnly: true },
+      { icon: Bell, label: "通知渠道", href: "/settings/channels" },
+      { icon: SquareTerminal, label: "用量脚本", href: "/settings/scripts", soon: true },
+      { icon: ArrowLeftRight, label: "汇率", href: "/settings/rates" },
+      { icon: Users, label: "用户管理", href: "/settings/users", adminOnly: true },
     ],
   },
 ];

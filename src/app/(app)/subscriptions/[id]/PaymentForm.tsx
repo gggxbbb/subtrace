@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { attachRatePrefill } from "@/lib/exchange/prefill";
 import { useSearchParams } from "next/navigation";
 import { recordPaymentAction } from "@/lib/subscriptions/actions";
 
@@ -39,8 +40,11 @@ export function PaymentForm({
     }
   };
 
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => attachRatePrefill(formRef.current), []);
+
   return (
-    <form action={action} className="space-y-4 px-4 py-4">
+    <form ref={formRef} action={action} className="space-y-4 px-4 py-4">
       {error && (
         <div className="border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
           记录失败：请检查日期与金额

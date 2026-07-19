@@ -2,6 +2,7 @@
 // 例：0 8 * * * curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://host/api/cron/reminders
 
 import { NextResponse } from "next/server";
+import { refreshAllAutoRates } from "@/lib/exchange/service";
 import { runReminderScan } from "@/lib/reminders";
 
 export async function POST(req: Request) {
@@ -15,5 +16,7 @@ export async function POST(req: Request) {
   const now = new Date();
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const summary = await runReminderScan(today);
-  return NextResponse.json({ ok: true, ...summary });
+  // 汇率 AUTO 刷新共用每日节拍（ticket 09），与内置调度器路径对齐
+  const rates = await refreshAllAutoRates();
+  return NextResponse.json({ ok: true, ...summary, rates });
 }

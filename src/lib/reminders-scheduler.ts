@@ -19,10 +19,16 @@ async function scanIfNeeded() {
     const now = new Date();
     const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     const summary = await runReminderScan(today);
-    lastScanDay = utcDay();
     if (summary.hits > 0 || summary.failed > 0) {
       console.log(`[reminders] 扫描完成: hits=${summary.hits} sent=${summary.sent} failed=${summary.failed}`);
     }
+    // 同日的 AUTO 汇率刷新（ticket 09）：与提醒共用「UTC 日切换」节拍
+    const { refreshAllAutoRates } = await import("@/lib/exchange/service");
+    const rates = await refreshAllAutoRates();
+    if (rates.updated > 0 || rates.failed.length > 0) {
+      console.log(`[rates] 刷新完成: updated=${rates.updated} failed=${rates.failed.length}`);
+    }
+    lastScanDay = utcDay();
   } catch (e) {
     // 失败不记 lastScanDay，下小时重试
     console.error("[reminders] 扫描失败:", e);

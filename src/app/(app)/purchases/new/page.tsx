@@ -1,6 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { PrefillForm } from "@/components/PrefillForm";
 import { createPurchaseAction } from "@/lib/purchases/actions";
 
 const inputCls =
@@ -23,7 +24,7 @@ export default function NewPurchasePage() {
           登记失败：请检查必填项
         </div>
       )}
-      <form action={createPurchaseAction} className="space-y-4 border border-black bg-white p-5">
+      <PrefillForm action={createPurchaseAction} className="space-y-4 border border-black bg-white p-5">
         <div>
           <label className={labelCls}>名称</label>
           <input name="name" required placeholder="索尼 WH-1000XM5" className={inputCls} />
@@ -59,7 +60,7 @@ export default function NewPurchasePage() {
         <button className="w-full bg-black py-2.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800">
           登记 →
         </button>
-      </form>
+      </PrefillForm>
     </div>
   );
 }

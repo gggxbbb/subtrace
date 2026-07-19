@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { PrefillForm } from "@/components/PrefillForm";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getPurchase } from "@/lib/purchases/service";
 import { updatePurchaseAction } from "@/lib/purchases/actions";
@@ -28,7 +29,7 @@ export default async function EditPurchasePage({ params }: { params: Promise<{ i
         </div>
       </header>
       <main className="mx-auto max-w-xl px-6 py-8">
-        <form action={updatePurchaseAction.bind(null, purchase.id)} className="space-y-4 border border-black bg-white p-5">
+        <PrefillForm action={updatePurchaseAction.bind(null, purchase.id)} className="space-y-4 border border-black bg-white p-5">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>名称</label>
@@ -68,7 +69,7 @@ export default async function EditPurchasePage({ params }: { params: Promise<{ i
           >
             取消
           </a>
-        </form>
+        </PrefillForm>
       </main>
     </>
   );

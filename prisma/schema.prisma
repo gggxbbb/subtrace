@@ -14,6 +14,8 @@ model User {
   /// ADMIN | USER（SQLite 无原生 enum，由应用层约束）
   role          String    @default("USER")
   baseCurrency  String    @default("CNY")
+  /// 汇率 API 模板（{base} 占位），默认 open.er-api.com；ticket 09
+  ratesApiUrl   String?
   createdAt     DateTime  @default(now())
   sessions      Session[]
   invitesCreated Invite[] @relation("creator")
@@ -23,6 +25,25 @@ model User {
   usageRecords  UsageRecord[]
   beneficiaries Beneficiary[]
   notifyChannels NotificationChannel[]
+  exchangeRates ExchangeRate[]
+}
+
+/// 汇率表（ticket 09）：原币 → 主币种；AUTO 每日 API 刷新 / MANUAL 手动钉住
+model ExchangeRate {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 原币代码（USD/JPY/HKD…）；目标币 = 用户主币种
+  currency   String
+  /// 1 原币 = rateToBase 主币种
+  rateToBase Float
+  /// AUTO | MANUAL
+  mode       String   @default("MANUAL")
+  /// 上次自动更新失败的错误；为 null 且 AUTO 表示正常
+  lastError  String?
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, currency])
 }
 
 model Invite {
