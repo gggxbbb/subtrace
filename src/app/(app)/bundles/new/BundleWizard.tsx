@@ -122,87 +122,102 @@ export function BundleWizard({
         </div>
         <div className="space-y-px border border-black bg-black">
           {items.map((it, i) => (
-            <div key={i} className="grid grid-cols-[1fr_auto_auto_auto_auto] items-end gap-3 bg-white px-3 py-3">
-              <div>
-                <div className="mb-1 flex gap-2 text-[9px] uppercase f-mono">
-                  <button
-                    type="button"
-                    onClick={() => update(i, { mode: "new" })}
-                    className={it.mode === "new" ? "font-bold underline" : "text-neutral-400"}
-                  >
-                    新建
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => update(i, { mode: "existing" })}
-                    className={it.mode === "existing" ? "font-bold underline" : "text-neutral-400"}
-                  >
-                    关联已有
-                  </button>
+            <div key={i} className="space-y-3 bg-white px-3 py-3">
+              <div className="flex items-end gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex gap-2 text-[9px] uppercase f-mono">
+                    <button
+                      type="button"
+                      onClick={() => update(i, { mode: "new" })}
+                      className={it.mode === "new" ? "font-bold underline" : "text-neutral-400"}
+                    >
+                      新建
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => update(i, { mode: "existing" })}
+                      className={it.mode === "existing" ? "font-bold underline" : "text-neutral-400"}
+                    >
+                      关联已有
+                    </button>
+                  </div>
+                  {it.mode === "new" ? (
+                    <input
+                      placeholder="子会员名称，如 优酷 VIP"
+                      value={it.newName}
+                      onChange={(e) => update(i, { newName: e.target.value })}
+                      className={inputCls}
+                    />
+                  ) : (
+                    <select
+                      value={it.subscriptionId}
+                      onChange={(e) => {
+                        const sub = existingSubs.find((s) => s.id === e.target.value);
+                        update(i, {
+                          subscriptionId: e.target.value,
+                          // 顺延心智：服务起预填该订阅当前到期日（排他日，无缝衔接）
+                          periodStart: sub?.expiry ?? it.periodStart,
+                          periodEnd: "",
+                          plusDays: "",
+                        });
+                      }}
+                      className={inputCls}
+                    >
+                      <option value="">选择已有订阅…</option>
+                      {existingSubs.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}{s.expiry ? `（到期 ${s.expiry}）` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
-                {it.mode === "new" ? (
+                <button
+                  type="button"
+                  onClick={() => setItems(items.filter((_, j) => j !== i))}
+                  className="p-2 text-neutral-400 hover:text-red-700"
+                  disabled={items.length === 1}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-3 items-end gap-3">
+                <div>
+                  <label className={labelCls}>单买原价</label>
                   <input
-                    placeholder="子会员名称，如 优酷 VIP"
-                    value={it.newName}
-                    onChange={(e) => update(i, { newName: e.target.value })}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="未知"
+                    value={it.listPriceBase}
+                    onChange={(e) => update(i, { listPriceBase: e.target.value })}
                     className={inputCls}
                   />
-                ) : (
-                  <select
-                    value={it.subscriptionId}
-                    onChange={(e) => update(i, { subscriptionId: e.target.value })}
+                </div>
+                <div>
+                  <label className={labelCls}>按比例 ≈</label>
+                  <div className="border border-dashed border-neutral-400 px-2 py-1.5 text-sm f-mono">
+                    {fmtMoney(autoAlloc(it))}
+                  </div>
+                </div>
+                <div>
+                  <label className={labelCls}>分摊额（可改）</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder={autoAlloc(it).toFixed(2)}
+                    value={it.allocatedBase}
+                    onChange={(e) => update(i, { allocatedBase: e.target.value })}
                     className={inputCls}
-                  >
-                    <option value="">选择已有订阅…</option>
-                    {existingSubs.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}{s.expiry ? `（到期 ${s.expiry}）` : ""}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-              <div>
-                <label className={labelCls}>单买原价</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="未知"
-                  value={it.listPriceBase}
-                  onChange={(e) => update(i, { listPriceBase: e.target.value })}
-                  className={`${inputCls} w-24`}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>按比例 ≈</label>
-                <div className="border border-dashed border-neutral-400 px-2 py-1.5 text-sm f-mono">
-                  {fmtMoney(autoAlloc(it))}
+                  />
                 </div>
               </div>
-              <div>
-                <label className={labelCls}>分摊额（可改）</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder={autoAlloc(it).toFixed(2)}
-                  value={it.allocatedBase}
-                  onChange={(e) => update(i, { allocatedBase: e.target.value })}
-                  className={`${inputCls} w-24`}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => setItems(items.filter((_, j) => j !== i))}
-                className="p-2 text-neutral-400 hover:text-red-700"
-                disabled={items.length === 1}
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-              <div className="col-span-5 grid grid-cols-[1fr_1fr_auto] items-end gap-3">
+              <div className="grid grid-cols-2 items-end gap-3">
                 <div>
-                  <label className={labelCls}>服务起（留空继承打包起）</label>
+                  <label className={labelCls}>
+                    服务起（{it.mode === "existing" && it.subscriptionId ? "已预填当前到期日" : "留空继承打包起"}）
+                  </label>
                   <input
                     type="date"
                     value={it.periodStart}
@@ -233,7 +248,6 @@ export function BundleWizard({
                     />
                   </div>
                 </div>
-                <div />
               </div>
             </div>
           ))}
