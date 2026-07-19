@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Led, LedMatrix } from "@/components/te";
+import { Led } from "@/components/te";
 import {
   addQuotaSnapshotAction,
   addUsageAction,
@@ -71,16 +71,24 @@ export function UsageEntryPanel({
     verdict && refPrice && refPrice > 0
       ? Math.max(0, Math.ceil((verdict.cost - verdict.value) / refPrice))
       : null;
-  // 区间点阵：每天一格，有用量点亮，今天白点，未到灰点
-  const matrixDays: { used: boolean; today: boolean; future: boolean }[] = [];
+  // 日历数据：从区间首日所在周的周一开始，到区间末日止
+  const calDays: { day: number; inPeriod: boolean; used: boolean; today: boolean }[] = [];
   if (verdict) {
     const start = new Date(`${verdict.periodStart}T00:00:00Z`).getTime();
     const end = new Date(`${verdict.periodEnd}T00:00:00Z`).getTime();
     const todayMs = new Date(`${today}T00:00:00Z`).getTime();
     const usedDates = new Set(records.map((r) => r.date));
-    for (let t = start; t < end && matrixDays.length < 42; t += 86_400_000) {
+    // 对齐周一（UTC getUTCDay: 0=周日）
+    const startDow = (new Date(start).getUTCDay() + 6) % 7;
+    const calStart = start - startDow * 86_400_000;
+    for (let t = calStart; t < end; t += 86_400_000) {
       const iso = new Date(t).toISOString().slice(0, 10);
-      matrixDays.push({ used: usedDates.has(iso), today: t === todayMs, future: t > todayMs });
+      calDays.push({
+        day: new Date(t).getUTCDate(),
+        inPeriod: t >= start,
+        used: usedDates.has(iso),
+        today: t === todayMs,
+      });
     }
   }
 
@@ -234,24 +242,30 @@ export function UsageEntryPanel({
               )}
             </div>
           )}
-          <LedMatrix
-            rows={Math.ceil(matrixDays.length / 7)}
-            cols={7}
-            size={7}
-            gap={5}
-            lit={(r, c) => {
-              const day = matrixDays[r * 7 + c];
-              if (!day) return false;
-              if (day.today) return "#111";
-              if (day.used) return true;
-              return false;
-            }}
-            dark={false}
-            stretch
-          />
+          <div className="grid grid-cols-7 gap-1">
+            {["一", "二", "三", "四", "五", "六", "日"].map((w) => (
+              <div key={w} className="text-center text-[9px] uppercase text-neutral-400 f-mono">
+                {w}
+              </div>
+            ))}
+            {calDays.map((d, i) => (
+              <div
+                key={i}
+                className={`flex flex-col items-center py-1 text-[10px] f-mono ${
+                  d.today ? "border border-black bg-[#E4E3E0] font-bold" : "border border-transparent"
+                } ${d.inPeriod ? "" : "text-neutral-300"}`}
+              >
+                <span>{d.day}</span>
+                <span
+                  className="mt-0.5 inline-block h-1.5 w-1.5 rounded-full"
+                  style={{ background: d.used ? "#FF5A00" : "transparent" }}
+                />
+              </div>
+            ))}
+          </div>
           <div className="mt-1 flex justify-between text-[9px] uppercase text-neutral-400 f-mono">
             <span>{verdict.periodStart}</span>
-            <span>点 = 有用量 · 白 = 今天</span>
+            <span>点 = 有用量 · 框 = 今天</span>
             <span>{verdict.periodEnd}</span>
           </div>
         </div>
