@@ -12,13 +12,14 @@ import {
   RefreshCcw,
   Settings,
   SquareTerminal,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { Led } from "./te";
 
 const NAV: {
   group: string;
-  items: { icon: LucideIcon; label: string; href: string; soon?: boolean }[];
+  items: { icon: LucideIcon; label: string; href: string; soon?: boolean; adminOnly?: boolean }[];
 }[] = [
   {
     group: "WORKBENCH / 工作台",
@@ -34,6 +35,7 @@ const NAV: {
     group: "ACCOUNT / 账户",
     items: [
       { icon: Settings, label: "设置", href: "/settings" },
+      { icon: Users, label: "用户管理", href: "/users", adminOnly: true },
     ],
   },
 ];
@@ -61,7 +63,7 @@ export function Sidebar({ username, role }: { username: string; role: string }) 
               <ChevronDown className="h-3 w-3" />
             </div>
             <div className="mt-1.5 space-y-0.5">
-              {g.items.map((it) => {
+              {g.items.filter((it) => !it.adminOnly || role === "ADMIN").map((it) => {
                 const active = pathname.startsWith(it.href);
                 const cls = `flex items-center gap-2.5 px-2 py-1.5 text-[13px] font-medium ${
                   active

@@ -2,12 +2,17 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import {
   createInvite,
   createSession,
+  deleteUser,
   invalidateSession,
   login,
   register,
+  resetUserPassword,
+  revokeInvite,
+  setUserRole,
 } from "./service";
 import { getCurrentUser, SESSION_COOKIE } from "./session";
 
@@ -60,4 +65,39 @@ export async function createInviteAction() {
   if (!user || user.role !== "ADMIN") throw new Error("forbidden");
   const invite = await createInvite(user.id);
   return invite.token;
+}
+
+/** 吊销未使用邀请（仅 ADMIN） */
+export async function revokeInviteAction(token: string) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "ADMIN") throw new Error("forbidden");
+  await revokeInvite(token);
+  revalidatePath("/users");
+}
+
+const assertAdmin = async () => {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "ADMIN") throw new Error("forbidden");
+  return user;
+};
+
+/** 改角色（仅 ADMIN；不能改自己/最后一个 ADMIN） */
+export async function setUserRoleAction(targetId: string, role: "ADMIN" | "USER") {
+  const user = await assertAdmin();
+  await setUserRole(user.id, targetId, role);
+  revalidatePath("/users");
+}
+
+/** 重置用户密码（仅 ADMIN；改密后踢掉其全部会话） */
+export async function resetUserPasswordAction(targetId: string, newPassword: string) {
+  const user = await assertAdmin();
+  await resetUserPassword(user.id, targetId, newPassword);
+  revalidatePath("/users");
+}
+
+/** 删除用户（仅 ADMIN；级联删除其全部数据） */
+export async function deleteUserAction(targetId: string) {
+  const user = await assertAdmin();
+  await deleteUser(user.id, targetId);
+  revalidatePath("/users");
 }

@@ -88,3 +88,96 @@ export async function createInvite(creatorId: string, expiresAt?: Date) {
     },
   });
 }
+
+/** 用户列表（管理页）：用户名/角色/注册时间/订阅数 */
+export async function listUsers() {
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      username: true,
+      role: true,
+      baseCurrency: true,
+      createdAt: true,
+      _count: { select: { subscriptions: true } },
+    },
+  });
+  return users.map((u) => ({
+    id: u.id,
+    username: u.username,
+    role: u.role,
+    baseCurrency: u.baseCurrency,
+    createdAt: u.createdAt,
+    subscriptionCount: u._count.subscriptions,
+  }));
+}
+
+export interface InviteView {
+  token: string;
+  createdBy: string;
+  usedBy: string | null;
+  expiresAt: Date;
+  createdAt: Date;
+}
+
+/** 邀请列表（管理页）：含状态判定的原始数据 */
+export async function listInvites(): Promise<InviteView[]> {
+  const rows = await prisma.invite.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { creator: { select: { username: true } } },
+  });
+  const usedByIds = rows.map((r) => r.usedById).filter((id): id is string => id !== null);
+  const usedByUsers = await prisma.user.findMany({
+    where: { id: { in: usedByIds } },
+    select: { id: true, username: true },
+  });
+  const nameOf = new Map(usedByUsers.map((u) => [u.id, u.username]));
+  return rows.map((r) => ({
+    token: r.token,
+    createdBy: r.creator.username,
+    usedBy: r.usedById ? (nameOf.get(r.usedById) ?? "?") : null,
+    expiresAt: r.expiresAt,
+    createdAt: r.createdAt,
+  }));
+}
+
+/** 吊销未使用的邀请 */
+export async function revokeInvite(token: string): Promise<void> {
+  await prisma.invite.deleteMany({ where: { token, usedById: null } });
+}
+
+/** 管理操作的共同护栏：不能操作自己；目标若是最后一个 ADMIN 也不可降级/删除 */
+async function assertAdminTarget(actorId: string, targetId: string) {
+  if (actorId === targetId) throw new Error("不能操作自己 self_forbidden");
+  const target = await prisma.user.findUnique({ where: { id: targetId } });
+  if (!target) throw new Error("用户不存在 user_not_found");
+  if (target.role === "ADMIN") {
+    const admins = await prisma.user.count({ where: { role: "ADMIN" } });
+    if (admins <= 1) throw new Error("至少保留一名管理员 last_admin");
+  }
+  return target;
+}
+
+/** 改角色（ADMIN↔USER） */
+export async function setUserRole(actorId: string, targetId: string, role: "ADMIN" | "USER") {
+  await assertAdminTarget(actorId, targetId);
+  await prisma.user.update({ where: { id: targetId }, data: { role } });
+}
+
+/** 重置用户密码（管理员直接设定新密码） */
+export async function resetUserPassword(actorId: string, targetId: string, newPassword: string) {
+  if (newPassword.length < 8) throw new Error("密码至少 8 位 weak_password");
+  await assertAdminTarget(actorId, targetId);
+  await prisma.user.update({
+    where: { id: targetId },
+    data: { passwordHash: await hash(newPassword) },
+  });
+  // 改密后踢掉该用户全部会话
+  await prisma.session.deleteMany({ where: { userId: targetId } });
+}
+
+/** 删除用户（级联带走其订阅/物品/邀请等全部数据） */
+export async function deleteUser(actorId: string, targetId: string) {
+  await assertAdminTarget(actorId, targetId);
+  await prisma.user.delete({ where: { id: targetId } });
+}

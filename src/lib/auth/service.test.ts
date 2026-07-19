@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "../db";
 import {
   createInvite,
+  deleteUser,
+  resetUserPassword,
+  setUserRole,
   createSession,
   getSessionUser,
   invalidateSession,
@@ -77,5 +80,51 @@ describe("登录与会话", () => {
     const user = await register("gggxbbb", "secret-password");
     const session = await createSession(user.id, new Date(Date.now() - 1000));
     expect(await getSessionUser(session.id)).toBeNull();
+  });
+});
+
+describe("用户管理（ADMIN 操作）", () => {
+  const setup = async () => {
+    const admin = await register("admin", "secret-password");
+    const invite = await createInvite(admin.id);
+    const member = await register("member", "secret-password", invite.token);
+    return { admin, member };
+  };
+
+  it("改角色：USER→ADMIN→USER；此时可降级原 admin（不再是唯一管理员）", async () => {
+    const { admin, member } = await setup();
+    await expect(setUserRole(admin.id, member.id, "ADMIN")).resolves.toBeUndefined();
+    await expect(setUserRole(admin.id, member.id, "USER")).resolves.toBeUndefined();
+  });
+
+  it("不能操作自己，不能动最后一个 ADMIN", async () => {
+    const { admin, member } = await setup();
+    await expect(setUserRole(admin.id, admin.id, "USER")).rejects.toThrow(/self/);
+    await expect(deleteUser(admin.id, admin.id)).rejects.toThrow(/self/);
+    await expect(setUserRole(admin.id, admin.id, "USER")).rejects.toThrow(/self/);
+    // member 不是 ADMIN，可正常删除
+    await expect(deleteUser(admin.id, member.id)).resolves.toBeUndefined();
+    // admin 是唯一 ADMIN：不可降级不可删
+    await expect(setUserRole(member.id, admin.id, "USER")).rejects.toThrow(/last_admin|self|不存在/);
+  });
+
+  it("重置密码：新密码可登录，旧会话被踢", async () => {
+    const { admin, member } = await setup();
+    const session = await createSession(member.id);
+    await resetUserPassword(admin.id, member.id, "new-password-456");
+    await expect(login("member", "new-password-456")).resolves.toMatchObject({ username: "member" });
+    await expect(login("member", "secret-password")).rejects.toThrow();
+    expect(await getSessionUser(session.id)).toBeNull();
+    await expect(resetUserPassword(admin.id, member.id, "short")).rejects.toThrow(/8/);
+  });
+
+  it("删除用户级联清空其订阅", async () => {
+    const { admin, member } = await setup();
+    await prisma.subscription.create({
+      data: { ownerId: member.id, name: "m的订阅", trackingMode: "MANUAL", startDate: new Date() },
+    });
+    await deleteUser(admin.id, member.id);
+    expect(await prisma.subscription.count()).toBe(0);
+    expect(await prisma.user.count()).toBe(1);
   });
 });
