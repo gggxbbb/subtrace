@@ -2,11 +2,13 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Panel, fmt, fmtDate } from "@/components/te";
 import { getCurrentUser } from "@/lib/auth/session";
-import { listBundles } from "@/lib/bundles/service";
+import { listArchivedBundles, listBundles } from "@/lib/bundles/service";
+import { BundleRowActions } from "./BundleRowActions";
 
 export default async function BundlesPage() {
   const user = (await getCurrentUser())!;
   const bundles = await listBundles(user.id);
+  const archived = await listArchivedBundles(user.id);
 
   return (
     <>
@@ -38,6 +40,7 @@ export default async function BundlesPage() {
             key={b.id}
             index={String(idx + 1).padStart(2, "0")}
             title={`${b.name} · ${fmt(b.totalAmountBase)} · ${fmtDate(b.periodStart)} → ${fmtDate(b.periodEnd)}`}
+            actions={<BundleRowActions bundleId={b.id} archived={false} />}
           >
             <table className="w-full text-[13px]">
               <thead>
@@ -65,6 +68,22 @@ export default async function BundlesPage() {
             </table>
           </Panel>
         ))}
+
+        {archived.length > 0 && (
+          <Panel index={String(bundles.length + 1).padStart(2, "0")} title={`已归档 / ${archived.length}`}>
+            {archived.map((b) => (
+              <div key={b.id} className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 text-[13px] last:border-0">
+                <span>
+                  {b.name}
+                  <span className="ml-2 text-[10px] text-neutral-400 f-mono">
+                    {fmt(b.totalAmountBase)} · {fmtDate(b.periodStart)} → {fmtDate(b.periodEnd)}
+                  </span>
+                </span>
+                <BundleRowActions bundleId={b.id} archived />
+              </div>
+            ))}
+          </Panel>
+        )}
       </div>
     </>
   );

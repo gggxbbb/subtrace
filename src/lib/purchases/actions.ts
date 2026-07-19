@@ -10,6 +10,7 @@ import {
   deletePurchase,
   deletePurchaseIncome,
   setPurchaseArchived,
+  updatePurchaseIncome,
   updatePurchase,
   type PurchaseInput,
 } from "./service";
@@ -90,15 +91,16 @@ export async function addPurchaseIncomeAction(purchaseId: string, formData: Form
     note: String(formData.get("note") ?? "") || undefined,
   });
   revalidatePath(`/purchases/${purchaseId}`);
-  redirect(`/purchases/${purchaseId}`);
+  const back = formData.get("back");
+  redirect(back ? `/purchases/${purchaseId}/incomes?${back}` : `/purchases/${purchaseId}`);
 }
 
-export async function deletePurchaseIncomeAction(purchaseId: string, incomeId: string) {
+export async function deletePurchaseIncomeAction(purchaseId: string, incomeId: string, back?: string) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   await deletePurchaseIncome(user.id, incomeId);
   revalidatePath(`/purchases/${purchaseId}`);
-  redirect(`/purchases/${purchaseId}`);
+  redirect(back ? `/purchases/${purchaseId}/incomes?${back}` : `/purchases/${purchaseId}`);
 }
 
 export async function setPurchaseArchivedAction(purchaseId: string, archived: boolean) {
@@ -117,4 +119,18 @@ export async function deletePurchaseAction(purchaseId: string) {
   revalidatePath("/purchases");
   revalidatePath("/dashboard");
   redirect("/purchases");
+}
+
+export async function updatePurchaseIncomeAction(purchaseId: string, incomeId: string, formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const amount = Number(formData.get("amount"));
+  await updatePurchaseIncome(user.id, incomeId, {
+    amount,
+    amountBase: parseNum(formData.get("amountBase")) ?? amount,
+    date: parseDate(formData.get("date")),
+    note: String(formData.get("note") ?? "") || null,
+  });
+  revalidatePath(`/purchases/${purchaseId}`);
+  redirect(`/purchases/${purchaseId}/incomes?${formData.get("back") ?? ""}`);
 }

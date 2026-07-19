@@ -8,6 +8,7 @@ import {
   addUsage,
   deleteUsage,
   setUsageConfig,
+  updateUsage,
 } from "./service";
 import { prisma } from "../db";
 
@@ -36,7 +37,8 @@ export async function addUsageAction(subscriptionId: string, formData: FormData)
     unitPrice: unitPrice && String(unitPrice).trim() !== "" ? Number(unitPrice) : undefined,
   });
   revalidatePath(`/subscriptions/${subscriptionId}`);
-  redirect(`/subscriptions/${subscriptionId}`);
+  const back = formData.get("back");
+  redirect(back ? `/subscriptions/${subscriptionId}/usage/records?${back}` : `/subscriptions/${subscriptionId}`);
 }
 
 export async function addQuotaSnapshotAction(subscriptionId: string, formData: FormData) {
@@ -58,12 +60,12 @@ export async function addQuotaSnapshotAction(subscriptionId: string, formData: F
 }
 
 
-export async function deleteUsageAction(subscriptionId: string, usageId: string) {
+export async function deleteUsageAction(subscriptionId: string, usageId: string, back?: string) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   await deleteUsage(user.id, usageId);
   revalidatePath(`/subscriptions/${subscriptionId}`);
-  redirect(`/subscriptions/${subscriptionId}`);
+  redirect(back ? `/subscriptions/${subscriptionId}/usage/records?${back}` : `/subscriptions/${subscriptionId}`);
 }
 
 /** 停用用量跟踪：清空类型（记录保留，重新启用时可恢复解读） */
@@ -91,4 +93,22 @@ export async function purgeUsageAction(subscriptionId: string) {
   });
   revalidatePath(`/subscriptions/${subscriptionId}`);
   redirect(`/subscriptions/${subscriptionId}`);
+}
+
+export async function updateUsageAction(subscriptionId: string, usageId: string, formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const num = (k: string) => {
+    const v = formData.get(k);
+    return v && String(v).trim() !== "" ? Number(v) : undefined;
+  };
+  await updateUsage(user.id, usageId, {
+    date: formData.get("date") ? parseDate(formData.get("date")) : undefined,
+    quantity: num("quantity"),
+    unitPrice: num("unitPrice"),
+    quotaTotal: num("quotaTotal"),
+  });
+  revalidatePath(`/subscriptions/${subscriptionId}/usage/records`);
+  revalidatePath(`/subscriptions/${subscriptionId}`);
+  redirect(`/subscriptions/${subscriptionId}/usage/records?${formData.get("back") ?? ""}`);
 }

@@ -111,7 +111,8 @@ export async function recordPaymentAction(subscriptionId: string, formData: Form
   }
   revalidatePath(`/subscriptions/${subscriptionId}`);
   revalidatePath("/dashboard");
-  redirect(`/subscriptions/${subscriptionId}`);
+  const back = formData.get("back");
+  redirect(back ? `/subscriptions/${subscriptionId}/payments?${back}` : `/subscriptions/${subscriptionId}`);
 }
 
 export async function setStatusAction(
@@ -151,16 +152,17 @@ export async function updatePaymentAction(
   await updatePayment(user.id, paymentId, paymentInputFrom(formData));
   revalidatePath(`/subscriptions/${subscriptionId}`);
   revalidatePath("/dashboard");
-  redirect(`/subscriptions/${subscriptionId}`);
+  const back = formData.get("back");
+  redirect(back ? `/subscriptions/${subscriptionId}/payments?${back}` : `/subscriptions/${subscriptionId}`);
 }
 
-export async function deletePaymentAction(subscriptionId: string, paymentId: string) {
+export async function deletePaymentAction(subscriptionId: string, paymentId: string, back?: string) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   await deletePayment(user.id, paymentId);
   revalidatePath(`/subscriptions/${subscriptionId}`);
   revalidatePath("/dashboard");
-  redirect(`/subscriptions/${subscriptionId}`);
+  redirect(back ? `/subscriptions/${subscriptionId}/payments?${back}` : `/subscriptions/${subscriptionId}`);
 }
 
 export async function deleteSubscriptionAction(subscriptionId: string) {

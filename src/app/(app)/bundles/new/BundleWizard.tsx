@@ -12,7 +12,7 @@ const labelCls =
 
 const fmtMoney = (n: number) => `¥${n.toFixed(2)}`;
 
-interface Item {
+export interface Item {
   mode: "existing" | "new";
   subscriptionId: string;
   newName: string;
@@ -25,7 +25,7 @@ interface Item {
   periodTouched: boolean;
 }
 
-const newItem = (start: string, end: string): Item => ({
+export const newItem = (start: string, end: string): Item => ({
   mode: "new",
   subscriptionId: "",
   newName: "",
@@ -37,16 +37,33 @@ const newItem = (start: string, end: string): Item => ({
   periodTouched: false,
 });
 
+export interface BundleWizardInitial {
+  name: string;
+  totalAmount: string;
+  currency: string;
+  periodStart: string;
+  periodEnd: string;
+  items: Item[];
+}
+
 export function BundleWizard({
   existingSubs,
+  initial,
+  action,
+  submitLabel = "创建联合会员 →",
 }: {
   existingSubs: { id: string; name: string; expiry: string | null }[];
+  /** 编辑模式：预填数据（子会员全部按「关联已有」呈现） */
+  initial?: BundleWizardInitial;
+  /** 自定义提交 action（编辑模式用 replaceBundleAction） */
+  action?: (formData: FormData) => Promise<void>;
+  submitLabel?: string;
 }) {
   const error = useSearchParams().get("error");
   const today = new Date().toISOString().slice(0, 10);
   const nextYear = new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10);
-  const [items, setItems] = useState<Item[]>([newItem(today, nextYear)]);
-  const [total, setTotal] = useState("");
+  const [items, setItems] = useState<Item[]>(initial?.items ?? [newItem(today, nextYear)]);
+  const [total, setTotal] = useState(initial?.totalAmount ?? "");
 
   const totalNum = Number(total) || 0;
   const priceSum = items.reduce((s, it) => s + (Number(it.listPriceBase) || 0), 0);
@@ -56,8 +73,8 @@ export function BundleWizard({
   const update = (i: number, patch: Partial<Item>) =>
     setItems(items.map((it, j) => (j === i ? { ...it, ...patch } : it)));
 
-  const [bundleStart, setBundleStartRaw] = useState(today);
-  const [bundleEnd, setBundleEndRaw] = useState(nextYear);
+  const [bundleStart, setBundleStartRaw] = useState(initial?.periodStart ?? today);
+  const [bundleEnd, setBundleEndRaw] = useState(initial?.periodEnd ?? nextYear);
   const [bundlePlusDays, setBundlePlusDays] = useState("");
 
   // 打包日期改动时，未手动改过起止的行跟着联动
@@ -95,7 +112,7 @@ export function BundleWizard({
   };
 
   return (
-    <form action={createBundleAction} className="space-y-4 border border-black bg-white p-5">
+    <form action={action ?? createBundleAction} className="space-y-4 border border-black bg-white p-5">
       {error && (
         <div className="border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
           创建失败：请检查打包信息与子会员
@@ -104,7 +121,7 @@ export function BundleWizard({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>联合会员名称</label>
-          <input name="name" required placeholder="88VIP 联名" className={inputCls} />
+          <input name="name" required defaultValue={initial?.name} placeholder="88VIP 联名" className={inputCls} />
         </div>
         <div>
           <label className={labelCls}>打包实付</label>
@@ -119,7 +136,7 @@ export function BundleWizard({
               onChange={(e) => setTotal(e.target.value)}
               className={inputCls}
             />
-            <input name="currency" defaultValue="CNY" className={`${inputCls} w-20 f-mono`} />
+            <input name="currency" defaultValue={initial?.currency ?? "CNY"} className={`${inputCls} w-20 f-mono`} />
           </div>
         </div>
       </div>
@@ -319,7 +336,7 @@ export function BundleWizard({
         )}
       />
       <button className="w-full bg-black py-2.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800">
-        创建联合会员 →
+        {submitLabel}
       </button>
     </form>
   );

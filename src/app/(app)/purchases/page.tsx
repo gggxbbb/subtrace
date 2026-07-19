@@ -3,11 +3,13 @@ import { Plus } from "lucide-react";
 import { Panel, ORANGE, fmt, fmtDate } from "@/components/te";
 import { getCurrentUser } from "@/lib/auth/session";
 import { breakevenProgress, dayDiff, purchaseCurrentDailyRate } from "@/lib/cost-engine";
-import { listPurchases, toEnginePurchase } from "@/lib/purchases/service";
+import { listArchivedPurchases, listPurchases, toEnginePurchase } from "@/lib/purchases/service";
+import { ArchivedPurchaseList } from "./ArchivedPurchaseList";
 
 export default async function PurchasesPage() {
   const user = (await getCurrentUser())!;
   const purchases = await listPurchases(user.id);
+  const archived = await listArchivedPurchases(user.id);
   const today = new Date();
   const rows = purchases.map((p) => {
     const engine = toEnginePurchase(p);
@@ -69,6 +71,20 @@ export default async function PurchasesPage() {
             ))}
           </div>
         </Panel>
+
+        <div className="mt-4">
+          <Panel index="02" title={`已归档 / ${archived.length}`}>
+            <ArchivedPurchaseList
+              rows={archived.map((a) => ({
+                id: a.id,
+                name: a.name,
+                category: a.category,
+                status: a.status,
+                purchaseDate: a.purchaseDate.toISOString().slice(0, 10),
+              }))}
+            />
+          </Panel>
+        </div>
       </div>
     </>
   );

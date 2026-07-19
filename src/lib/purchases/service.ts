@@ -176,3 +176,30 @@ export async function setPurchaseArchived(ownerId: string, id: string, archived:
 export async function deletePurchase(ownerId: string, id: string): Promise<void> {
   await prisma.purchase.deleteMany({ where: { id, ownerId } });
 }
+
+/** 编辑收益记录 */
+export async function updatePurchaseIncome(
+  ownerId: string,
+  incomeId: string,
+  input: { amount?: number; currency?: string; amountBase?: number; date?: Date; note?: string | null },
+): Promise<void> {
+  await prisma.purchaseIncome.updateMany({
+    where: { id: incomeId, purchase: { ownerId } },
+    data: {
+      ...(input.amount !== undefined && { amount: input.amount }),
+      ...(input.currency !== undefined && { currency: input.currency }),
+      ...(input.amountBase !== undefined && { amountBase: input.amountBase }),
+      ...(input.date !== undefined && { date: input.date }),
+      ...(input.note !== undefined && { note: input.note }),
+    },
+  });
+}
+
+/** 已归档物品 */
+export async function listArchivedPurchases(ownerId: string) {
+  return prisma.purchase.findMany({
+    where: { ownerId, archived: true },
+    orderBy: { purchaseDate: "desc" },
+    select: { id: true, name: true, category: true, status: true, purchaseDate: true },
+  });
+}

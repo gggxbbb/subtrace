@@ -99,7 +99,15 @@ export default async function PurchaseDetailPage({
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          <Panel index="01" title={`收益记录 / ${incomes.length}`}>
+          <Panel
+            index="01"
+            title={`收益记录 / ${incomes.length}`}
+            actions={
+              <a href={`/purchases/${purchase.id}/incomes`} className="text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-black">
+                全部 →
+              </a>
+            }
+          >
             <PurchaseIncomePanel
               purchaseId={purchase.id}
               incomes={incomes.map((i) => ({

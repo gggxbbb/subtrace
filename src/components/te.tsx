@@ -78,12 +78,15 @@ export function Panel({
   title,
   action,
   href,
+  actions,
   children,
 }: {
   index: string;
   title: string;
   action?: string;
   href?: string;
+  /** 标题行右侧自定义操作区（优先于 action/href） */
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -92,14 +95,15 @@ export function Panel({
         <span className="text-[10px] font-semibold uppercase tracking-[0.15em] f-mono">
           <span className="text-neutral-400">{index}</span> — {title}
         </span>
-        {action && (
-          <a
-            href={href}
-            className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-black"
-          >
-            {action} <ArrowRight className="h-3 w-3" />
-          </a>
-        )}
+        {actions ??
+          (action && (
+            <a
+              href={href}
+              className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-black"
+            >
+              {action} <ArrowRight className="h-3 w-3" />
+            </a>
+          ))}
       </header>
       {children}
     </section>

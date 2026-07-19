@@ -191,7 +191,15 @@ export default async function SubscriptionDetailPage({
             </Panel>
           )}
 
-          <Panel index="02" title={`付费历史 / ${sub.payments.length}`}>
+          <Panel
+            index="02"
+            title={`付费历史 / ${sub.payments.length}`}
+            actions={
+              <a href={`/subscriptions/${sub.id}/payments`} className="text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-black">
+                全部 →
+              </a>
+            }
+          >
             <PaymentHistory
               subscriptionId={sub.id}
               canEdit={isOwner}
@@ -224,7 +232,15 @@ export default async function SubscriptionDetailPage({
                 verdict={verdictData}
               />
             </Panel>
-            <Panel index="04" title="盈亏 · 当前区间">
+            <Panel
+              index="04"
+              title="盈亏 · 当前区间"
+              actions={
+                <a href={`/subscriptions/${sub.id}/usage/records`} className="text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-black">
+                  全部 →
+                </a>
+              }
+            >
               <UsageVerdictPanel
                 verdict={verdictData}
                 usageUnit={sub.usageUnit}

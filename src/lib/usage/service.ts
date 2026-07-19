@@ -215,3 +215,24 @@ export function getUsageVerdict(
     costPerUse: actualCostPerUse(costShare, usage),
   };
 }
+
+/** 编辑用量记录（所有者或记录本人） */
+export async function updateUsage(
+  actorId: string,
+  usageId: string,
+  input: { date?: Date; quantity?: number; unitPrice?: number | null; quotaTotal?: number | null },
+): Promise<void> {
+  const rec = await prisma.usageRecord.findFirst({
+    where: { id: usageId, OR: [{ subscription: { ownerId: actorId } }, { userId: actorId }] },
+  });
+  if (!rec) throw new Error("记录不存在 usage_not_found");
+  await prisma.usageRecord.update({
+    where: { id: usageId },
+    data: {
+      ...(input.date !== undefined && { date: input.date }),
+      ...(input.quantity !== undefined && { quantity: input.quantity }),
+      ...(input.unitPrice !== undefined && { unitPrice: input.unitPrice }),
+      ...(input.quotaTotal !== undefined && { quotaTotal: input.quotaTotal }),
+    },
+  });
+}

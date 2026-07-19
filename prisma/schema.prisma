@@ -155,6 +155,8 @@ model Bundle {
   totalAmountBase Float
   periodStart     DateTime
   periodEnd       DateTime
+  /// 归档（隐藏于列表）
+  archived        Boolean  @default(false)
   createdAt       DateTime  @default(now())
   payments        Payment[]
 }
