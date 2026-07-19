@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { recordPaymentAction } from "@/lib/subscriptions/actions";
 
@@ -7,6 +8,8 @@ const inputCls =
   "w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white";
 const labelCls =
   "mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
+
+const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 export function PaymentForm({
   subscriptionId,
@@ -23,6 +26,18 @@ export function PaymentForm({
 }) {
   const error = useSearchParams().get("error");
   const action = recordPaymentAction.bind(null, subscriptionId);
+  const [periodStart, setPeriodStart] = useState(prefill.periodStart);
+  const [periodEnd, setPeriodEnd] = useState(prefill.periodEnd);
+  const [plusDays, setPlusDays] = useState("");
+
+  const applyPlusDays = (v: string) => {
+    setPlusDays(v);
+    const n = Number(v);
+    if (Number.isFinite(n) && v.trim() !== "" && periodStart) {
+      const start = new Date(`${periodStart}T00:00:00Z`);
+      setPeriodEnd(iso(new Date(start.getTime() + n * 86_400_000)));
+    }
+  };
 
   return (
     <form action={action} className="space-y-4 px-4 py-4">
@@ -52,11 +67,47 @@ export function PaymentForm({
         </div>
         <div>
           <label className={labelCls}>服务起</label>
-          <input name="periodStart" type="date" defaultValue={prefill.periodStart} required className={`${inputCls} f-mono`} />
+          <input
+            name="periodStart"
+            type="date"
+            value={periodStart}
+            onChange={(e) => setPeriodStart(e.target.value)}
+            required
+            className={`${inputCls} f-mono`}
+          />
         </div>
         <div>
           <label className={labelCls}>服务止（到期日）</label>
-          <input name="periodEnd" type="date" defaultValue={prefill.periodEnd} required className={`${inputCls} f-mono`} />
+          <div className="flex gap-2">
+            <input
+              name="periodEnd"
+              type="date"
+              value={periodEnd}
+              onChange={(e) => {
+                setPeriodEnd(e.target.value);
+                setPlusDays("");
+              }}
+              required
+              className={`${inputCls} f-mono`}
+            />
+            <div className="relative w-28 shrink-0">
+              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-sm text-neutral-500 f-mono">
+                +
+              </span>
+              <input
+                type="number"
+                min="1"
+                placeholder="N"
+                value={plusDays}
+                onChange={(e) => applyPlusDays(e.target.value)}
+                className={`${inputCls} pl-5 f-mono`}
+                title="按天数：服务止 = 服务起 + N 天"
+              />
+            </div>
+          </div>
+          <div className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
+            或输入 +N 天快速顺延
+          </div>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
