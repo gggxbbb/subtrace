@@ -118,7 +118,7 @@ export function UsageEntryPanel({
       )}
 
       {kind === "COUNT" ? (
-        <form action={addUsageAction.bind(null, subscriptionId)} className="space-y-2">
+        <form key="count" action={addUsageAction.bind(null, subscriptionId)} className="space-y-2">
           {kindUnset && (
             <>
               <input type="hidden" name="usageKind" value="COUNT" />
@@ -173,7 +173,7 @@ export function UsageEntryPanel({
           </div>
         </form>
       ) : (
-        <form action={addQuotaSnapshotAction.bind(null, subscriptionId)} className="space-y-2">
+        <form key="quota" action={addQuotaSnapshotAction.bind(null, subscriptionId)} className="space-y-2">
           {kindUnset && (
             <>
               <input type="hidden" name="usageKind" value="QUOTA" />
