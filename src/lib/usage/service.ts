@@ -18,7 +18,7 @@ import type { UsageRecord } from "@/generated/prisma/client";
 export interface UsageConfigInput {
   usageKind: "COUNT" | "QUOTA";
   usageUnit: string;
-  altUnitPrice: number;
+  altUnitPrice?: number;
   quotaTotal?: number;
 }
 
@@ -32,8 +32,8 @@ export async function setUsageConfig(
     data: {
       usageKind: input.usageKind,
       usageUnit: input.usageUnit,
-      altUnitPrice: input.altUnitPrice,
-      quotaTotal: input.usageKind === "QUOTA" ? input.quotaTotal : null,
+      altUnitPrice: input.usageKind === "COUNT" ? (input.altUnitPrice ?? null) : null,
+      quotaTotal: input.usageKind === "QUOTA" ? (input.quotaTotal ?? null) : null,
     },
   });
 }
@@ -90,29 +90,88 @@ async function assertOwned(ownerId: string, subscriptionId: string) {
   return sub;
 }
 
-export interface UsageVerdict {
+export interface CountVerdict {
+  kind: "COUNT";
   periodStart: Date;
   periodEnd: Date;
   /** 当前服务区间净额（全额） */
   cost: number;
   usage: number;
-  /** 用量 × 替代单价 */
+  /** 用量 × 替代单价（逐条记录级单价） */
   value: number;
   verdictAmount: number;
   costPerUse: number | null;
 }
 
-/** 当前服务区间的盈亏（覆盖 today 的成本段；无覆盖或未配置用量为 null） */
+export interface QuotaVerdict {
+  kind: "QUOTA";
+  periodStart: Date;
+  periodEnd: Date;
+  /** 当前服务区间净额（全额） */
+  cost: number;
+  /** 最新快照的已用额度 */
+  used: number;
+  /** 最新快照的总额度 */
+  total: number;
+  /** 使用率（0–1，封顶 1） */
+  usageRate: number;
+  /** 区间内首次用满 100% 的快照日期；未用满为 null */
+  hit100At: Date | null;
+  /** 没用满折算的浪费 = cost × (1 − usageRate) */
+  wastedAmount: number;
+  /** 每单位实际成本（如每 GB 成本） */
+  costPerUnit: number | null;
+  /** = −wastedAmount（≤0；用满为 0） */
+  verdictAmount: number;
+}
+
+export type UsageVerdict = CountVerdict | QuotaVerdict;
+
+/** 当前服务区间的盈亏（覆盖 today 的成本段；无覆盖为 null） */
 export function getUsageVerdict(
   sub: SubscriptionWithPayments,
   records: UsageRecord[],
   today: Date,
 ): UsageVerdict | null {
-  if (!sub.usageKind || sub.altUnitPrice == null) return null;
+  if (!sub.usageKind) return null;
   const covering = costSegments(toEngineSub(sub), toEnginePayments(sub.payments), today).find(
     (s) => s.start <= today && today < s.end,
   );
   if (!covering) return null;
+
+  if (sub.usageKind === "QUOTA") {
+    // 额度型：只看使用率——用到 100% 没有，什么时候用满；浪费 = 未用部分 × 成本
+    const inPeriod = records
+      .filter((r) => r.kind === "TOTAL" && r.date >= covering.start && r.date < covering.end)
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+    const latest = inPeriod[inPeriod.length - 1];
+    if (!latest) return null;
+    const effectiveTotal = (r: UsageRecord) => r.quotaTotal ?? sub.quotaTotal;
+    const total = effectiveTotal(latest);
+    if (total == null || total <= 0) return null;
+    const used = latest.quantity;
+    const usageRate = Math.min(used / total, 1);
+    const hit = inPeriod.find((r) => {
+      const t = effectiveTotal(r);
+      return t != null && t > 0 && r.quantity >= t;
+    });
+    const wastedAmount = covering.net * (1 - usageRate);
+    return {
+      kind: "QUOTA",
+      periodStart: covering.start,
+      periodEnd: covering.end,
+      cost: covering.net,
+      used,
+      total,
+      usageRate,
+      hit100At: hit?.date ?? null,
+      wastedAmount,
+      costPerUnit: used > 0 ? covering.net / used : null,
+      verdictAmount: -wastedAmount + 0, // 避免 -0
+    };
+  }
+
+  if (sub.altUnitPrice == null) return null;
   const usage = usageInPeriod(
     records.map((r) => ({ date: r.date, quantity: r.quantity, kind: r.kind as "DELTA" | "TOTAL" })),
     covering.start,
@@ -130,6 +189,7 @@ export function getUsageVerdict(
     sub.altUnitPrice ?? 0,
   );
   return {
+    kind: "COUNT",
     periodStart: covering.start,
     periodEnd: covering.end,
     cost: covering.net,

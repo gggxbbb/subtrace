@@ -132,15 +132,18 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   const itemDailyCost = purchases.reduce((s, p) => s + p.dailyCost, 0);
   const totalDailyCost = active.reduce((s, r) => s + r.dailyCost, 0) + itemDailyCost;
 
-  // 用量红黑榜：配置了用量的订阅按当前区间盈亏排序
+  // 用量红黑榜：启用用量追踪的订阅按当前区间盈亏排序（计数型赚亏 / 额度型浪费）
   const usageBoard: UsageBoardRow[] = [];
-  for (const sub of subs.filter((s) => s.usageKind && s.altUnitPrice != null)) {
+  for (const sub of subs.filter((s) => s.usageKind)) {
     const v = getUsageVerdict(sub, await listUsage(sub.id), today);
     if (!v) continue;
     usageBoard.push({
       id: sub.id,
       name: sub.name,
-      detail: `${v.usage} ${sub.usageUnit ?? ""} × ${v.value > 0 && v.usage > 0 ? (v.value / v.usage).toFixed(2) : sub.altUnitPrice} − ${v.cost.toFixed(2)}`,
+      detail:
+        v.kind === "COUNT"
+          ? `${v.usage} ${sub.usageUnit ?? ""} × ${v.value > 0 && v.usage > 0 ? (v.value / v.usage).toFixed(2) : sub.altUnitPrice} − ${v.cost.toFixed(2)}`
+          : `已用 ${Math.round(v.usageRate * 100)}%（${v.used}/${v.total} ${sub.usageUnit ?? ""}）${v.hit100At ? " · 已用满" : ""}`,
       verdictAmount: v.verdictAmount,
     });
   }

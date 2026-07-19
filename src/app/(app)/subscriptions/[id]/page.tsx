@@ -16,6 +16,7 @@ import {
   UsageEntryPanel,
   UsageVerdictPanel,
   type UsageRecordRow,
+  type VerdictData,
 } from "./UsagePanel";
 
 export default async function SubscriptionDetailPage({
@@ -54,16 +55,31 @@ export default async function SubscriptionDetailPage({
     unitPrice: r.unitPrice,
     quotaTotal: r.quotaTotal,
   }));
-  const verdictData = v
-    ? {
-        periodStart: iso(v.periodStart),
-        periodEnd: iso(v.periodEnd),
-        cost: v.cost,
-        usage: v.usage,
-        value: v.value,
-        verdictAmount: v.verdictAmount,
-        costPerUse: v.costPerUse,
-      }
+  const verdictData: VerdictData | null = v
+    ? v.kind === "COUNT"
+      ? {
+          kind: "COUNT",
+          periodStart: iso(v.periodStart),
+          periodEnd: iso(v.periodEnd),
+          cost: v.cost,
+          usage: v.usage,
+          value: v.value,
+          verdictAmount: v.verdictAmount,
+          costPerUse: v.costPerUse,
+        }
+      : {
+          kind: "QUOTA",
+          periodStart: iso(v.periodStart),
+          periodEnd: iso(v.periodEnd),
+          cost: v.cost,
+          used: v.used,
+          total: v.total,
+          usageRate: v.usageRate,
+          hit100At: v.hit100At ? iso(v.hit100At) : null,
+          wastedAmount: v.wastedAmount,
+          costPerUnit: v.costPerUnit,
+          verdictAmount: v.verdictAmount,
+        }
     : null;
 
   return (
@@ -76,6 +92,12 @@ export default async function SubscriptionDetailPage({
           <h1 className="text-xl font-bold uppercase tracking-tight">{sub.name}</h1>
         </div>
         <div className="flex items-center gap-2.5">
+          <a
+            href={`/subscriptions/${sub.id}/usage`}
+            className="border border-black bg-white px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-black hover:text-white"
+          >
+            用量跟踪{sub.usageKind ? "" : "（未启用）"} →
+          </a>
           {sub.status === "ACTIVE" ? (
             <form action={setStatusAction.bind(null, sub.id, "CANCELLED")}>
               <button className="border border-black bg-white px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-black hover:text-white">
@@ -135,37 +157,29 @@ export default async function SubscriptionDetailPage({
           </Panel>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Panel index="03" title="用量录入">
-            <UsageEntryPanel
-              subscriptionId={sub.id}
-              usageKind={(sub.usageKind as "COUNT" | "QUOTA" | null) ?? null}
-              usageUnit={sub.usageUnit}
-              defaultUnitPrice={sub.altUnitPrice}
-              defaultQuotaTotal={sub.quotaTotal}
-              records={usageRecordRows}
-              verdict={
-                verdictData
-                  ? {
-                      periodStart: verdictData.periodStart,
-                      periodEnd: verdictData.periodEnd,
-                      cost: verdictData.cost,
-                      usage: verdictData.usage,
-                      value: verdictData.value,
-                    }
-                  : null
-              }
-            />
-          </Panel>
-          <Panel index="04" title="盈亏 · 当前区间">
-            <UsageVerdictPanel
-              verdict={verdictData}
-              usageUnit={sub.usageUnit}
-              subscriptionId={sub.id}
-              records={usageRecordRows}
-            />
-          </Panel>
-        </div>
+        {sub.usageKind && (
+          <div className="grid grid-cols-2 gap-4">
+            <Panel index="03" title="用量录入">
+              <UsageEntryPanel
+                subscriptionId={sub.id}
+                usageKind={(sub.usageKind as "COUNT" | "QUOTA" | null) ?? null}
+                usageUnit={sub.usageUnit}
+                defaultUnitPrice={sub.altUnitPrice}
+                defaultQuotaTotal={sub.quotaTotal}
+                records={usageRecordRows}
+                verdict={verdictData}
+              />
+            </Panel>
+            <Panel index="04" title="盈亏 · 当前区间">
+              <UsageVerdictPanel
+                verdict={verdictData}
+                usageUnit={sub.usageUnit}
+                subscriptionId={sub.id}
+                records={usageRecordRows}
+              />
+            </Panel>
+          </div>
+        )}
       </div>
     </>
   );

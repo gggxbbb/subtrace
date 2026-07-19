@@ -22,6 +22,32 @@ export interface UsageRecordRow {
   quotaTotal: number | null;
 }
 
+/** 序列化后的盈亏联合（详情页 server 端构造） */
+export type VerdictData =
+  | {
+      kind: "COUNT";
+      periodStart: string;
+      periodEnd: string;
+      cost: number;
+      usage: number;
+      value: number;
+      verdictAmount: number;
+      costPerUse: number | null;
+    }
+  | {
+      kind: "QUOTA";
+      periodStart: string;
+      periodEnd: string;
+      cost: number;
+      used: number;
+      total: number;
+      usageRate: number;
+      hit100At: string | null;
+      wastedAmount: number;
+      costPerUnit: number | null;
+      verdictAmount: number;
+    };
+
 /** 用量录入卡：类型/单位可就地设定；本次用量、本次单价、当月总额度逐条可调，默认继承上一条记录 */
 export function UsageEntryPanel({
   subscriptionId,
@@ -38,18 +64,11 @@ export function UsageEntryPanel({
   defaultUnitPrice: number | null;
   defaultQuotaTotal: number | null;
   records: UsageRecordRow[];
-  verdict: {
-    periodStart: string;
-    periodEnd: string;
-    cost: number;
-    usage: number;
-    value: number;
-  } | null;
+  verdict: VerdictData | null;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const last = records[records.length - 1];
-  const [kind, setKind] = useState<"COUNT" | "QUOTA">(usageKind ?? "COUNT");
-  const [unit, setUnit] = useState(usageUnit ?? "");
+  const kind: "COUNT" | "QUOTA" = usageKind ?? "COUNT";
   // 从历史提取去重的 用量×单价 元组（最近优先）
   const tuples: { quantity: number; unitPrice: number | null }[] = [];
   for (const r of [...records].reverse()) {
@@ -61,15 +80,29 @@ export function UsageEntryPanel({
   const [unitPrice, setUnitPrice] = useState<string>(last?.unitPrice?.toString() ?? "");
   const pricePlaceholder =
     last?.unitPrice ?? defaultUnitPrice ?? undefined;
-  const quotaPlaceholder =
-    last?.quotaTotal ?? defaultQuotaTotal ?? undefined;
-  const kindUnset = usageKind === null;
 
-  // 回本提示：按参考单价还差多少用量回本
+  // 额度型：总额继承上一条；第二行四值联动（使用到额度 = 快照值，本次 = 与上一条的差）
+  const lastTotal = last?.quotaTotal ?? defaultQuotaTotal ?? 0;
+  const lastUsed = last?.kind === "TOTAL" ? last.quantity : 0;
+  const [qTotal, setQTotal] = useState<number>(lastTotal);
+  const [qUsedTo, setQUsedTo] = useState<number>(lastUsed);
+  const r1 = (n: number) => Math.round(n * 10) / 10;
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const qDelta = r2(qUsedTo - lastUsed);
+  const qUsedToPct = qTotal > 0 ? r1((qUsedTo / qTotal) * 100) : 0;
+  const qDeltaPct = qTotal > 0 ? r1((qDelta / qTotal) * 100) : 0;
+
+  // 回本提示：计数型按参考单价还差多少用量回本；额度型看距用满还差多少
   const refPrice = last?.unitPrice ?? defaultUnitPrice;
   const needed =
-    verdict && refPrice && refPrice > 0
+    verdict?.kind === "COUNT" && refPrice && refPrice > 0
       ? Math.max(0, Math.ceil((verdict.cost - verdict.value) / refPrice))
+      : null;
+  const quotaHint =
+    verdict?.kind === "QUOTA"
+      ? verdict.usageRate >= 1
+        ? { done: true as const }
+        : { done: false as const, remainingPct: Math.round((1 - verdict.usageRate) * 100) }
       : null;
   // 日历数据：从区间首日所在周的周一开始，到区间末日止
   const calDays: { day: number; inPeriod: boolean; used: boolean; today: boolean }[] = [];
@@ -94,37 +127,8 @@ export function UsageEntryPanel({
 
   return (
     <div className="px-4 py-4">
-      {kindUnset && (
-        <div className="mb-3 grid grid-cols-[1fr_1fr] gap-2">
-          <div className="grid grid-cols-2 gap-px border border-black bg-black">
-            {(["COUNT", "QUOTA"] as const).map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setKind(k)}
-                className={`px-2 py-1.5 text-[10px] uppercase f-mono ${kind === k ? "bg-black text-white" : "bg-white hover:bg-black/5"}`}
-              >
-                {k === "COUNT" ? "计数型" : "额度型"}
-              </button>
-            ))}
-          </div>
-          <input
-            placeholder="单位：次 / 小时 / 点数"
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
-            className={inputCls}
-          />
-        </div>
-      )}
-
       {kind === "COUNT" ? (
         <form key="count" action={addUsageAction.bind(null, subscriptionId)} className="space-y-2">
-          {kindUnset && (
-            <>
-              <input type="hidden" name="usageKind" value="COUNT" />
-              <input type="hidden" name="usageUnit" value={unit} />
-            </>
-          )}
           <div className="flex items-end gap-2">
             <div className="flex-1">
               <label className={labelCls}>日期</label>
@@ -174,27 +178,11 @@ export function UsageEntryPanel({
         </form>
       ) : (
         <form key="quota" action={addQuotaSnapshotAction.bind(null, subscriptionId)} className="space-y-2">
-          {kindUnset && (
-            <>
-              <input type="hidden" name="usageKind" value="QUOTA" />
-              <input type="hidden" name="usageUnit" value={unit} />
-            </>
-          )}
           <div className="flex items-end gap-2">
             <div className="flex-1">
               <label className={labelCls}>日期</label>
               <input name="date" type="date" defaultValue={today} required className={`${inputCls} f-mono`} />
             </div>
-            <div className="w-24">
-              <label className={labelCls}>本次使用额度</label>
-              <input name="used" type="number" step="1" min="0" placeholder="800" className={inputCls} />
-            </div>
-            <div className="w-16">
-              <label className={labelCls}>或 %</label>
-              <input name="percent" type="number" step="1" min="0" max="100" placeholder="65" className={inputCls} />
-            </div>
-          </div>
-          <div className="flex items-end gap-2">
             <div className="w-28">
               <label className={labelCls}>当月总额度</label>
               <input
@@ -202,19 +190,53 @@ export function UsageEntryPanel({
                 type="number"
                 step="1"
                 min="1"
-                placeholder={quotaPlaceholder?.toString() ?? "1000"}
+                value={qTotal || ""}
+                onChange={(e) => setQTotal(parseFloat(e.target.value) || 0)}
+                required
                 className={inputCls}
               />
             </div>
-            <div className="w-24">
-              <label className={labelCls}>本次单价</label>
+          </div>
+          <div className="flex items-end gap-2">
+            <div>
+              <label className={labelCls}>本次额度</label>
               <input
-                name="unitPrice"
                 type="number"
-                step="0.01"
+                value={qDelta}
+                onChange={(e) => setQUsedTo(r2(lastUsed + (parseFloat(e.target.value) || 0)))}
+                className={`${inputCls} w-24`}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>本次 %</label>
+              <input
+                type="number"
+                step="0.1"
+                value={qDeltaPct}
+                onChange={(e) => setQUsedTo(r2(lastUsed + (qTotal * (parseFloat(e.target.value) || 0)) / 100))}
+                className={`${inputCls} w-20`}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>使用到额度</label>
+              <input
+                name="used"
+                type="number"
+                step="1"
                 min="0"
-                placeholder={pricePlaceholder?.toString() ?? "0.12"}
-                className={inputCls}
+                value={qUsedTo}
+                onChange={(e) => setQUsedTo(parseFloat(e.target.value) || 0)}
+                className={`${inputCls} w-24`}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>使用到 %</label>
+              <input
+                type="number"
+                step="0.1"
+                value={qUsedToPct}
+                onChange={(e) => setQUsedTo(r2((qTotal * (parseFloat(e.target.value) || 0)) / 100))}
+                className={`${inputCls} w-20`}
               />
             </div>
             <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
@@ -222,7 +244,7 @@ export function UsageEntryPanel({
             </button>
           </div>
           <div className="text-[9px] uppercase text-neutral-400 f-mono">
-            留空继承上一条记录{quotaPlaceholder != null ? `（总额度 ${quotaPlaceholder}）` : ""}
+            提交的是「使用到额度」快照；四个数值联动，改任意一个其余自动算
           </div>
         </form>
       )}
@@ -238,6 +260,18 @@ export function UsageEntryPanel({
                 <span>
                   再去 <strong className="tabular-nums">{needed}</strong> {usageUnit ?? "次"}回本
                   <span className="text-neutral-400">（按 {refPrice}/{usageUnit ?? "次"}）</span>
+                </span>
+              )}
+            </div>
+          )}
+          {quotaHint && (
+            <div className="mb-2 flex items-center gap-2 text-[11px]">
+              <Led color={quotaHint.done ? "#22c55e" : "#FF5A00"} />
+              {quotaHint.done ? (
+                <span>本区间已用满 100%</span>
+              ) : (
+                <span>
+                  还差 <strong className="tabular-nums">{quotaHint.remainingPct}%</strong> 用满
                 </span>
               )}
             </div>
@@ -274,22 +308,14 @@ export function UsageEntryPanel({
   );
 }
 
-/** 盈亏呈现卡：当前服务区间四指标 + 历史记录 */
+/** 盈亏呈现卡：计数型四指标 / 额度型使用率口径 + 历史记录 */
 export function UsageVerdictPanel({
   verdict: v,
   usageUnit,
   subscriptionId,
   records,
 }: {
-  verdict: {
-    periodStart: string;
-    periodEnd: string;
-    cost: number;
-    usage: number;
-    value: number;
-    verdictAmount: number;
-    costPerUse: number | null;
-  } | null;
+  verdict: VerdictData | null;
   usageUnit: string | null;
   subscriptionId: string;
   records: UsageRecordRow[];
@@ -310,28 +336,70 @@ export function UsageVerdictPanel({
           <div className="text-[9px] uppercase text-neutral-400 f-mono">已摊成本</div>
           <div className="text-lg font-bold tabular-nums">{fmtMoney(v.cost)}</div>
         </div>
-        <div>
-          <div className="text-[9px] uppercase text-neutral-400 f-mono">用量</div>
-          <div className="text-lg font-bold tabular-nums">
-            {v.usage} <span className="text-[10px] text-neutral-400">{usageUnit}</span>
-          </div>
-        </div>
-        <div>
-          <div className="text-[9px] uppercase text-neutral-400 f-mono">每次实际成本</div>
-          <div className="text-lg font-bold tabular-nums">
-            {v.costPerUse != null ? fmtMoney(v.costPerUse) : "—"}
-          </div>
-        </div>
-        <div>
-          <div className="text-[9px] uppercase text-neutral-400 f-mono">盈亏</div>
-          <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.verdictAmount >= 0 ? "text-teal-700" : "text-red-700"}`}>
-            {v.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(v.verdictAmount))}
-            <Led color={v.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
-          </div>
-        </div>
+        {v.kind === "COUNT" ? (
+          <>
+            <div>
+              <div className="text-[9px] uppercase text-neutral-400 f-mono">用量</div>
+              <div className="text-lg font-bold tabular-nums">
+                {v.usage} <span className="text-[10px] text-neutral-400">{usageUnit}</span>
+              </div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase text-neutral-400 f-mono">每次实际成本</div>
+              <div className="text-lg font-bold tabular-nums">
+                {v.costPerUse != null ? fmtMoney(v.costPerUse) : "—"}
+              </div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase text-neutral-400 f-mono">盈亏</div>
+              <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.verdictAmount >= 0 ? "text-teal-700" : "text-red-700"}`}>
+                {v.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(v.verdictAmount))}
+                <Led color={v.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <div className="text-[9px] uppercase text-neutral-400 f-mono">使用率</div>
+              <div className="text-lg font-bold tabular-nums">
+                {Math.round(v.usageRate * 100)}%
+                <span className="ml-1 text-[10px] font-normal text-neutral-400">
+                  {v.used}/{v.total} {usageUnit}
+                </span>
+              </div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase text-neutral-400 f-mono">用满 100%</div>
+              <div className="flex items-center gap-1.5 text-lg font-bold tabular-nums">
+                {v.hit100At ? (
+                  <>
+                    <span className="text-sm">{v.hit100At}</span>
+                    <Led color="#22c55e" />
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm text-neutral-400">未用满</span>
+                    <Led color="#ef4444" />
+                  </>
+                )}
+              </div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase text-neutral-400 f-mono">浪费</div>
+              <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.wastedAmount <= 0 ? "text-teal-700" : "text-red-700"}`}>
+                {v.wastedAmount <= 0 ? "¥0" : `−${fmtMoney(v.wastedAmount)}`}
+                <Led color={v.wastedAmount <= 0 ? "#22c55e" : "#ef4444"} />
+              </div>
+            </div>
+          </>
+        )}
       </div>
       <div className="mt-3 border-t border-dashed border-neutral-300 pt-1.5 text-[9px] uppercase text-neutral-400 f-mono">
-        {v.periodStart} → {v.periodEnd} · 价值 {fmtMoney(v.value)} − 成本 {fmtMoney(v.cost)}
+        {v.periodStart} → {v.periodEnd} ·{" "}
+        {v.kind === "COUNT"
+          ? `价值 ${fmtMoney(v.value)} − 成本 ${fmtMoney(v.cost)}`
+          : `未用 ${Math.round((1 - v.usageRate) * 100)}% × 成本 ${fmtMoney(v.cost)}`}
       </div>
       {records.length > 0 && (
         <div className="mt-2 border-t border-dashed border-neutral-300 pt-2">

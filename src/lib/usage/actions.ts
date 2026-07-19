@@ -19,7 +19,7 @@ export async function setUsageConfigAction(subscriptionId: string, formData: For
   await setUsageConfig(user.id, subscriptionId, {
     usageKind: String(formData.get("usageKind")) as "COUNT" | "QUOTA",
     usageUnit: String(formData.get("usageUnit") ?? ""),
-    altUnitPrice: Number(formData.get("altUnitPrice")),
+    altUnitPrice: formData.get("altUnitPrice") ? Number(formData.get("altUnitPrice")) : undefined,
     quotaTotal: formData.get("quotaTotal") ? Number(formData.get("quotaTotal")) : undefined,
   });
   revalidatePath(`/subscriptions/${subscriptionId}`);
@@ -29,7 +29,6 @@ export async function setUsageConfigAction(subscriptionId: string, formData: For
 export async function addUsageAction(subscriptionId: string, formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  await persistKindIfNew(user.id, subscriptionId, formData);
   const unitPrice = formData.get("unitPrice");
   await addUsage(user.id, subscriptionId, user.id, {
     date: parseDate(formData.get("date")),
@@ -43,7 +42,6 @@ export async function addUsageAction(subscriptionId: string, formData: FormData)
 export async function addQuotaSnapshotAction(subscriptionId: string, formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  await persistKindIfNew(user.id, subscriptionId, formData);
   const percent = formData.get("percent");
   const used = formData.get("used");
   const unitPrice = formData.get("unitPrice");
@@ -59,23 +57,38 @@ export async function addQuotaSnapshotAction(subscriptionId: string, formData: F
   redirect(`/subscriptions/${subscriptionId}`);
 }
 
-/** 首次录入时顺带持久化类型与单位 */
-async function persistKindIfNew(ownerId: string, subscriptionId: string, formData: FormData) {
-  const usageKind = formData.get("usageKind");
-  if (!usageKind) return;
-  await prisma.subscription.updateMany({
-    where: { id: subscriptionId, ownerId, usageKind: null },
-    data: {
-      usageKind: String(usageKind),
-      usageUnit: String(formData.get("usageUnit") ?? ""),
-    },
-  });
-}
 
 export async function deleteUsageAction(subscriptionId: string, usageId: string) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   await deleteUsage(user.id, usageId);
+  revalidatePath(`/subscriptions/${subscriptionId}`);
+  redirect(`/subscriptions/${subscriptionId}`);
+}
+
+/** 停用用量跟踪：清空类型（记录保留，重新启用时可恢复解读） */
+export async function disableUsageAction(subscriptionId: string) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await prisma.subscription.updateMany({
+    where: { id: subscriptionId, ownerId: user.id },
+    data: { usageKind: null },
+  });
+  revalidatePath(`/subscriptions/${subscriptionId}`);
+  redirect(`/subscriptions/${subscriptionId}`);
+}
+
+/** 停用并清除全部用量记录（不可恢复） */
+export async function purgeUsageAction(subscriptionId: string) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await prisma.usageRecord.deleteMany({
+    where: { subscriptionId, subscription: { ownerId: user.id } },
+  });
+  await prisma.subscription.updateMany({
+    where: { id: subscriptionId, ownerId: user.id },
+    data: { usageKind: null },
+  });
   revalidatePath(`/subscriptions/${subscriptionId}`);
   redirect(`/subscriptions/${subscriptionId}`);
 }
