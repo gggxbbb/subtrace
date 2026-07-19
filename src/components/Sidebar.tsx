@@ -43,7 +43,7 @@ const NAV: {
 export function Sidebar({ username, role }: { username: string; role: string }) {
   const pathname = usePathname();
   return (
-    <aside className="flex w-56 shrink-0 flex-col border-r border-black bg-[#E4E3E0]">
+    <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-black bg-[#E4E3E0]">
       <div className="flex h-16 items-center gap-3 border-b border-black px-4">
         <div className="flex h-9 w-9 items-center justify-center bg-black text-base font-bold text-white">
           S.
