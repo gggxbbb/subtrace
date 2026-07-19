@@ -135,10 +135,12 @@ export function costSegments(
       }
     }
   }
-  // 后向补齐：最后止期之后的推算周期，直到覆盖 today
+  // 后向补齐：最后止期之后的推算周期，直到覆盖 today。
+  // 无付费记录时锚点是“服务起点”——锚点即今天也要推出 [今天, +1周期) 段；
+  // 有记录时止期即今天则不覆盖（到期日当天起不再覆盖）。
   const afterfill: CostSegment[] = [];
   let cursor = segs.length > 0 ? segs[segs.length - 1].end : sub.anchorDate;
-  while (dayDiff(today, cursor) < 0) {
+  while (dayDiff(today, cursor) < 0 || (segs.length === 0 && afterfill.length === 0 && dayDiff(today, cursor) === 0)) {
     const next = advanceCycle(cursor, sub.cycle, 1);
     afterfill.push({ net: sub.listPriceBase, start: cursor, end: next, estimated: true });
     cursor = next;

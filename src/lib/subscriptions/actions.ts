@@ -8,10 +8,12 @@ import {
   deletePayment,
   recordPayment,
   setStatus,
+  toEngineSub,
   updatePayment,
   type PaymentInput,
   type SubscriptionInput,
 } from "./service";
+import { advanceCycle } from "../cost-engine";
 
 const parseDate = (v: FormDataEntryValue | null) =>
   new Date(`${String(v)}T00:00:00Z`);
@@ -50,8 +52,35 @@ export async function createSubscriptionAction(formData: FormData) {
   if (!input.name.trim()) redirect("/subscriptions/new?error=1");
   let createdId: string;
   try {
-    createdId = (await createSubscription(user.id, input)).id;
-  } catch {
+    const created = await createSubscription(user.id, input);
+    createdId = created.id;
+    // 同时记一笔付费（推荐路径）：到期日与成本立即以实付为准
+    if (formData.get("firstPayment") !== null) {
+      const amount = parseNum(formData.get("firstAmount")) ?? input.listPriceBase ?? input.listPrice;
+      const periodStart = formData.get("firstPeriodStart")
+        ? parseDate(formData.get("firstPeriodStart"))
+        : input.startDate;
+      let periodEnd = formData.get("firstPeriodEnd")
+        ? parseDate(formData.get("firstPeriodEnd"))
+        : null;
+      if (!periodEnd && created.trackingMode === "CYCLE") {
+        const cycle = toEngineSub(created).cycle;
+        if (cycle) periodEnd = advanceCycle(periodStart, cycle, 1);
+      }
+      if (amount != null && periodEnd) {
+        await recordPayment(user.id, createdId, {
+          amount,
+          currency: input.listCurrency ?? "CNY",
+          amountBase: amount,
+          paidAt: formData.get("firstPaidAt") ? parseDate(formData.get("firstPaidAt")) : input.startDate,
+          periodStart,
+          periodEnd,
+          source: (String(formData.get("firstSource")) || "AUTO") as PaymentInput["source"],
+        });
+      }
+    }
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
     redirect("/subscriptions/new?error=1");
   }
   redirect(`/subscriptions/${createdId}`);

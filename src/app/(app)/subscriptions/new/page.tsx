@@ -127,6 +127,45 @@ export default function NewSubscriptionPage() {
           <input name="startDate" type="date" defaultValue={today} required className={`${inputCls} f-mono`} />
         </div>
 
+        <div className="border border-black">
+          <label className="flex items-center gap-2 border-b border-black bg-[#E4E3E0] px-3 py-2 text-[12px]">
+            <input type="checkbox" name="firstPayment" defaultChecked={mode === "CYCLE"} className="h-4 w-4 accent-black" />
+            <span>
+              <strong>同时记一笔付费</strong>
+              <span className="ml-1 text-[10px] text-neutral-500">推荐：到期日与成本立刻以实付为准，不再靠推算</span>
+            </span>
+          </label>
+          <div className="grid grid-cols-2 gap-3 p-3">
+            <div>
+              <label className={labelCls}>实付金额</label>
+              <input name="firstAmount" type="number" step="0.01" min="0" placeholder="同标准价" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>来源</label>
+              <select name="firstSource" defaultValue="AUTO" className={inputCls}>
+                <option value="AUTO">自动扣费</option>
+                <option value="MANUAL">手动续费</option>
+                <option value="PROMO">活动价</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>支付日期</label>
+              <input name="firstPaidAt" type="date" defaultValue={today} className={`${inputCls} f-mono`} />
+            </div>
+            <div>
+              <label className={labelCls}>服务起</label>
+              <input name="firstPeriodStart" type="date" defaultValue={today} className={`${inputCls} f-mono`} />
+            </div>
+            <div className="col-span-2">
+              <label className={labelCls}>服务止（到期日）</label>
+              <input name="firstPeriodEnd" type="date" className={`${inputCls} f-mono`} />
+              <p className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
+                {mode === "CYCLE" ? "留空 = 服务起 + 一个周期" : "手动模式必填"}
+              </p>
+            </div>
+          </div>
+        </div>
+
         <button className="w-full bg-black py-2.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800">
           创建 →
         </button>

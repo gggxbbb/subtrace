@@ -337,3 +337,35 @@ describe("用量价值（单价跟记录走）", () => {
     expect(usageValue(records, d("2026-07-01"), d("2026-08-01"), 0.1)).toBeCloseTo(96);
   });
 });
+
+describe("锚点即今天的推算段（off-by-one）", () => {
+  it("今天创建的周期订阅：应推算出 [今天, +1周期) 段，当日费率 > 0", () => {
+    const sub: SubscriptionDef = {
+      trackingMode: "cycle",
+      startDate: d("2026-07-19"),
+      anchorDate: d("2026-07-19"),
+      cycle: { kind: "calendar", unit: "month", count: 1 },
+      listPriceBase: 114,
+    };
+    const segs = costSegments(sub, [], d("2026-07-19"));
+    expect(segs).toHaveLength(1);
+    expect(segs[0].start).toEqual(d("2026-07-19"));
+    expect(segs[0].end).toEqual(d("2026-08-19"));
+    expect(currentDailyRate(sub, [], d("2026-07-19"))).toBeGreaterThan(0);
+  });
+
+  it("有付费记录时，止期=今天不覆盖（到期日当天起不再覆盖）", () => {
+    const sub: SubscriptionDef = {
+      trackingMode: "cycle",
+      startDate: d("2026-06-19"),
+      anchorDate: d("2026-06-19"),
+      cycle: { kind: "calendar", unit: "month", count: 1 },
+      listPriceBase: 114,
+    };
+    const payments = [{ amountBase: 114, refundedBase: 0, paidAt: d("2026-06-19"), periodStart: d("2026-06-19"), periodEnd: d("2026-07-19") }];
+    const covering = costSegments(sub, payments, d("2026-07-19")).filter(
+      (s) => s.start <= d("2026-07-19") && d("2026-07-19") < s.end,
+    );
+    expect(covering.filter((s) => !s.estimated)).toHaveLength(0);
+  });
+});
