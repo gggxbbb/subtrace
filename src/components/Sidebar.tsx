@@ -6,7 +6,6 @@ import {
   BarChart3,
   Bell,
   Boxes,
-  ChevronDown,
   LayoutDashboard,
   Package,
   RefreshCcw,
@@ -58,9 +57,8 @@ export function Sidebar({ username, role }: { username: string; role: string }) 
       <nav className="flex-1 px-2 py-3">
         {NAV.map((g) => (
           <div key={g.group} className="mb-5">
-            <div className="flex items-center justify-between border-b border-dashed border-neutral-400 px-2 pb-1 text-[9px] uppercase tracking-[0.2em] text-neutral-500 f-mono">
+            <div className="border-b border-dashed border-neutral-400 px-2 pb-1 text-[9px] uppercase tracking-[0.2em] text-neutral-500 f-mono">
               {g.group}
-              <ChevronDown className="h-3 w-3" />
             </div>
             <div className="mt-1.5 space-y-0.5">
               {g.items.filter((it) => !it.adminOnly || role === "ADMIN").map((it) => {
