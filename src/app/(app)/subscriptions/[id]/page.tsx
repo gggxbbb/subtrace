@@ -238,20 +238,32 @@ export default async function SubscriptionDetailPage({
             value={
               coveringEstimated
                 ? "推算中"
-                : sub.status === "ACTIVE"
-                  ? "活跃"
-                  : sub.status === "CANCELLED"
-                    ? "已取消"
-                    : "已归档"
+                : sub.status === "ACTIVE" && daysToExpiry !== null && daysToExpiry < 0
+                  ? "已到期"
+                  : sub.status === "ACTIVE"
+                    ? "活跃"
+                    : sub.status === "CANCELLED"
+                      ? "已取消"
+                      : "已归档"
             }
             sub={
               coveringEstimated
                 ? `${sub.status === "ACTIVE" ? "活跃" : "已取消"} · 未记账，按标准价估计`
-                : sub.autoRenew
-                  ? "自动续费"
-                  : "手动续费"
+                : sub.status === "ACTIVE" && daysToExpiry !== null && daysToExpiry < 0
+                  ? "记录续费后恢复活跃"
+                  : sub.autoRenew
+                    ? "自动续费"
+                    : "手动续费"
             }
-            led={coveringEstimated ? "#FF6B00" : sub.status === "ACTIVE" ? "#22c55e" : "#ef4444"}
+            led={
+              coveringEstimated
+                ? "#FF6B00"
+                : sub.status === "ACTIVE" && daysToExpiry !== null && daysToExpiry < 0
+                  ? "#d4d4d4"
+                  : sub.status === "ACTIVE"
+                    ? "#22c55e"
+                    : "#ef4444"
+            }
           />
         </div>
 
