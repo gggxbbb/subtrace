@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getSubscription } from "@/lib/subscriptions/service";
+import { planRechain } from "@/lib/subscriptions/service";
+import { RechainBanner } from "../RechainBanner";
 import { PaymentsManager, type PaymentRow } from "./PaymentsManager";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +12,7 @@ export default async function PaymentsPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ q?: string; source?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ q?: string; source?: string; from?: string; to?: string; rechain?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -64,6 +66,20 @@ export default async function PaymentsPage({
         </a>
       </header>
       <main className="mx-auto max-w-4xl space-y-4 p-6">
+        {sp.rechain === "1" && (() => {
+          const plan = planRechain(sub.payments);
+          if (!plan) return null;
+          const sorted = [...sub.payments].sort((a, b) => a.periodStart.getTime() - b.periodStart.getTime());
+          const idx = sorted.findIndex((p) => p.id === plan.shifts[0].paymentId);
+          return (
+            <RechainBanner
+              subscriptionId={sub.id}
+              shiftCount={sorted.length - idx}
+              deltaDays={plan.shifts[0].deltaDays}
+              back={back}
+            />
+          );
+        })()}
         <PaymentsManager
           subscriptionId={sub.id}
           rows={rows}

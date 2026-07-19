@@ -246,9 +246,61 @@ export function paymentPrefill(
   };
 }
 
+/**
+ * 链式重排提议：付费记录按 periodStart 排序后应首尾相接（后笔起 = 前笔止）。
+ * 退款缩期/删笔造成断裂（空档或重叠）时，给出第一处断裂的修复位移——
+ * 后续记录整体平移 deltaDays（保持各自时长）。返回 null 表示链已连续。
+ */
+export function planRechain(
+  payments: { id: string; periodStart: Date; periodEnd: Date }[],
+): { shifts: { paymentId: string; from: Date; to: Date; deltaDays: number }[] } | null {
+  const sorted = payments.slice().sort((a, b) => a.periodStart.getTime() - b.periodStart.getTime());
+  for (let i = 1; i < sorted.length; i++) {
+    const prevEnd = sorted[i - 1].periodEnd;
+    const cur = sorted[i];
+    if (cur.periodStart.getTime() !== prevEnd.getTime()) {
+      const deltaDays = Math.round((prevEnd.getTime() - cur.periodStart.getTime()) / 86_400_000);
+      return {
+        shifts: [
+          { paymentId: cur.id, from: cur.periodStart, to: prevEnd, deltaDays },
+        ],
+      };
+    }
+  }
+  return null;
+}
+
+/** 应用链式重排：反复修复第一处断裂直到连续（每次平移后续全部记录） */
+export async function applyRechain(ownerId: string, subscriptionId: string): Promise<number> {
+  let applied = 0;
+  for (let guard = 0; guard < 50; guard++) {
+    const sub = await prisma.subscription.findFirst({
+      where: { id: subscriptionId, ownerId },
+      include: { payments: true },
+    });
+    if (!sub) throw new Error("订阅不存在 subscription_not_found");
+    const plan = planRechain(sub.payments);
+    if (!plan) return applied;
+    const { paymentId, deltaDays } = plan.shifts[0];
+    const sorted = sub.payments.slice().sort((a, b) => a.periodStart.getTime() - b.periodStart.getTime());
+    const idx = sorted.findIndex((p) => p.id === paymentId);
+    const ms = deltaDays * 86_400_000;
+    for (const p of sorted.slice(idx)) {
+      await prisma.payment.update({
+        where: { id: p.id },
+        data: {
+          periodStart: new Date(p.periodStart.getTime() + ms),
+          periodEnd: new Date(p.periodEnd.getTime() + ms),
+        },
+      });
+    }
+    applied++;
+  }
+  return applied;
+}
+
 /** 已归档订阅（仅自有） */
-export async function listArchivedSubscriptions(ownerId: string) {
-  return prisma.subscription.findMany({
+export async function listArchivedSubscriptions(ownerId: string) {  return prisma.subscription.findMany({
     where: { ownerId, status: "ARCHIVED" },
     orderBy: { createdAt: "desc" },
     select: { id: true, name: true, category: true, startDate: true },

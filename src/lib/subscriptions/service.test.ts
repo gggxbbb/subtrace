@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "../db";
 import { currentExpiry, costSegments } from "../cost-engine";
 import {
+  applyRechain,
   createSubscription,
+  planRechain,
   deletePayment,
   getSubscription,
   listSubscriptions,
@@ -177,5 +179,62 @@ describe("付费记录编辑与删除", () => {
     const fresh = await getSubscription(ownerId, sub.id);
     expect(fresh!.payments).toHaveLength(1);
     expect(fresh!.anchorDate).toEqual(d("2027-01-22"));
+  });
+});
+
+describe("链式重排（退款缩期/删笔后的后续调整）", () => {
+  const pay = async (subId: string, amount: number, start: string, end: string) =>
+    prisma.payment.create({
+      data: {
+        subscriptionId: subId, amount, currency: "CNY", amountBase: amount,
+        paidAt: d(start), periodStart: d(start), periodEnd: d(end), source: "MANUAL",
+      },
+    });
+
+  it("链连续时无提议", async () => {
+    const sub = await createSubscription(ownerId, {
+      name: "连续会员", trackingMode: "MANUAL", startDate: d("2026-01-01"),
+    });
+    await pay(sub.id, 100, "2026-01-01", "2026-04-01");
+    await pay(sub.id, 100, "2026-04-01", "2026-07-01");
+    const fresh = (await getSubscription(ownerId, sub.id))!;
+    expect(planRechain(fresh.payments)).toBeNull();
+  });
+
+  it("中段缩短 → 提议后续整体前移，确认后链恢复连续", async () => {
+    const sub = await createSubscription(ownerId, {
+      name: "连续会员", trackingMode: "MANUAL", startDate: d("2026-01-01"),
+    });
+    await pay(sub.id, 100, "2026-01-01", "2026-04-01");
+    const p2 = await pay(sub.id, 100, "2026-04-01", "2026-07-01");
+    const p3 = await pay(sub.id, 100, "2026-07-01", "2026-10-01");
+    // 第二笔退款缩期：止期提前到 05-01
+    await updatePayment(ownerId, p2.id, { periodEnd: d("2026-05-01") });
+    const fresh = (await getSubscription(ownerId, sub.id))!;
+    const plan = planRechain(fresh.payments);
+    expect(plan).not.toBeNull();
+    expect(plan!.shifts).toHaveLength(1);
+    expect(plan!.shifts[0].paymentId).toBe(p3.id);
+    expect(plan!.shifts[0].deltaDays).toBe(-61); // 07-01 → 05-01
+    await applyRechain(ownerId, sub.id);
+    const after = (await getSubscription(ownerId, sub.id))!;
+    const sorted = [...after.payments].sort((a, b) => a.periodStart.getTime() - b.periodStart.getTime());
+    expect(sorted[1].periodEnd).toEqual(d("2026-05-01"));
+    expect(sorted[2].periodStart).toEqual(d("2026-05-01"));
+    expect(sorted[2].periodEnd).toEqual(d("2026-08-01")); // 时长保持 92 天
+  });
+
+  it("删中间笔 → 断裂后提议前移后续", async () => {
+    const sub = await createSubscription(ownerId, {
+      name: "连续会员", trackingMode: "MANUAL", startDate: d("2026-01-01"),
+    });
+    await pay(sub.id, 100, "2026-01-01", "2026-04-01");
+    const p2 = await pay(sub.id, 100, "2026-04-01", "2026-07-01");
+    await pay(sub.id, 100, "2026-07-01", "2026-10-01");
+    await deletePayment(ownerId, p2.id);
+    const fresh = (await getSubscription(ownerId, sub.id))!;
+    const plan = planRechain(fresh.payments);
+    expect(plan).not.toBeNull();
+    expect(plan!.shifts[0].deltaDays).toBe(-91); // p3 前移到 04-01（4~6月=91天）
   });
 });

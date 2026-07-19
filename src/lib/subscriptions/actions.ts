@@ -8,6 +8,7 @@ import {
   deletePayment,
   deleteSubscription,
   recordPayment,
+  applyRechain,
   setStatus,
   toEngineSub,
   updateSubscription,
@@ -112,7 +113,8 @@ export async function recordPaymentAction(subscriptionId: string, formData: Form
   revalidatePath(`/subscriptions/${subscriptionId}`);
   revalidatePath("/dashboard");
   const back = formData.get("back");
-  redirect(back ? `/subscriptions/${subscriptionId}/payments?${back}` : `/subscriptions/${subscriptionId}`);
+  const sep = back ? "&" : "";
+  redirect(back ? `/subscriptions/${subscriptionId}/payments?${back}${sep}rechain=1` : `/subscriptions/${subscriptionId}?rechain=1`);
 }
 
 export async function setStatusAction(
@@ -153,7 +155,8 @@ export async function updatePaymentAction(
   revalidatePath(`/subscriptions/${subscriptionId}`);
   revalidatePath("/dashboard");
   const back = formData.get("back");
-  redirect(back ? `/subscriptions/${subscriptionId}/payments?${back}` : `/subscriptions/${subscriptionId}`);
+  const sep = back ? "&" : "";
+  redirect(back ? `/subscriptions/${subscriptionId}/payments?${back}${sep}rechain=1` : `/subscriptions/${subscriptionId}?rechain=1`);
 }
 
 export async function deletePaymentAction(subscriptionId: string, paymentId: string, back?: string) {
@@ -162,7 +165,8 @@ export async function deletePaymentAction(subscriptionId: string, paymentId: str
   await deletePayment(user.id, paymentId);
   revalidatePath(`/subscriptions/${subscriptionId}`);
   revalidatePath("/dashboard");
-  redirect(back ? `/subscriptions/${subscriptionId}/payments?${back}` : `/subscriptions/${subscriptionId}`);
+  const sep = back ? "&" : "";
+  redirect(back ? `/subscriptions/${subscriptionId}/payments?${back}${sep}rechain=1` : `/subscriptions/${subscriptionId}?rechain=1`);
 }
 
 export async function deleteSubscriptionAction(subscriptionId: string) {
@@ -193,4 +197,14 @@ export async function updateSubscriptionAction(subscriptionId: string, formData:
   revalidatePath("/subscriptions");
   revalidatePath("/dashboard");
   redirect(`/subscriptions/${subscriptionId}`);
+}
+
+/** 确认链式重排：后续记录平移保持连续 */
+export async function rechainPaymentsAction(subscriptionId: string, back?: string) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await applyRechain(user.id, subscriptionId);
+  revalidatePath(`/subscriptions/${subscriptionId}`);
+  revalidatePath("/dashboard");
+  redirect(back ? `/subscriptions/${subscriptionId}/payments?${back}` : `/subscriptions/${subscriptionId}`);
 }

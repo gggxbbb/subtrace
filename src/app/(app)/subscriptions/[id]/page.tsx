@@ -5,10 +5,12 @@ import { currentDailyRate, currentExpiry, dayDiff } from "@/lib/cost-engine";
 import {
   getSubscription,
   paymentPrefill,
+  planRechain,
   toEnginePayments,
   toEngineSub,
 } from "@/lib/subscriptions/service";
 import { setStatusAction } from "@/lib/subscriptions/actions";
+import { RechainBanner } from "./RechainBanner";
 import {
   beneficiaryRows as serviceBeneficiaryRows,
   listBeneficiaryCandidates,
@@ -27,10 +29,13 @@ import {
 
 export default async function SubscriptionDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ rechain?: string }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
   const user = (await getCurrentUser())!;
   const sub = await getSubscription(user.id, id);
   if (!sub) notFound();
@@ -164,6 +169,19 @@ export default async function SubscriptionDetailPage({
       </header>
 
       <div className="space-y-4 px-6 py-5">
+        {sp.rechain === "1" && (() => {
+          const plan = planRechain(sub.payments);
+          if (!plan) return null;
+          const sorted = [...sub.payments].sort((a, b) => a.periodStart.getTime() - b.periodStart.getTime());
+          const idx = sorted.findIndex((p) => p.id === plan.shifts[0].paymentId);
+          return (
+            <RechainBanner
+              subscriptionId={sub.id}
+              shiftCount={sorted.length - idx}
+              deltaDays={plan.shifts[0].deltaDays}
+            />
+          );
+        })()}
         <div className="grid grid-cols-4 gap-4">
           <Kpi index="B1" label="当前到期日" value={expiry ? fmtDate(expiry) : "—"} sub={expiry ? `${dayDiff(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())), expiry)} 天后（当天起不再覆盖）` : "手动模式待记录"} />
           <Kpi index="B2" label="当日费率" value={fmt(daily)} sub={sub.beneficiaries.length > 0 ? `我的份额 ${Math.round(myShare * 100)}% · ${fmt(daily * myShare)}/日` : `≈ 每月 ${fmt(daily * 30.4)}`} />
