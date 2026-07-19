@@ -25,6 +25,15 @@ export interface ReportCategory {
   share: number; // 0–1
 }
 
+export interface ReportItem {
+  kind: "sub" | "purchase";
+  id: string;
+  name: string;
+  category: string;
+  cost: number;
+  share: number; // 0–1（占摊销总额）
+}
+
 export interface ReportData {
   periodLabel: string;
   start: string;
@@ -34,6 +43,8 @@ export interface ReportData {
   dailyAvg: number;
   categories: ReportCategory[];
   days: ReportDay[];
+  /** 逐项摊销成本（订阅/物品，降序） */
+  items: ReportItem[];
 }
 
 const atUtc = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
@@ -62,6 +73,13 @@ export async function getReportData(
 
   const costByDay = new Map<number, number>();
   const costByCat = new Map<string, number>();
+  const costByItem = new Map<string, ReportItem>();
+  const bumpItem = (kind: "sub" | "purchase", id: string, name: string, category: string, cost: number) => {
+    if (cost === 0) return;
+    const cur = costByItem.get(id) ?? { kind, id, name, category, cost: 0, share: 0 };
+    cur.cost += cost;
+    costByItem.set(id, cur);
+  };
   const bump = (ms: number, cat: string, cost: number) => {
     if (cost === 0) return;
     costByDay.set(ms, (costByDay.get(ms) ?? 0) + cost);
@@ -79,6 +97,7 @@ export async function getReportData(
       const e = Math.min(atUtc(seg.end), endMs);
       if (e <= s) continue;
       const rate = segmentDailyRate(seg) * share;
+      bumpItem("sub", sub.id, sub.name, cat, rate * ((e - s) / 86_400_000));
       for (let t = s; t < e; t += 86_400_000) bump(t, cat, rate);
     }
   }
@@ -90,9 +109,13 @@ export async function getReportData(
     const holdEnd = p.endDate ? atUtc(p.endDate) : endMs;
     const s = Math.max(holdStart, startMs);
     const e = Math.min(holdEnd, endMs);
+    let itemCost = 0;
     for (let t = s; t < e; t += 86_400_000) {
-      bump(t, "物品", purchaseDailyRate(engine, new Date(t)));
+      const c = purchaseDailyRate(engine, new Date(t));
+      itemCost += c;
+      bump(t, "物品", c);
     }
+    bumpItem("purchase", p.id, p.name, "物品", itemCost);
   }
 
   // 实付：自有订阅付费 + 物品买入/追加，落在区间内
@@ -122,6 +145,10 @@ export async function getReportData(
     .map(([name, cost]) => ({ name, cost, share: totalAmortized > 0 ? cost / totalAmortized : 0 }))
     .sort((a, b) => b.cost - a.cost);
 
+  const items = [...costByItem.values()]
+    .map((it) => ({ ...it, share: totalAmortized > 0 ? it.cost / totalAmortized : 0 }))
+    .sort((a, b) => b.cost - a.cost);
+
   return {
     periodLabel,
     start: iso(startMs),
@@ -131,5 +158,6 @@ export async function getReportData(
     dailyAvg: totalAmortized / numDays,
     categories,
     days,
+    items,
   };
 }

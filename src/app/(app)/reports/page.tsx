@@ -45,6 +45,15 @@ export default async function ReportsPage({
 
   const currentPeriod = p.kind === "month" ? `${p.year}-${String(p.month).padStart(2, "0")}` : `${p.year}`;
   const r = await getReportData(user.id, startMs, endMs, label);
+  // 环比：上一期同长度区间
+  const prevRange =
+    p.kind === "month"
+      ? p.month === 1
+        ? monthRange(p.year - 1, 12)
+        : monthRange(p.year, p.month - 1)
+      : yearRange(p.year - 1);
+  const prev = await getReportData(user.id, prevRange.startMs, prevRange.endMs, "");
+  const delta = prev.totalAmortized > 0 ? (r.totalAmortized - prev.totalAmortized) / prev.totalAmortized : null;
 
   // 趋势：月视图逐日柱；年视图聚合 12 个月
   const todayIso = new Date().toISOString().slice(0, 10);
@@ -87,7 +96,13 @@ export default async function ReportsPage({
 
       <div className="space-y-4 px-6 py-5">
         <div className="grid grid-cols-4 gap-4">
-          <Kpi index="R1" label="摊销成本" value={fmt(r.totalAmortized)} sub="成本段按天切片" />
+          <Kpi
+            index="R1"
+            label="摊销成本"
+            value={fmt(r.totalAmortized)}
+            sub={delta != null ? `较上期 ${delta >= 0 ? "+" : ""}${Math.round(delta * 100)}%` : "成本段按天切片"}
+            led={delta != null ? (delta <= 0 ? "#22c55e" : "#ef4444") : undefined}
+          />
           <Kpi index="R2" label="实付" value={fmt(r.totalPaid)} sub="区间内实际流出" />
           <Kpi index="R3" label="日均" value={fmt(r.dailyAvg)} sub="摊销口径" />
           <Kpi index="R4" label="分类数" value={`${r.categories.length}`} sub={r.categories[0] ? `最大：${r.categories[0].name}` : "—"} />
@@ -98,7 +113,7 @@ export default async function ReportsPage({
             <div className="px-4 py-4">
               <div className="flex h-36 items-end gap-px">
                 {bars.map((b, i) => (
-                  <div key={i} className="group relative flex-1" title={`${b.label} · ${fmt(b.cost)}`}>
+                  <div key={i} className="group relative h-full flex-1" title={`${b.label} · ${fmt(b.cost)}`}>
                     <div
                       className="w-full"
                       style={{
@@ -138,6 +153,59 @@ export default async function ReportsPage({
             </div>
           </Panel>
         </div>
+
+        <Panel index="03" title={`明细 / ${r.items.length}`}>
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="border-b border-black text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+                <th className="px-4 py-2 font-medium">名称</th>
+                <th className="px-4 py-2 font-medium">分类</th>
+                <th className="px-4 py-2 w-2/5 font-medium">占比</th>
+                <th className="px-4 py-2 text-right font-medium">摊销成本</th>
+                <th className="px-4 py-2 text-right font-medium">日均</th>
+              </tr>
+            </thead>
+            <tbody>
+              {r.items.map((it) => (
+                <tr key={it.id} className="border-b border-neutral-200 last:border-0 hover:bg-black/[0.03]">
+                  <td className="px-4 py-2">
+                    <a
+                      href={it.kind === "sub" ? `/subscriptions/${it.id}` : `/purchases/${it.id}`}
+                      className="font-medium hover:underline"
+                    >
+                      {it.name}
+                    </a>
+                    <span className="ml-1.5 text-[9px] uppercase text-neutral-400 f-mono">
+                      {it.kind === "sub" ? "订阅" : "物品"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-neutral-500">{it.category}</td>
+                  <td className="px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 flex-1 bg-[#E4E3E0]">
+                        <div className="h-full bg-black" style={{ width: `${Math.max(1, Math.round(it.share * 100))}%` }} />
+                      </div>
+                      <span className="w-10 text-right text-[10px] tabular-nums text-neutral-500 f-mono">
+                        {Math.round(it.share * 100)}%
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-2 text-right text-[11px] font-semibold tabular-nums f-mono">{fmt(it.cost)}</td>
+                  <td className="px-4 py-2 text-right text-[11px] tabular-nums text-neutral-500 f-mono">
+                    {fmt(it.cost / r.days.length)}
+                  </td>
+                </tr>
+              ))}
+              {r.items.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
+                    区间内无成本
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </Panel>
       </div>
     </>
   );
