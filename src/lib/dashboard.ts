@@ -17,6 +17,7 @@ import {
 } from "./subscriptions/service";
 import { listPurchases, toEnginePurchase } from "./purchases/service";
 import { getUsageVerdict, listUsage } from "./usage/service";
+import { shareFor } from "./beneficiaries/service";
 
 export interface DashboardRow {
   id: string;
@@ -28,6 +29,10 @@ export interface DashboardRow {
   dailyCost: number;
   monthlyCost: number;
   status: string;
+  /** 共享订阅（非我拥有）：标注所有者 */
+  sharedFrom: string | null;
+  /** 我的份额（0–1；无分摊为 1） */
+  sharePct: number;
 }
 
 export interface UpcomingItem {
@@ -103,6 +108,9 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     const engineSub = toEngineSub(sub);
     const payments = toEnginePayments(sub.payments);
     const expiry = currentExpiry(engineSub, payments, today);
+    // 份额切片（ADR-0003）：共享订阅只计我的份额
+    const share = shareFor(sub.beneficiaries, sub.ownerId, userId);
+    const daily = currentDailyRate(engineSub, payments, today) * share;
     return {
       id: sub.id,
       name: sub.name,
@@ -110,9 +118,11 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       cycleLabel: cycleLabel(sub),
       expiry,
       daysUntilExpiry: expiry ? dayDiff(today, expiry) : null,
-      dailyCost: currentDailyRate(engineSub, payments, today),
-      monthlyCost: currentDailyRate(engineSub, payments, today) * 30.4,
+      dailyCost: daily,
+      monthlyCost: daily * 30.4,
       status: sub.status,
+      sharedFrom: sub.ownerId === userId ? null : sub.owner.username,
+      sharePct: share,
     };
   });
 
@@ -132,10 +142,10 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   const itemDailyCost = purchases.reduce((s, p) => s + p.dailyCost, 0);
   const totalDailyCost = active.reduce((s, r) => s + r.dailyCost, 0) + itemDailyCost;
 
-  // 用量红黑榜：启用用量追踪的订阅按当前区间盈亏排序（计数型赚亏 / 额度型浪费）
+  // 用量红黑榜：启用用量追踪的订阅按当前区间盈亏排序（按人切片，ADR-0003）
   const usageBoard: UsageBoardRow[] = [];
   for (const sub of subs.filter((s) => s.usageKind)) {
-    const v = getUsageVerdict(sub, await listUsage(sub.id), today);
+    const v = getUsageVerdict(sub, await listUsage(sub.id), today, userId);
     if (!v) continue;
     usageBoard.push({
       id: sub.id,
@@ -174,7 +184,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     const day = new Date(today.getTime() - i * 86_400_000);
     const subCost = subs
       .filter((s) => s.status === "ACTIVE" && dayDiff(s.startDate, day) >= 0)
-      .reduce((sum, s) => sum + rateOn(s, day), 0);
+      .reduce((sum, s) => sum + rateOn(s, day) * shareFor(s.beneficiaries, s.ownerId, userId), 0);
     const itemCost = purchasesRaw
       .filter((p) => dayDiff(p.purchaseDate, day) >= 0)
       .reduce((sum, p) => sum + purchaseCurrentDailyRate(toEnginePurchase(p), day), 0);
@@ -183,7 +193,8 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
 
   const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
   const yearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
-  const spent = subs.flatMap((s) => s.payments);
+  // 实付只计自己拥有的订阅（共享订阅的钱是所有者出的）
+  const spent = subs.filter((s) => s.ownerId === userId).flatMap((s) => s.payments);
   const monthSpent = spent
     .filter((p) => p.paidAt >= monthStart)
     .reduce((s, p) => s + p.amountBase - p.refundedBase, 0);

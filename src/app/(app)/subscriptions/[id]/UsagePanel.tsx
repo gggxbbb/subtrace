@@ -314,11 +314,14 @@ export function UsageVerdictPanel({
   usageUnit,
   subscriptionId,
   records,
+  perUser = [],
 }: {
   verdict: VerdictData | null;
   usageUnit: string | null;
   subscriptionId: string;
   records: UsageRecordRow[];
+  /** 所有者视角：各受益人用量与盈亏对比 */
+  perUser?: { name: string; usageLabel: string; verdictAmount: number }[];
 }) {
   if (!v) {
     return (
@@ -401,6 +404,22 @@ export function UsageVerdictPanel({
           ? `价值 ${fmtMoney(v.value)} − 成本 ${fmtMoney(v.cost)}`
           : `未用 ${Math.round((1 - v.usageRate) * 100)}% × 成本 ${fmtMoney(v.cost)}`}
       </div>
+      {perUser.length > 0 && (
+        <div className="mt-2 border-t border-dashed border-neutral-300 pt-2">
+          <div className="mb-1 text-[9px] uppercase text-neutral-400 f-mono">各受益人</div>
+          {perUser.map((u) => (
+            <div key={u.name} className="flex items-center justify-between py-1 text-[11px] f-mono">
+              <span>{u.name}</span>
+              <span className="flex items-center gap-2">
+                <span className="text-neutral-500">{u.usageLabel}</span>
+                <span className={u.verdictAmount >= 0 ? "text-teal-700" : "text-red-700"}>
+                  {u.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(u.verdictAmount))}
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
       {records.length > 0 && (
         <div className="mt-2 border-t border-dashed border-neutral-300 pt-2">
           {[...records].reverse().slice(0, 10).map((r) => (

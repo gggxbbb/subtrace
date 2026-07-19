@@ -21,6 +21,7 @@ model User {
   purchases     Purchase[]
   bundles       Bundle[]
   usageRecords  UsageRecord[]
+  beneficiaries Beneficiary[]
 }
 
 model Invite {
@@ -78,6 +79,25 @@ model Subscription {
   createdAt     DateTime @default(now())
   payments      Payment[]
   usage         UsageRecord[]
+  beneficiaries Beneficiary[]
+}
+
+/// 受益实体（ADR-0003）：用户（家庭共享）或物品（iCloud 之于多设备）；份额 = 权重 / Σ权重
+model Beneficiary {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  /// USER | ITEM
+  kind           String
+  /// kind=USER 时指向用户
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// kind=ITEM 时指向物品
+  purchaseId     String?
+  purchase       Purchase?    @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  /// 权重（默认 1，均分）；改权重全局重算
+  weight         Float        @default(1)
+  createdAt      DateTime     @default(now())
 }
 
 model UsageRecord {
@@ -160,4 +180,5 @@ model Purchase {
   /// 残值（主币种）
   resaleBase   Float?
   createdAt    DateTime @default(now())
+  beneficiaries Beneficiary[]
 }

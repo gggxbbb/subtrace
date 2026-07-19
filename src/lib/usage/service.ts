@@ -13,7 +13,8 @@ import {
   toEngineSub,
   type SubscriptionWithPayments,
 } from "../subscriptions/service";
-import type { UsageRecord } from "@/generated/prisma/client";
+import type { Beneficiary, UsageRecord } from "@/generated/prisma/client";
+import { shareFor } from "../beneficiaries/service";
 
 export interface UsageConfigInput {
   usageKind: "COUNT" | "QUOTA";
@@ -40,12 +41,12 @@ export async function setUsageConfig(
 
 /** 计数型：逐条录入用量（本次单价可选，默认继承订阅替代单价） */
 export async function addUsage(
-  ownerId: string,
+  actorId: string,
   subscriptionId: string,
   userId: string,
   input: { date: Date; quantity: number; unitPrice?: number },
 ): Promise<UsageRecord> {
-  await assertOwned(ownerId, subscriptionId);
+  await assertUsageAllowed(actorId, subscriptionId);
   return prisma.usageRecord.create({
     data: { subscriptionId, userId, date: input.date, quantity: input.quantity, unitPrice: input.unitPrice, kind: "DELTA" },
   });
@@ -53,12 +54,12 @@ export async function addUsage(
 
 /** 额度型：录入已用量或百分比（百分比按当月总额度折算），单价/总额度可选快照 */
 export async function addQuotaSnapshot(
-  ownerId: string,
+  actorId: string,
   subscriptionId: string,
   userId: string,
   input: { date: Date; used?: number; percent?: number; unitPrice?: number; quotaTotal?: number },
 ): Promise<UsageRecord> {
-  const sub = await assertOwned(ownerId, subscriptionId);
+  const sub = await assertUsageAllowed(actorId, subscriptionId);
   const quotaTotal = input.quotaTotal ?? sub.quotaTotal;
   let quantity = input.used;
   if (quantity == null && input.percent != null) {
@@ -71,9 +72,13 @@ export async function addQuotaSnapshot(
   });
 }
 
-export async function deleteUsage(ownerId: string, usageId: string) {
+export async function deleteUsage(actorId: string, usageId: string) {
+  // 所有者可删任何记录；受益人只能删自己的
   await prisma.usageRecord.deleteMany({
-    where: { id: usageId, subscription: { ownerId } },
+    where: {
+      id: usageId,
+      OR: [{ subscription: { ownerId: actorId } }, { userId: actorId }],
+    },
   });
 }
 
@@ -84,9 +89,15 @@ export async function listUsage(subscriptionId: string): Promise<UsageRecord[]> 
   });
 }
 
-async function assertOwned(ownerId: string, subscriptionId: string) {
-  const sub = await prisma.subscription.findFirst({ where: { id: subscriptionId, ownerId } });
+/** 录入权限：所有者或 USER 类受益人（受益人记自己的用量） */
+async function assertUsageAllowed(actorId: string, subscriptionId: string) {
+  const sub = await prisma.subscription.findFirst({ where: { id: subscriptionId } });
   if (!sub) throw new Error("订阅不存在 subscription_not_found");
+  if (sub.ownerId === actorId) return sub;
+  const ben = await prisma.beneficiary.findFirst({
+    where: { subscriptionId, kind: "USER", userId: actorId },
+  });
+  if (!ben) throw new Error("订阅不存在 subscription_not_found");
   return sub;
 }
 
@@ -127,21 +138,26 @@ export interface QuotaVerdict {
 
 export type UsageVerdict = CountVerdict | QuotaVerdict;
 
-/** 当前服务区间的盈亏（覆盖 today 的成本段；无覆盖为 null） */
+/** 当前服务区间的盈亏（覆盖 today 的成本段；无覆盖为 null）。
+ *  传 forUserId 时按该受益人切片：成本 × 份额，用量只计其本人记录 */
 export function getUsageVerdict(
-  sub: SubscriptionWithPayments,
+  sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[] },
   records: UsageRecord[],
   today: Date,
+  forUserId?: string,
 ): UsageVerdict | null {
   if (!sub.usageKind) return null;
   const covering = costSegments(toEngineSub(sub), toEnginePayments(sub.payments), today).find(
     (s) => s.start <= today && today < s.end,
   );
   if (!covering) return null;
+  const share = forUserId ? shareFor(sub.beneficiaries ?? [], sub.ownerId, forUserId) : 1;
+  const costShare = covering.net * share;
+  const myRecords = forUserId ? records.filter((r) => r.userId === forUserId) : records;
 
   if (sub.usageKind === "QUOTA") {
     // 额度型：只看使用率——用到 100% 没有，什么时候用满；浪费 = 未用部分 × 成本
-    const inPeriod = records
+    const inPeriod = myRecords
       .filter((r) => r.kind === "TOTAL" && r.date >= covering.start && r.date < covering.end)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
     const latest = inPeriod[inPeriod.length - 1];
@@ -155,30 +171,30 @@ export function getUsageVerdict(
       const t = effectiveTotal(r);
       return t != null && t > 0 && r.quantity >= t;
     });
-    const wastedAmount = covering.net * (1 - usageRate);
+    const wastedAmount = costShare * (1 - usageRate);
     return {
       kind: "QUOTA",
       periodStart: covering.start,
       periodEnd: covering.end,
-      cost: covering.net,
+      cost: costShare,
       used,
       total,
       usageRate,
       hit100At: hit?.date ?? null,
       wastedAmount,
-      costPerUnit: used > 0 ? covering.net / used : null,
+      costPerUnit: used > 0 ? costShare / used : null,
       verdictAmount: -wastedAmount + 0, // 避免 -0
     };
   }
 
   if (sub.altUnitPrice == null) return null;
   const usage = usageInPeriod(
-    records.map((r) => ({ date: r.date, quantity: r.quantity, kind: r.kind as "DELTA" | "TOTAL" })),
+    myRecords.map((r) => ({ date: r.date, quantity: r.quantity, kind: r.kind as "DELTA" | "TOTAL" })),
     covering.start,
     covering.end,
   );
   const value = usageValue(
-    records.map((r) => ({
+    myRecords.map((r) => ({
       date: r.date,
       quantity: r.quantity,
       kind: r.kind as "DELTA" | "TOTAL",
@@ -192,10 +208,10 @@ export function getUsageVerdict(
     kind: "COUNT",
     periodStart: covering.start,
     periodEnd: covering.end,
-    cost: covering.net,
+    cost: costShare,
     usage,
     value,
-    verdictAmount: value - covering.net,
-    costPerUse: actualCostPerUse(covering.net, usage),
+    verdictAmount: value - costShare,
+    costPerUse: actualCostPerUse(costShare, usage),
   };
 }

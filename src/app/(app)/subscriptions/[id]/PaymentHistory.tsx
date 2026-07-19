@@ -38,9 +38,12 @@ export interface HistoryPayment {
 export function PaymentHistory({
   subscriptionId,
   payments,
+  canEdit = true,
 }: {
   subscriptionId: string;
   payments: HistoryPayment[];
+  /** 仅所有者可编辑/删除（受益用户只读） */
+  canEdit?: boolean;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -143,12 +146,15 @@ export function PaymentHistory({
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {canEdit && (
               <button
                 onClick={() => setEditingId(p.id)}
                 className="invisible border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono group-hover:visible hover:bg-black hover:text-white"
               >
                 编辑
               </button>
+              )}
+              {canEdit && (
               <button
                 onClick={async () => {
                   if (confirm("删除这笔付费记录？锚点将回退重算。")) {
@@ -159,6 +165,7 @@ export function PaymentHistory({
               >
                 删除
               </button>
+              )}
               <Led color={p.source === "PROMO" ? "#FF5A00" : "#22c55e"} />
             </div>
           </div>

@@ -10,7 +10,8 @@ import { BundleWizard } from "./BundleWizard";
 
 export default async function NewBundlePage() {
   const user = (await getCurrentUser())!;
-  const subs = await listSubscriptions(user.id);
+  // 联合会员只能打包自己拥有的订阅（共享来的不能转包）
+  const subs = (await listSubscriptions(user.id)).filter((s) => s.ownerId === user.id);
   const today = new Date();
   const existingSubs = subs.map((s) => {
     const expiry = currentExpiry(toEngineSub(s), toEnginePayments(s.payments), today);

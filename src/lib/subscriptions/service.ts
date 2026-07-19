@@ -8,8 +8,14 @@ import {
   type SubscriptionDef,
 } from "../cost-engine";
 import type { Payment, Subscription } from "@/generated/prisma/client";
+import { beneficiaryInclude, type BeneficiaryWithRefs } from "../beneficiaries/service";
 
 export type SubscriptionWithPayments = Subscription & { payments: Payment[] };
+/** 含受益实体（用户/物品引用）与所有者名的订阅 */
+export type SubscriptionWithRefs = SubscriptionWithPayments & {
+  beneficiaries: BeneficiaryWithRefs[];
+  owner: { username: string };
+};
 
 export interface SubscriptionInput {
   name: string;
@@ -105,21 +111,34 @@ export async function createSubscription(
   });
 }
 
-export async function listSubscriptions(ownerId: string): Promise<SubscriptionWithPayments[]> {
+/** 订阅列表：自己拥有的 + 作为受益人被共享的 */
+export async function listSubscriptions(userId: string): Promise<SubscriptionWithRefs[]> {
   return prisma.subscription.findMany({
-    where: { ownerId, status: { not: "ARCHIVED" } },
-    include: { payments: { orderBy: { periodStart: "asc" } } },
+    where: {
+      status: { not: "ARCHIVED" },
+      OR: [{ ownerId: userId }, { beneficiaries: { some: { userId } } }],
+    },
+    include: {
+      payments: { orderBy: { periodStart: "asc" } },
+      beneficiaries: { include: beneficiaryInclude },
+      owner: { select: { username: true } },
+    },
     orderBy: { createdAt: "asc" },
   });
 }
 
+/** 读取订阅：所有者或受益用户（受益用户只读，编辑操作仍走 ownerId 校验） */
 export async function getSubscription(
-  ownerId: string,
+  userId: string,
   id: string,
-): Promise<SubscriptionWithPayments | null> {
+): Promise<SubscriptionWithRefs | null> {
   return prisma.subscription.findFirst({
-    where: { id, ownerId },
-    include: { payments: { orderBy: { periodStart: "asc" } } },
+    where: { id, OR: [{ ownerId: userId }, { beneficiaries: { some: { userId } } }] },
+    include: {
+      payments: { orderBy: { periodStart: "asc" } },
+      beneficiaries: { include: beneficiaryInclude },
+      owner: { select: { username: true } },
+    },
   });
 }
 

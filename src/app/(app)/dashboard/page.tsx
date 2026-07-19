@@ -225,6 +225,16 @@ export default async function DashboardPage() {
                     <Link href={`/subscriptions/${s.id}`} className="font-medium hover:underline">
                       {s.name}
                     </Link>
+                    {s.sharedFrom && (
+                      <span className="ml-1.5 border border-sky-700 px-1 py-px text-[9px] uppercase text-sky-700 f-mono">
+                        共享·{s.sharedFrom}
+                      </span>
+                    )}
+                    {!s.sharedFrom && s.sharePct < 1 && (
+                      <span className="ml-1.5 border border-orange-600 px-1 py-px text-[9px] uppercase text-orange-600 f-mono">
+                        分摊 {Math.round(s.sharePct * 100)}%
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-neutral-500">{s.category ?? "—"}</td>
                   <td className="px-4 py-2.5 text-[11px] text-neutral-500 f-mono">{s.cycleLabel}</td>
