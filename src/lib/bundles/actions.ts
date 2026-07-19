@@ -18,6 +18,8 @@ export async function createBundleAction(formData: FormData) {
       newName?: string;
       listPriceBase: number | null;
       allocatedBase?: number;
+      periodStart?: string;
+      periodEnd?: string;
     }[];
     const periodStart = parseDate(formData.get("periodStart"));
     const periodEnd = parseDate(formData.get("periodEnd"));
@@ -26,8 +28,8 @@ export async function createBundleAction(formData: FormData) {
       newSubscription: it.newName ? { name: it.newName } : undefined,
       listPriceBase: it.listPriceBase,
       allocatedBase: it.allocatedBase,
-      periodStart,
-      periodEnd,
+      periodStart: it.periodStart ? new Date(`${it.periodStart}T00:00:00Z`) : periodStart,
+      periodEnd: it.periodEnd ? new Date(`${it.periodEnd}T00:00:00Z`) : periodEnd,
     }));
     await createBundle(user.id, {
       name: String(formData.get("name") ?? ""),

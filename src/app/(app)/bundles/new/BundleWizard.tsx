@@ -18,6 +18,9 @@ interface Item {
   newName: string;
   listPriceBase: string;
   allocatedBase: string; // 空 = 按比例
+  periodStart: string; // 空 = 继承打包起止
+  periodEnd: string;
+  plusDays: string;
 }
 
 const newItem = (): Item => ({
@@ -26,6 +29,9 @@ const newItem = (): Item => ({
   newName: "",
   listPriceBase: "",
   allocatedBase: "",
+  periodStart: "",
+  periodEnd: "",
+  plusDays: "",
 });
 
 export function BundleWizard({
@@ -46,6 +52,22 @@ export function BundleWizard({
 
   const update = (i: number, patch: Partial<Item>) =>
     setItems(items.map((it, j) => (j === i ? { ...it, ...patch } : it)));
+
+  const [bundleStart, setBundleStart] = useState(today);
+  const [bundleEnd, setBundleEnd] = useState(nextYear);
+
+  const applyPlusDays = (i: number, v: string) => {
+    const it = items[i];
+    const start = it.periodStart || bundleStart;
+    const n = Number(v);
+    const patch: Partial<Item> = { plusDays: v };
+    if (Number.isFinite(n) && v.trim() !== "" && start) {
+      patch.periodEnd = new Date(
+        new Date(`${start}T00:00:00Z`).getTime() + n * 86_400_000,
+      ).toISOString().slice(0, 10);
+    }
+    update(i, patch);
+  };
 
   return (
     <form action={createBundleAction} className="space-y-4 border border-black bg-white p-5">
@@ -79,11 +101,11 @@ export function BundleWizard({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>权益起</label>
-          <input name="periodStart" type="date" defaultValue={today} required className={`${inputCls} f-mono`} />
+          <input name="periodStart" type="date" value={bundleStart} onChange={(e) => setBundleStart(e.target.value)} required className={`${inputCls} f-mono`} />
         </div>
         <div>
           <label className={labelCls}>权益止</label>
-          <input name="periodEnd" type="date" defaultValue={nextYear} required className={`${inputCls} f-mono`} />
+          <input name="periodEnd" type="date" value={bundleEnd} onChange={(e) => setBundleEnd(e.target.value)} required className={`${inputCls} f-mono`} />
         </div>
       </div>
 
@@ -178,6 +200,41 @@ export function BundleWizard({
               >
                 <Trash2 className="h-4 w-4" />
               </button>
+              <div className="col-span-5 grid grid-cols-[1fr_1fr_auto] items-end gap-3">
+                <div>
+                  <label className={labelCls}>服务起（留空继承打包起）</label>
+                  <input
+                    type="date"
+                    value={it.periodStart}
+                    placeholder={bundleStart}
+                    onChange={(e) => update(i, { periodStart: e.target.value })}
+                    className={`${inputCls} f-mono`}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>服务止（留空继承打包止）</label>
+                  <div className="flex border border-black bg-[#E4E3E0] focus-within:bg-white">
+                    <input
+                      type="date"
+                      value={it.periodEnd}
+                      onChange={(e) => update(i, { periodEnd: e.target.value, plusDays: "" })}
+                      className="w-full bg-transparent px-2 py-1.5 text-sm outline-none f-mono"
+                    />
+                    <span className="flex items-center border-l border-black px-2 text-sm text-neutral-500 f-mono">
+                      +
+                    </span>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="N 天"
+                      value={it.plusDays}
+                      onChange={(e) => applyPlusDays(i, e.target.value)}
+                      className="w-20 shrink-0 bg-transparent px-1 py-1.5 text-sm outline-none f-mono"
+                    />
+                  </div>
+                </div>
+                <div />
+              </div>
             </div>
           ))}
         </div>
@@ -195,6 +252,8 @@ export function BundleWizard({
             newName: it.mode === "new" ? it.newName : undefined,
             listPriceBase: it.listPriceBase === "" ? null : Number(it.listPriceBase),
             allocatedBase: it.allocatedBase === "" ? undefined : Number(it.allocatedBase),
+            periodStart: it.periodStart || undefined,
+            periodEnd: it.periodEnd || undefined,
           })),
         )}
       />
