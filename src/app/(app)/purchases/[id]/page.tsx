@@ -7,8 +7,9 @@ import {
   purchaseCurrentDailyRate,
   purchaseDailyRate,
 } from "@/lib/cost-engine";
-import { getPurchase, subscriptionShareCost, toEnginePurchase } from "@/lib/purchases/service";
+import { getPurchase, listPurchaseIncomes, subscriptionShareCost, toEnginePurchase } from "@/lib/purchases/service";
 import { closePurchaseAction } from "@/lib/purchases/actions";
+import { PurchaseEditForm, PurchaseIncomePanel } from "./PurchasePanels";
 
 export default async function PurchaseDetailPage({
   params,
@@ -26,11 +27,13 @@ export default async function PurchaseDetailPage({
   const daily = purchaseDailyRate(engine, today);
   const progress = breakevenProgress(engine, today);
   const todayIso = today.toISOString().slice(0, 10);
-  // TCO（ADR-0003）：物品摊销净额 + 作为受益实体的订阅份额（持有期内）
+  // TCO（ADR-0003）：物品净额 + 订阅份额 − 累计收益
   const shareLines = await subscriptionShareCost(user.id, purchase, today);
   const subShareTotal = shareLines.reduce((s, l) => l.amount, 0);
+  const incomes = await listPurchaseIncomes(purchase.id);
+  const incomeTotal = incomes.reduce((s, i) => s + i.amountBase, 0);
   const itemNet = purchase.amountBase - (purchase.resaleBase ?? 0);
-  const tco = itemNet + subShareTotal;
+  const tco = itemNet + subShareTotal - incomeTotal;
 
   return (
     <>
@@ -74,7 +77,7 @@ export default async function PurchaseDetailPage({
               <span className="tabular-nums f-mono">{fmt(itemNet)}</span>
             </div>
             {shareLines.map((l) => (
-              <div key={l.subscriptionId} className="flex justify-between border-b border-dashed border-neutral-200 py-1 last:border-0">
+              <div key={l.subscriptionId} className="flex justify-between border-b border-dashed border-neutral-200 py-1">
                 <span className="text-neutral-500">
                   <a href={`/subscriptions/${l.subscriptionId}`} className="underline decoration-dotted hover:text-black">{l.name}</a>
                   <span className="ml-1 text-[10px] text-neutral-400 f-mono">份额 {Math.round(l.share * 100)}%</span>
@@ -82,15 +85,50 @@ export default async function PurchaseDetailPage({
                 <span className="tabular-nums f-mono">{fmt(l.amount)}</span>
               </div>
             ))}
+            {incomeTotal > 0 && (
+              <div className="flex justify-between py-1">
+                <span className="text-neutral-500">累计收益（{incomes.length} 笔）</span>
+                <span className="tabular-nums text-teal-700 f-mono">−{fmt(incomeTotal)}</span>
+              </div>
+            )}
             {shareLines.length === 0 && (
               <div className="py-1 text-[11px] text-neutral-400">无订阅份额——可在订阅详情页把本物品加为受益实体</div>
             )}
           </div>
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+          <Panel index="01" title="物品信息">
+            <PurchaseEditForm
+              purchaseId={purchase.id}
+              initial={{
+                name: purchase.name,
+                category: purchase.category,
+                amount: purchase.amount,
+                currency: purchase.currency,
+                amountBase: purchase.amountBase,
+                purchaseDate: purchase.purchaseDate.toISOString().slice(0, 10),
+                expectedDays: purchase.expectedDays,
+              }}
+            />
+          </Panel>
+          <Panel index="02" title={`收益记录 / ${incomes.length}`}>
+            <PurchaseIncomePanel
+              purchaseId={purchase.id}
+              incomes={incomes.map((i) => ({
+                id: i.id,
+                amount: i.amount,
+                amountBase: i.amountBase,
+                date: i.date.toISOString().slice(0, 10),
+                note: i.note,
+              }))}
+            />
+          </Panel>
+        </div>
+
         {inUse && (
           <div className="grid grid-cols-2 gap-4">
-            <Panel index="01" title="卖出登记">
+            <Panel index="03" title="卖出登记">
               <form action={closePurchaseAction.bind(null, purchase.id)} className="space-y-4 px-4 py-4">
                 <input type="hidden" name="status" value="SOLD" />
                 <div className="grid grid-cols-2 gap-4">
@@ -108,7 +146,7 @@ export default async function PurchaseDetailPage({
                 </button>
               </form>
             </Panel>
-            <Panel index="02" title="报废登记">
+            <Panel index="04" title="报废登记">
               <form action={closePurchaseAction.bind(null, purchase.id)} className="space-y-4 px-4 py-4">
                 <input type="hidden" name="status" value="RETIRED" />
                 <div>

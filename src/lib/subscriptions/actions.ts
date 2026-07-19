@@ -6,6 +6,7 @@ import { getCurrentUser } from "../auth/session";
 import {
   createSubscription,
   deletePayment,
+  deleteSubscription,
   recordPayment,
   setStatus,
   toEngineSub,
@@ -159,4 +160,13 @@ export async function deletePaymentAction(subscriptionId: string, paymentId: str
   revalidatePath(`/subscriptions/${subscriptionId}`);
   revalidatePath("/dashboard");
   redirect(`/subscriptions/${subscriptionId}`);
+}
+
+export async function deleteSubscriptionAction(subscriptionId: string) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await deleteSubscription(user.id, subscriptionId);
+  revalidatePath("/subscriptions");
+  revalidatePath("/dashboard");
+  redirect("/subscriptions");
 }

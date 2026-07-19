@@ -17,7 +17,7 @@ import {
 } from "./subscriptions/service";
 import { listPurchases, toEnginePurchase } from "./purchases/service";
 import { getUsageVerdict, listUsage } from "./usage/service";
-import { shareFor } from "./beneficiaries/service";
+import { shareForViewer } from "./beneficiaries/service";
 
 export interface DashboardRow {
   id: string;
@@ -109,7 +109,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     const payments = toEnginePayments(sub.payments);
     const expiry = currentExpiry(engineSub, payments, today);
     // 份额切片（ADR-0003）：共享订阅只计我的份额
-    const share = shareFor(sub.beneficiaries, sub.ownerId, userId);
+    const share = shareForViewer(sub.beneficiaries, sub.ownerId, userId);
     const daily = currentDailyRate(engineSub, payments, today) * share;
     return {
       id: sub.id,
@@ -184,7 +184,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     const day = new Date(today.getTime() - i * 86_400_000);
     const subCost = subs
       .filter((s) => s.status === "ACTIVE" && dayDiff(s.startDate, day) >= 0)
-      .reduce((sum, s) => sum + rateOn(s, day) * shareFor(s.beneficiaries, s.ownerId, userId), 0);
+      .reduce((sum, s) => sum + rateOn(s, day) * shareForViewer(s.beneficiaries, s.ownerId, userId), 0);
     const itemCost = purchasesRaw
       .filter((p) => dayDiff(p.purchaseDate, day) >= 0)
       .reduce((sum, p) => sum + purchaseCurrentDailyRate(toEnginePurchase(p), day), 0);

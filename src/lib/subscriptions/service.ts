@@ -246,6 +246,20 @@ export function paymentPrefill(
   };
 }
 
+/** 已归档订阅（仅自有） */
+export async function listArchivedSubscriptions(ownerId: string) {
+  return prisma.subscription.findMany({
+    where: { ownerId, status: "ARCHIVED" },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, name: true, category: true, startDate: true },
+  });
+}
+
+/** 硬删除订阅（付费/用量/受益人级联删除，不可恢复） */
+export async function deleteSubscription(ownerId: string, id: string): Promise<void> {
+  await prisma.subscription.deleteMany({ where: { id, ownerId } });
+}
+
 export async function setStatus(
   ownerId: string,
   id: string,

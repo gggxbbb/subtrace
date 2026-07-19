@@ -14,7 +14,7 @@ import {
   type SubscriptionWithPayments,
 } from "../subscriptions/service";
 import type { Beneficiary, UsageRecord } from "@/generated/prisma/client";
-import { shareFor } from "../beneficiaries/service";
+import { shareForViewer } from "../beneficiaries/service";
 
 export interface UsageConfigInput {
   usageKind: "COUNT" | "QUOTA";
@@ -151,7 +151,7 @@ export function getUsageVerdict(
     (s) => s.start <= today && today < s.end,
   );
   if (!covering) return null;
-  const share = forUserId ? shareFor(sub.beneficiaries ?? [], sub.ownerId, forUserId) : 1;
+  const share = forUserId ? shareForViewer(sub.beneficiaries ?? [], sub.ownerId, forUserId) : 1;
   const costShare = covering.net * share;
   const myRecords = forUserId ? records.filter((r) => r.userId === forUserId) : records;
 

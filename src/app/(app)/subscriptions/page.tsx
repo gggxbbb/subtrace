@@ -3,10 +3,13 @@ import { Plus } from "lucide-react";
 import { Led, Panel, fmt, fmtDate } from "@/components/te";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getDashboardData } from "@/lib/dashboard";
+import { listArchivedSubscriptions } from "@/lib/subscriptions/service";
+import { ArchivedList } from "./ArchivedList";
 
 export default async function SubscriptionsPage() {
   const user = (await getCurrentUser())!;
   const d = await getDashboardData(user.id);
+  const archived = await listArchivedSubscriptions(user.id);
 
   return (
     <>
@@ -81,6 +84,19 @@ export default async function SubscriptionsPage() {
             </tbody>
           </table>
         </Panel>
+
+        <div className="mt-4">
+          <Panel index="02" title={`已归档 / ${archived.length}`}>
+            <ArchivedList
+              rows={archived.map((a) => ({
+                id: a.id,
+                name: a.name,
+                category: a.category,
+                startDate: a.startDate.toISOString().slice(0, 10),
+              }))}
+            />
+          </Panel>
+        </div>
       </div>
     </>
   );

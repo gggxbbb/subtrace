@@ -12,7 +12,7 @@ import { setStatusAction } from "@/lib/subscriptions/actions";
 import {
   beneficiaryRows as serviceBeneficiaryRows,
   listBeneficiaryCandidates,
-  shareFor,
+  shareForViewer,
 } from "@/lib/beneficiaries/service";
 import { getUsageVerdict, listUsage } from "@/lib/usage/service";
 import { PaymentForm } from "./PaymentForm";
@@ -54,7 +54,7 @@ export default async function SubscriptionDetailPage({
   const usageRecords = sub.usageKind ? await listUsage(sub.id) : [];
   // 分摊（ADR-0003）：我的份额与按人盈亏
   const isOwner = sub.ownerId === user.id;
-  const myShare = shareFor(sub.beneficiaries, sub.ownerId, user.id);
+  const myShare = shareForViewer(sub.beneficiaries, sub.ownerId, user.id);
   const beneficiaryRows = serviceBeneficiaryRows(sub);
   const { users: candidateUsers, items: candidateItems } = isOwner
     ? await listBeneficiaryCandidates(user.id, sub.id)

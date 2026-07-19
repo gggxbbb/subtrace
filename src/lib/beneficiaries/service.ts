@@ -89,8 +89,24 @@ export function shareFor(list: Beneficiary[], ownerId: string, refId: string): n
 }
 
 /**
- * 添加受益实体。首个加入时自动补上所有者（权重 1）——
- * 从此订阅进入分摊状态，所有者也是受益人之一。
+ * 某用户视角的有效份额：所有者 = 自己的 USER 行 + 全部 ITEM 行
+ * （物品是我的，物品摊的份额也是我的成本）；其他受益用户 = 仅自己的 USER 行。
+ */
+export function shareForViewer(list: Beneficiary[], ownerId: string, viewerId: string): number {
+  if (list.length === 0) return viewerId === ownerId ? 1 : 0;
+  const sum = list.reduce((s, b) => s + b.weight, 0);
+  if (sum <= 0) return 0;
+  const mine =
+    viewerId === ownerId
+      ? list.reduce((s, b) => s + (b.kind === "ITEM" || b.userId === viewerId ? b.weight : 0), 0)
+      : (list.find((b) => b.userId === viewerId)?.weight ?? 0);
+  return mine / sum;
+}
+
+/**
+ * 添加受益实体。首个 USER 受益人加入时自动补上所有者（权重 1）——家庭共享从均分开始；
+ * 首个 ITEM 受益人不补——物品分摊通常就是纯设备分摊（iCloud 之于多设备），
+ * 且物品份额本来就计入所有者成本（shareForOwned）。
  */
 export async function addBeneficiary(
   ownerId: string,
@@ -112,8 +128,7 @@ export async function addBeneficiary(
     throw new Error("该受益实体已存在（重复添加）");
   }
   return prisma.$transaction(async (tx) => {
-    if (existing.length === 0) {
-      // 进入分摊状态：自动补所有者占位行
+    if (existing.length === 0 && input.kind === "USER") {
       await tx.beneficiary.create({
         data: { subscriptionId, kind: "USER", userId: ownerId, weight: 1 },
       });

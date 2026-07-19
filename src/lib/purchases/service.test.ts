@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "../db";
 import { breakevenProgress, purchaseCurrentDailyRate, purchaseDailyRate } from "../cost-engine";
 import {
+  addPurchaseIncome,
+  deletePurchaseIncome,
+  listPurchaseIncomes,
+  updatePurchase,
   subscriptionShareCost,
   closePurchase,
   createPurchase,
@@ -106,7 +110,7 @@ describe("回本进度", () => {
 });
 
 describe("物品 TCO：订阅份额（ADR-0003）", () => {
-  it("iPhone 作为 iCloud 受益人：份额 1/2，持有期整段覆盖", async () => {
+  it("iPhone 作为 iCloud 唯一受益人：份额 1，整段计入", async () => {
     const { createSubscription } = await import("../subscriptions/service");
     const { addBeneficiary } = await import("../beneficiaries/service");
     const sub = await createSubscription(ownerId, {
@@ -124,12 +128,13 @@ describe("物品 TCO：订阅份额（ADR-0003）", () => {
     await addBeneficiary(ownerId, sub.id, { kind: "ITEM", purchaseId: iphone.id });
     const lines = await subscriptionShareCost(ownerId, iphone, d("2026-07-18"));
     expect(lines).toHaveLength(1);
-    expect(lines[0].share).toBeCloseTo(0.5);
-    // 截至今天 07-18：覆盖 17/31 天
-    expect(lines[0].amount).toBeCloseTo(217 * (17 / 31) * 0.5, 1);
+    // 唯一受益人 → 份额 1（物品受益不再自动补所有者行）
+    expect(lines[0].share).toBeCloseTo(1);
+    // 与持有期重叠即整段计入（不按天折算）
+    expect(lines[0].amount).toBeCloseTo(217);
   });
 
-  it("持有期只覆盖部分区间：按重叠天数折算", async () => {
+  it("持有期与段有交集即整段计入（不按天折算）", async () => {
     const { createSubscription } = await import("../subscriptions/service");
     const { addBeneficiary } = await import("../beneficiaries/service");
     const sub = await createSubscription(ownerId, {
@@ -141,13 +146,13 @@ describe("物品 TCO：订阅份额（ADR-0003）", () => {
         paidAt: d("2026-07-01"), periodStart: d("2026-07-01"), periodEnd: d("2026-08-01"), source: "MANUAL",
       },
     });
-    // 07-16 买入，截至今天 07-18：覆盖 2 天 / 31 天
+    // 07-16 买入：持有期与 07-01~08-01 段有交集 → 整段计入
     const ipad = await createPurchase(ownerId, {
       name: "iPad", amount: 4000, currency: "CNY", amountBase: 4000, purchaseDate: d("2026-07-16"),
     });
     await addBeneficiary(ownerId, sub.id, { kind: "ITEM", purchaseId: ipad.id });
     const lines = await subscriptionShareCost(ownerId, ipad, d("2026-07-18"));
-    expect(lines[0].amount).toBeCloseTo(217 * (2 / 31) * 0.5, 1);
+    expect(lines[0].amount).toBeCloseTo(217);
   });
 
   it("非受益物品无订阅份额", async () => {
@@ -155,5 +160,31 @@ describe("物品 TCO：订阅份额（ADR-0003）", () => {
       name: "升降桌", amount: 2000, currency: "CNY", amountBase: 2000, purchaseDate: d("2026-01-01"),
     });
     expect(await subscriptionShareCost(ownerId, desk, d("2026-07-18"))).toHaveLength(0);
+  });
+});
+
+describe("物品收益与编辑", () => {
+  it("可记录/删除收益，抵减 TCO", async () => {
+    const p = await createPurchase(ownerId, {
+      name: "相机", amount: 12000, currency: "CNY", amountBase: 12000, purchaseDate: d("2026-01-01"),
+    });
+    await addPurchaseIncome(ownerId, p.id, { amount: 300, date: d("2026-03-01"), note: "出租 3 天" });
+    await addPurchaseIncome(ownerId, p.id, { amount: 200, date: d("2026-05-01"), note: "出租 2 天" });
+    const incomes = await listPurchaseIncomes(p.id);
+    expect(incomes).toHaveLength(2);
+    expect(incomes.reduce((s, i) => s + i.amountBase, 0)).toBe(500);
+    await deletePurchaseIncome(ownerId, incomes[0].id);
+    expect(await listPurchaseIncomes(p.id)).toHaveLength(1);
+  });
+
+  it("创建后可编辑名称/金额/日期/寿命", async () => {
+    const p = await createPurchase(ownerId, {
+      name: "相机", amount: 12000, currency: "CNY", amountBase: 12000, purchaseDate: d("2026-01-01"),
+    });
+    await updatePurchase(ownerId, p.id, { name: "相机 A7M4", amountBase: 11500, expectedDays: 1500 });
+    const fresh = await getPurchase(ownerId, p.id);
+    expect(fresh!.name).toBe("相机 A7M4");
+    expect(fresh!.amountBase).toBe(11500);
+    expect(fresh!.expectedDays).toBe(1500);
   });
 });

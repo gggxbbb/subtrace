@@ -181,4 +181,21 @@ model Purchase {
   resaleBase   Float?
   createdAt    DateTime @default(now())
   beneficiaries Beneficiary[]
+  incomes      PurchaseIncome[]
+}
+
+/// 物品创造的收益（出租、返利等），抵减 TCO
+model PurchaseIncome {
+  id         String   @id @default(cuid())
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  /// 收益（原币）
+  amount     Float
+  currency   String   @default("CNY")
+  /// 主币种快照（ADR-0004）
+  amountBase Float
+  date       DateTime
+  /// 来源说明：出租 / 返利 / 其他
+  note       String?
+  createdAt  DateTime @default(now())
 }

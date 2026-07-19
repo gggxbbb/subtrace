@@ -5,6 +5,7 @@ import { prisma } from "../db";
 import {
   addBeneficiary,
   shareFor,
+  shareForViewer,
   beneficiaryShares,
   listBeneficiaries,
   removeBeneficiary,
@@ -90,7 +91,7 @@ describe("添加受益实体", () => {
     ).rejects.toThrow(/权限|物品/);
   });
 
-  it("iCloud 场景：所有者 + 两台设备，权重 1:1:1", async () => {
+  it("iCloud 场景：两台设备 1:1，不再自动补所有者", async () => {
     const mkItem = (name: string) =>
       prisma.purchase.create({
         data: { ownerId, name, amount: 5000, currency: "CNY", amountBase: 5000, purchaseDate: d("2026-01-01") },
@@ -100,8 +101,8 @@ describe("添加受益实体", () => {
     await addBeneficiary(ownerId, subId, { kind: "ITEM", purchaseId: mac.id });
     await addBeneficiary(ownerId, subId, { kind: "ITEM", purchaseId: iphone.id });
     const shares = beneficiaryShares(await listBeneficiaries(subId));
-    expect(shares).toHaveLength(3); // 自动补的所有者 + 两台设备
-    for (const s of shares) expect(s.share).toBeCloseTo(1 / 3);
+    expect(shares).toHaveLength(2);
+    for (const s of shares) expect(s.share).toBeCloseTo(1 / 2);
   });
 });
 
@@ -138,23 +139,49 @@ describe("访问控制", () => {
 });
 
 describe("纯设备分摊（iCloud 场景）", () => {
-  it("可移除所有者占位行：份额只在物品间分配，所有者份额为 0", async () => {
-    const mkItem = (name: string) =>
-      prisma.purchase.create({
-        data: { ownerId, name, amount: 5000, currency: "CNY", amountBase: 5000, purchaseDate: d("2026-01-01") },
-      });
-    const mac = await mkItem("MacBook");
-    const iphone = await mkItem("iPhone");
+  it("可移除所有者占位行：份额只在剩余受益人间分配，所有者份额为 0", async () => {
+    const mac = await prisma.purchase.create({
+      data: { ownerId, name: "MacBook", amount: 5000, currency: "CNY", amountBase: 5000, purchaseDate: d("2026-01-01") },
+    });
+    // 先加 USER（自动补所有者），再加 ITEM，然后移除所有者行
+    await addBeneficiary(ownerId, subId, { kind: "USER", userId: memberId });
     await addBeneficiary(ownerId, subId, { kind: "ITEM", purchaseId: mac.id });
-    await addBeneficiary(ownerId, subId, { kind: "ITEM", purchaseId: iphone.id });
     const list = await listBeneficiaries(subId);
     const ownerRow = list.find((b) => b.userId === ownerId)!;
     await removeBeneficiary(ownerId, ownerRow.id);
     const rest = await listBeneficiaries(subId);
     expect(rest).toHaveLength(2);
     const shares = beneficiaryShares(rest);
+    expect(shares.find((s) => s.refId === memberId)!.share).toBeCloseTo(0.5);
     expect(shares.find((s) => s.refId === mac.id)!.share).toBeCloseTo(0.5);
-    expect(shares.find((s) => s.refId === iphone.id)!.share).toBeCloseTo(0.5);
     expect(shareFor(rest, ownerId, ownerId)).toBe(0);
+  });
+});
+
+describe("物品受益规则", () => {
+  it("首个 ITEM 受益人不再自动补所有者行", async () => {
+    const mac = await prisma.purchase.create({
+      data: { ownerId, name: "MacBook", amount: 5000, currency: "CNY", amountBase: 5000, purchaseDate: d("2026-01-01") },
+    });
+    await addBeneficiary(ownerId, subId, { kind: "ITEM", purchaseId: mac.id });
+    const list = await listBeneficiaries(subId);
+    expect(list).toHaveLength(1);
+    expect(list[0].purchaseId).toBe(mac.id);
+  });
+
+  it("所有者有效份额 = 自己的 USER 行 + 全部 ITEM 行", async () => {
+    const mkItem = (name: string) =>
+      prisma.purchase.create({
+        data: { ownerId, name, amount: 5000, currency: "CNY", amountBase: 5000, purchaseDate: d("2026-01-01") },
+      });
+    const mac = await mkItem("MacBook");
+    const iphone = await mkItem("iPhone");
+    await addBeneficiary(ownerId, subId, { kind: "USER", userId: memberId });
+    await addBeneficiary(ownerId, subId, { kind: "ITEM", purchaseId: mac.id });
+    await addBeneficiary(ownerId, subId, { kind: "ITEM", purchaseId: iphone.id });
+    const list = await listBeneficiaries(subId);
+    // 行：owner(1) + member(1) + mac(1) + iphone(1) → 所有者 = (1+1+1)/4 = 3/4
+    expect(shareForViewer(list, ownerId, ownerId)).toBeCloseTo(0.75);
+    expect(shareForViewer(list, ownerId, memberId)).toBeCloseTo(0.25);
   });
 });
