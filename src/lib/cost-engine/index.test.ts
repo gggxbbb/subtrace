@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 import {
   actualCostPerUse,
+  allocateBundle,
   breakevenProgress,
   costSegments,
   currentDailyRate,
@@ -274,5 +275,25 @@ describe("重叠成本段", () => {
     expect(currentDailyRate(sub, payments, d("2021-06-01"))).toBeCloseTo(160 / 365 + 80 / 365);
     // 只剩第二段
     expect(currentDailyRate(sub, payments, d("2022-01-15"))).toBeCloseTo(80 / 365);
+  });
+});
+
+describe("联合会员分摊（ADR-0002）", () => {
+  it("按子会员标准价比例分摊打包实付", () => {
+    // 88VIP 88 元：优酷年卡原价 198、网易云 99
+    const [a, b] = allocateBundle(88, [198, 99]);
+    expect(a).toBeCloseTo(88 * (198 / 297));
+    expect(b).toBeCloseTo(88 * (99 / 297));
+    expect(a + b).toBeCloseTo(88);
+  });
+
+  it("原价未知的子会员按 0 参与，只摊已知原价部分", () => {
+    const [known, unknown] = allocateBundle(88, [198, 0]);
+    expect(known).toBeCloseTo(88);
+    expect(unknown).toBe(0);
+  });
+
+  it("全部未知原价时不产生分摊", () => {
+    expect(allocateBundle(88, [0, 0])).toEqual([0, 0]);
   });
 });

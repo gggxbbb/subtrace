@@ -19,6 +19,7 @@ model User {
   invitesCreated Invite[] @relation("creator")
   subscriptions Subscription[]
   purchases     Purchase[]
+  bundles       Bundle[]
 }
 
 model Invite {
@@ -86,8 +87,27 @@ model Payment {
   periodEnd      DateTime
   /// AUTO | MANUAL | PROMO | BUNDLE
   source         String
+  /// BUNDLE 来源时指向联合会员（归属挂在付费记录上，ADR-0002）
+  bundleId       String?
+  bundle         Bundle?      @relation(fields: [bundleId], references: [id], onDelete: SetNull)
   note           String?
   createdAt      DateTime     @default(now())
+}
+
+model Bundle {
+  id              String    @id @default(cuid())
+  ownerId         String
+  owner           User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name            String
+  /// 打包实付（原币）
+  totalAmount     Float
+  currency        String
+  /// 主币种快照（ADR-0004）
+  totalAmountBase Float
+  periodStart     DateTime
+  periodEnd       DateTime
+  createdAt       DateTime  @default(now())
+  payments        Payment[]
 }
 
 model Purchase {

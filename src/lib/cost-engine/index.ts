@@ -223,3 +223,13 @@ export function verdict(costShare: number, usageQty: number, altUnitPrice: numbe
 export function actualCostPerUse(costShare: number, usageQty: number): number | null {
   return usageQty > 0 ? costShare / usageQty : null;
 }
+
+/**
+ * 联合会员分摊（ADR-0002）：打包实付 × 子会员标准价 / Σ标准价。
+ * 原价未知（0）的子会员不参与分摊；全部未知时全为 0（可手动覆盖）。
+ */
+export function allocateBundle(totalBase: number, listPrices: number[]): number[] {
+  const sum = listPrices.reduce((s, p) => s + Math.max(0, p), 0);
+  if (sum <= 0) return listPrices.map(() => 0);
+  return listPrices.map((p) => (totalBase * Math.max(0, p)) / sum);
+}

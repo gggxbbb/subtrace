@@ -35,6 +35,8 @@ export interface PaymentInput {
   periodStart: Date;
   periodEnd: Date;
   source: "AUTO" | "MANUAL" | "PROMO" | "BUNDLE";
+  /** BUNDLE 来源时指向联合会员 */
+  bundleId?: string;
   note?: string;
 }
 
@@ -141,6 +143,7 @@ export async function recordPayment(
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
         source: input.source,
+        bundleId: input.bundleId,
         note: input.note,
       },
     }),
