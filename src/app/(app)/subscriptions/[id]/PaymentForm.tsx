@@ -60,7 +60,7 @@ export function PaymentForm({
         <label className={labelCls}>折算主币种金额（快照，默认同实付）</label>
         <input name="amountBase" type="number" step="0.01" min="0" placeholder="留空 = 实付金额" className={inputCls} />
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>支付日期</label>
           <input name="paidAt" type="date" defaultValue={prefill.paidAt} required className={`${inputCls} f-mono`} />
@@ -76,38 +76,36 @@ export function PaymentForm({
             className={`${inputCls} f-mono`}
           />
         </div>
-        <div>
-          <label className={labelCls}>服务止（到期日）</label>
-          <div className="flex gap-2">
-            <input
-              name="periodEnd"
-              type="date"
-              value={periodEnd}
-              onChange={(e) => {
-                setPeriodEnd(e.target.value);
-                setPlusDays("");
-              }}
-              required
-              className={`${inputCls} f-mono`}
-            />
-            <div className="relative w-28 shrink-0">
-              <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-sm text-neutral-500 f-mono">
-                +
-              </span>
-              <input
-                type="number"
-                min="1"
-                placeholder="N"
-                value={plusDays}
-                onChange={(e) => applyPlusDays(e.target.value)}
-                className={`${inputCls} pl-5 f-mono`}
-                title="按天数：服务止 = 服务起 + N 天"
-              />
-            </div>
-          </div>
-          <div className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
-            或输入 +N 天快速顺延
-          </div>
+      </div>
+      <div>
+        <label className={labelCls}>服务止（到期日）</label>
+        <div className="flex border border-black bg-[#E4E3E0] focus-within:bg-white">
+          <input
+            name="periodEnd"
+            type="date"
+            value={periodEnd}
+            onChange={(e) => {
+              setPeriodEnd(e.target.value);
+              setPlusDays("");
+            }}
+            required
+            className="w-full bg-transparent px-2 py-1.5 text-sm outline-none f-mono"
+          />
+          <span className="flex items-center border-l border-black px-2 text-sm text-neutral-500 f-mono">
+            +
+          </span>
+          <input
+            type="number"
+            min="1"
+            placeholder="N 天"
+            value={plusDays}
+            onChange={(e) => applyPlusDays(e.target.value)}
+            className="w-20 shrink-0 bg-transparent px-1 py-1.5 text-sm outline-none f-mono"
+            title="按天数：服务止 = 服务起 + N 天"
+          />
+        </div>
+        <div className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
+          右侧输入 +N 天快速顺延
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
