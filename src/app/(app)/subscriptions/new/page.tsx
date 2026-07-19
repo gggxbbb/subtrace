@@ -127,6 +127,14 @@ export default function NewSubscriptionPage() {
           <input name="startDate" type="date" defaultValue={today} required className={`${inputCls} f-mono`} />
         </div>
 
+        <div>
+          <label className={labelCls}>提醒天数</label>
+          <input name="remindDays" defaultValue="7,3,0" className={`${inputCls} f-mono`} />
+          <p className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
+            逗号分隔；到期前 N 天经通知渠道提醒 · 留空 = 不提醒
+          </p>
+        </div>
+
         <div className="border border-black">
           <label className="flex items-center gap-2 border-b border-black bg-[#E4E3E0] px-3 py-2 text-[12px]">
             <input type="checkbox" name="firstPayment" defaultChecked={mode === "CYCLE"} className="h-4 w-4 accent-black" />

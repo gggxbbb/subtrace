@@ -22,6 +22,7 @@ model User {
   bundles       Bundle[]
   usageRecords  UsageRecord[]
   beneficiaries Beneficiary[]
+  notifyChannels NotificationChannel[]
 }
 
 model Invite {
@@ -80,6 +81,39 @@ model Subscription {
   payments      Payment[]
   usage         UsageRecord[]
   beneficiaries Beneficiary[]
+}
+
+/// 通知渠道（ticket 08）：WEBHOOK（POST JSON）| EMAIL（SMTP，经 nodemailer）
+model NotificationChannel {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// WEBHOOK | EMAIL
+  kind      String
+  name      String
+  /// JSON：WEBHOOK={url}；EMAIL={host,port,secure,user,pass,from,to}
+  config    String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  deliveries ReminderDelivery[]
+}
+
+/// 提醒投递记录：成功/失败都落库，(渠道,订阅,到期日,偏移) 唯一防重发
+model ReminderDelivery {
+  id             String   @id @default(cuid())
+  channelId      String
+  channel        NotificationChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  subscriptionId String
+  /// 命中的到期日（UTC 零点）
+  dueDate        DateTime
+  /// 提前天数（7/3/0 之一）
+  dayOffset      Int
+  /// OK | FAIL
+  status         String
+  error          String?
+  sentAt         DateTime @default(now())
+
+  @@unique([channelId, subscriptionId, dueDate, dayOffset])
 }
 
 /// 受益实体（ADR-0003）：用户（家庭共享）或物品（iCloud 之于多设备）；份额 = 权重 / Σ权重

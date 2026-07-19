@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getSubscription } from "@/lib/subscriptions/service";
+import { parseRemindDays } from "@/lib/reminders";
 import { updateSubscriptionAction } from "@/lib/subscriptions/actions";
 import { SubscriptionEditForm } from "./SubscriptionEditForm";
 
@@ -39,6 +40,7 @@ export default async function EditSubscriptionPage({ params }: { params: Promise
             listPriceBase: sub.listPriceBase,
             listCurrency: sub.listCurrency ?? "CNY",
             autoRenew: sub.autoRenew,
+            remindDays: parseRemindDays(sub.remindDays).join(","),
             startDate: sub.startDate.toISOString().slice(0, 10),
           }}
         />

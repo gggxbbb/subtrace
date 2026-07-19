@@ -29,6 +29,8 @@ export interface SubscriptionInput {
   listCurrency?: string;
   listPriceBase?: number;
   autoRenew?: boolean;
+  /** 到期前 N 天提醒档位（ticket 08），存 JSON 数组 */
+  remindDays?: number[];
   startDate: Date;
 }
 
@@ -106,6 +108,7 @@ export async function createSubscription(
       listCurrency: input.listCurrency,
       listPriceBase: input.listPriceBase,
       autoRenew: input.autoRenew ?? true,
+      ...(input.remindDays !== undefined && { remindDays: JSON.stringify(input.remindDays) }),
       startDate: input.startDate,
     },
   });
@@ -339,6 +342,7 @@ export async function updateSubscription(
       ...(input.listCurrency !== undefined && { listCurrency: input.listCurrency }),
       ...(input.listPriceBase !== undefined && { listPriceBase: input.listPriceBase }),
       ...(input.autoRenew !== undefined && { autoRenew: input.autoRenew }),
+      ...(input.remindDays !== undefined && { remindDays: JSON.stringify(input.remindDays) }),
       ...(input.startDate !== undefined && { startDate: input.startDate }),
     },
   });

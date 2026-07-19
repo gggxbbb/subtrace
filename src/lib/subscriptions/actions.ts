@@ -27,6 +27,17 @@ const parseNum = (v: FormDataEntryValue | null) => {
   return Number.isFinite(n) ? n : undefined;
 };
 
+/** "7,3,0" → [7,3,0]；空串 → []（关闭提醒）；非法项丢弃 */
+const parseRemindDaysField = (v: FormDataEntryValue | null): number[] | undefined => {
+  if (v === null) return undefined;
+  const days = String(v)
+    .split(/[\s,，、/]+/)
+    .filter((t) => t !== "")
+    .map(Number)
+    .filter((n) => Number.isInteger(n) && n >= 0);
+  return [...new Set(days)];
+};
+
 export async function createSubscriptionAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -50,6 +61,7 @@ export async function createSubscriptionAction(formData: FormData) {
     listCurrency: String(formData.get("listCurrency") ?? "") || undefined,
     listPriceBase: parseNum(formData.get("listPriceBase")),
     autoRenew: formData.get("autoRenew") !== null,
+    remindDays: parseRemindDaysField(formData.get("remindDays")),
     startDate: parseDate(formData.get("startDate")),
   };
   if (!input.name.trim()) redirect("/subscriptions/new?error=1");
@@ -191,6 +203,7 @@ export async function updateSubscriptionAction(subscriptionId: string, formData:
     listPriceBase: parseNum(formData.get("listPriceBase")),
     listCurrency: String(formData.get("listCurrency") ?? "") || undefined,
     autoRenew: formData.get("autoRenew") !== null,
+    remindDays: parseRemindDaysField(formData.get("remindDays")),
     startDate: parseDate(formData.get("startDate")),
   });
   revalidatePath(`/subscriptions/${subscriptionId}`);
