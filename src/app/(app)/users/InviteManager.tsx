@@ -4,6 +4,7 @@
 
 import { useState, useTransition } from "react";
 import { createInviteAction, revokeInviteAction } from "@/lib/auth/actions";
+import { Panel } from "@/components/te";
 import type { InviteView } from "@/lib/auth/service";
 
 export type InviteRow = Omit<InviteView, "expiresAt" | "createdAt"> & {
@@ -22,9 +23,10 @@ export function InviteManager({ invites }: { invites: InviteRow[] }) {
   const [link, setLink] = useState<string | null>(null);
 
   return (
-    <div className="border border-black bg-white">
-      <div className="flex items-center justify-between border-b border-black bg-black px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-white f-mono">
-        <span>02 — 邀请 / {invites.length}</span>
+    <Panel
+      index="02"
+      title={`邀请 / ${invites.length}`}
+      actions={
         <button
           disabled={pending}
           onClick={() =>
@@ -33,11 +35,12 @@ export function InviteManager({ invites }: { invites: InviteRow[] }) {
               setLink(`${location.origin}/register?invite=${token}`);
             })
           }
-          className="bg-white px-2.5 py-1 text-[9px] uppercase tracking-wider text-black f-mono hover:bg-[#FF6B00] hover:text-white disabled:opacity-40"
+          className="border border-black bg-white px-2.5 py-1 text-[9px] uppercase tracking-wider f-mono hover:bg-black hover:text-white disabled:opacity-40"
         >
           生成邀请链接
         </button>
-      </div>
+      }
+    >
       {link && (
         <div className="flex items-center gap-2 border-b border-black bg-[#E4E3E0] px-4 py-2">
           <span className="flex-1 break-all text-[10px] f-mono">{link}</span>
@@ -76,6 +79,6 @@ export function InviteManager({ invites }: { invites: InviteRow[] }) {
           </div>
         );
       })}
-    </div>
+    </Panel>
   );
 }

@@ -4,7 +4,7 @@
 
 import { useState, useTransition } from "react";
 import { deleteUserAction, resetUserPasswordAction, setUserRoleAction } from "@/lib/auth/actions";
-import { fmtDate } from "@/components/te";
+import { Panel, fmtDate } from "@/components/te";
 
 export interface UserRow {
   id: string;
@@ -31,10 +31,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
     });
 
   return (
-    <div className="border border-black bg-white">
-      <div className="border-b border-black bg-black px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-white f-mono">
-        01 — 用户 / {users.length}
-      </div>
+    <Panel index="01" title={`用户 / ${users.length}`}>
       {error && (
         <div className="border-b border-black bg-[#ef4444] px-4 py-1.5 text-[10px] uppercase text-white f-mono">
           {error}
@@ -108,6 +105,6 @@ export function UsersTable({ users }: { users: UserRow[] }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </Panel>
   );
 }

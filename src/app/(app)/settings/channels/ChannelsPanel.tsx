@@ -9,6 +9,7 @@ import {
   testChannelAction,
   toggleChannelAction,
 } from "@/lib/notifications/actions";
+import { Panel } from "@/components/te";
 import type { ChannelView } from "@/lib/notifications/service";
 
 const inputCls =
@@ -73,10 +74,7 @@ export function ChannelsPanel({ channels }: { channels: ChannelView[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="border border-black bg-white">
-        <div className="border-b border-black bg-black px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-white f-mono">
-          01 — 已配置渠道 / {channels.length}
-        </div>
+      <Panel index="01" title={`已配置渠道 / ${channels.length}`}>
         {channels.length === 0 && (
           <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
             还没有通知渠道，在下方添加
@@ -85,12 +83,9 @@ export function ChannelsPanel({ channels }: { channels: ChannelView[] }) {
         {channels.map((c) => (
           <ChannelRow key={c.id} channel={c} />
         ))}
-      </div>
+      </Panel>
 
-      <div className="border border-black bg-white">
-        <div className="border-b border-black bg-black px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-white f-mono">
-          02 — 添加渠道
-        </div>
+      <Panel index="02" title="添加渠道">
         <form
           action={(fd) => start(() => createChannelAction(fd))}
           className="space-y-4 p-4"
@@ -211,7 +206,7 @@ export function ChannelsPanel({ channels }: { channels: ChannelView[] }) {
             添加渠道
           </button>
         </form>
-      </div>
+      </Panel>
     </div>
   );
 }
