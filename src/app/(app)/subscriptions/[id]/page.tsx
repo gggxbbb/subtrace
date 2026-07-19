@@ -45,9 +45,13 @@ export default async function SubscriptionDetailPage({
   const payments = toEnginePayments(sub.payments);
   const expiry = currentExpiry(engineSub, payments, today);
   const daily = currentDailyRate(engineSub, payments, today);
-  const coveringUnknown = costSegments(engineSub, payments, today).some(
-    (s) => s.amountUnknown === true && s.start <= today && today < s.end,
+  const covering = costSegments(engineSub, payments, today).filter(
+    (s) => s.start <= today && today < s.end,
   );
+  const coveringUnknown = covering.some((s) => s.amountUnknown === true);
+  // 覆盖今天的只有推算段（记录止期已过）→ 费率是标准价估计，不是实付
+  const coveringEstimated = covering.length > 0 && covering.every((s) => s.estimated);
+  const daysToExpiry = expiry ? dayDiff(today, expiry) : null;
   const totalPaid = sub.payments.reduce((s, p) => s + (p.amountBase ?? 0) - p.refundedBase, 0);
   const unknownPayments = sub.payments.filter((p) => p.amountBase === null).length;
   const prefillRaw = paymentPrefill(sub, sub.payments);
@@ -189,7 +193,19 @@ export default async function SubscriptionDetailPage({
           );
         })()}
         <div className="grid grid-cols-4 gap-4">
-          <Kpi index="B1" label="当前到期日" value={expiry ? fmtDate(expiry) : "—"} sub={expiry ? `${dayDiff(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())), expiry)} 天后（当天起不再覆盖）` : "手动模式待记录"} />
+          <Kpi
+            index="B1"
+            label="当前到期日"
+            value={expiry ? fmtDate(expiry) : "—"}
+            sub={
+              expiry
+                ? daysToExpiry! < 0
+                  ? `已过期 ${-daysToExpiry!} 天（到期日当天起不再覆盖）`
+                  : `${daysToExpiry} 天后（当天起不再覆盖）`
+                : "手动模式待记录"
+            }
+            led={daysToExpiry !== null && daysToExpiry < 0 ? "#ef4444" : undefined}
+          />
           <Kpi
             index="B2"
             label="当日费率"
@@ -197,7 +213,9 @@ export default async function SubscriptionDetailPage({
             sub={
               daily === 0 && coveringUnknown
                 ? "当前区间金额未记录，成本不计"
-                : sub.beneficiaries.length > 0
+                : coveringEstimated
+                  ? "按标准价推算中（未记账，记一笔后按实付修正）"
+                  : sub.beneficiaries.length > 0
                   ? `我的份额 ${Math.round(myShare * 100)}% · ${fmt(daily * myShare)}/日`
                   : `≈ 每月 ${fmt(daily * 30.4)}`
             }

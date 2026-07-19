@@ -70,6 +70,10 @@ export default async function SubscriptionsPage() {
                       <span className="flex w-fit items-center gap-1.5 px-1.5 py-0.5 text-[9px] uppercase f-mono">
                         <Led color="#ef4444" /> 已取消
                       </span>
+                    ) : s.daysUntilExpiry !== null && s.daysUntilExpiry < 0 ? (
+                      <span className="flex w-fit items-center gap-1.5 px-1.5 py-0.5 text-[9px] uppercase text-white f-mono" style={{ background: "#ef4444" }}>
+                        <Led color="#fff" /> 过期 {-s.daysUntilExpiry}d
+                      </span>
                     ) : s.daysUntilExpiry !== null && s.daysUntilExpiry <= 14 ? (
                       <span className="flex w-fit items-center gap-1.5 px-1.5 py-0.5 text-[9px] uppercase text-white f-mono" style={{ background: "#FF5A00" }}>
                         <Led color="#fff" /> {s.daysUntilExpiry}d
