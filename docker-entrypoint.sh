@@ -6,7 +6,7 @@ set -e
 export DATABASE_URL="${DATABASE_URL:-file:./data/subtrace.db}"
 
 echo "[subtrace] 应用数据库迁移…"
-node /migrate/node_modules/prisma/build/index.js migrate deploy
+(cd /migrate && node node_modules/prisma/build/index.js migrate deploy)
 
 echo "[subtrace] 启动服务器 :${PORT:-3000}"
 exec node server.js

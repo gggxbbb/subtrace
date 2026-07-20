@@ -44,10 +44,10 @@ COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 
-# 启动时跑迁移：npm 平铺安装的 CLI + schema + migrations
+# 启动时跑迁移：npm 平铺安装的 CLI + schema + migrations（全部收在 /migrate 自洽）
 COPY --from=migrator /migrate/node_modules /migrate/node_modules
-COPY prisma ./prisma
-COPY prisma.config.ts ./
+COPY prisma /migrate/prisma
+COPY prisma.config.ts /migrate/prisma.config.ts
 COPY docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh && mkdir -p data
 
