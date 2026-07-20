@@ -23,7 +23,7 @@ COPY prisma ./prisma
 COPY prisma.config.ts ./
 COPY src ./src
 COPY public ./public
-COPY next.config.ts tsconfig.json ./
+COPY next.config.ts tsconfig.json postcss.config.mjs ./
 # Prisma client 生成到 src/generated（自定义输出路径），需在构建期产出
 RUN pnpm prisma generate && pnpm build
 
