@@ -11,7 +11,7 @@ export default async function AppLayout({
   if (!user) redirect("/login");
   return (
     <div className="flex min-h-screen bg-[#E4E3E0] text-[#111] f-grotesk">
-      <Sidebar username={user.username} role={user.role} />
+      <Sidebar username={user.username} role={user.role} canUseScripts={user.canUseScripts} />
       <main className="min-w-0 flex-1">{children}</main>
     </div>
   );

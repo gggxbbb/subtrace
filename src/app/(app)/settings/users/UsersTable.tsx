@@ -3,7 +3,7 @@
 // 用户列表（ADMIN）：角色切换 / 重置密码 / 删除。自己与最后一个 ADMIN 由服务端护栏拦截。
 
 import { useState, useTransition } from "react";
-import { deleteUserAction, resetUserPasswordAction, setUserRoleAction } from "@/lib/auth/actions";
+import { deleteUserAction, resetUserPasswordAction, setCanUseScriptsAction, setUserRoleAction } from "@/lib/auth/actions";
 import { Panel, fmtDate } from "@/components/te";
 
 export interface UserRow {
@@ -11,6 +11,7 @@ export interface UserRow {
   username: string;
   role: string;
   baseCurrency: string;
+  canUseScripts: boolean;
   createdAt: string;
   subscriptionCount: number;
   isMe: boolean;
@@ -43,6 +44,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
             <th className="px-4 py-2 font-medium">用户名</th>
             <th className="px-4 py-2 font-medium">角色</th>
             <th className="px-4 py-2 font-medium">主币种</th>
+            <th className="px-4 py-2 font-medium">脚本权限</th>
             <th className="px-4 py-2 text-right font-medium">订阅数</th>
             <th className="px-4 py-2 font-medium">注册时间</th>
             <th className="px-4 py-2 text-right font-medium">操作</th>
@@ -65,6 +67,15 @@ export function UsersTable({ users }: { users: UserRow[] }) {
                 </span>
               </td>
               <td className="px-4 py-2.5 text-[11px] text-neutral-500 f-mono">{u.baseCurrency}</td>
+              <td className="px-4 py-2.5">
+                <button
+                  disabled={pending}
+                  onClick={() => run(() => setCanUseScriptsAction(u.id, !u.canUseScripts))}
+                  className={`px-1.5 py-0.5 text-[9px] uppercase f-mono ${u.canUseScripts ? "bg-black text-white" : "border border-black bg-white text-neutral-400 hover:bg-black/5"} disabled:opacity-40`}
+                >
+                  {u.canUseScripts ? "信任" : "关闭"}
+                </button>
+              </td>
               <td className="px-4 py-2.5 text-right text-[11px] tabular-nums f-mono">{u.subscriptionCount}</td>
               <td className="px-4 py-2.5 text-[11px] text-neutral-500 f-mono">{fmtDate(new Date(`${u.createdAt}T00:00:00+08:00`))}</td>
               <td className="px-4 py-2.5 text-right">

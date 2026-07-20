@@ -9,13 +9,14 @@ import type { User } from "@/generated/prisma/client";
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 天
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 天
 
-export type SafeUser = Pick<User, "id" | "username" | "role" | "baseCurrency">;
+export type SafeUser = Pick<User, "id" | "username" | "role" | "baseCurrency" | "canUseScripts">;
 
 const toSafe = (u: User): SafeUser => ({
   id: u.id,
   username: u.username,
   role: u.role,
   baseCurrency: u.baseCurrency,
+  canUseScripts: u.canUseScripts,
 });
 
 /** 注册：空库首个用户为 ADMIN 且无需邀请；此后必须凭有效邀请，注册后为 USER。 */
@@ -98,6 +99,7 @@ export async function listUsers() {
       username: true,
       role: true,
       baseCurrency: true,
+      canUseScripts: true,
       createdAt: true,
       _count: { select: { subscriptions: true } },
     },
@@ -107,6 +109,7 @@ export async function listUsers() {
     username: u.username,
     role: u.role,
     baseCurrency: u.baseCurrency,
+    canUseScripts: u.canUseScripts,
     createdAt: u.createdAt,
     subscriptionCount: u._count.subscriptions,
   }));
@@ -180,4 +183,11 @@ export async function resetUserPassword(actorId: string, targetId: string, newPa
 export async function deleteUser(actorId: string, targetId: string) {
   await assertAdminTarget(actorId, targetId);
   await prisma.user.delete({ where: { id: targetId } });
+}
+
+/** 勾选/取消脚本权限（信任用户标记，ADR-0007）。仅 ADMIN 调用（action 层护栏）。 */
+export async function setCanUseScripts(targetId: string, allowed: boolean) {
+  const target = await prisma.user.findUnique({ where: { id: targetId } });
+  if (!target) throw new Error("用户不存在 user_not_found");
+  await prisma.user.update({ where: { id: targetId }, data: { canUseScripts: allowed } });
 }

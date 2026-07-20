@@ -317,7 +317,17 @@ export default async function SubscriptionDetailPage({
 
         {sub.usageKind && (
           <div className="grid grid-cols-2 gap-4">
-            <Panel index="03" title="用量录入">
+            <Panel
+              index="03"
+              title={`用量录入${sub.script ? " · 脚本同步中" : ""}`}
+              actions={
+                sub.script ? (
+                  <a href="/settings/scripts" className="text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-black">
+                    脚本管理 →
+                  </a>
+                ) : undefined
+              }
+            >
               <UsageEntryPanel
                 subscriptionId={sub.id}
                 usageKind={(sub.usageKind as "COUNT" | "QUOTA" | null) ?? null}

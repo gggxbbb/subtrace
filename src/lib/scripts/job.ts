@@ -15,8 +15,13 @@ import { today } from "../dates";
 
 /** 执行单个订阅的脚本：沙箱运行 → 写 TOTAL 快照。返回摘要消息；失败抛错（runJob 记 FAIL）。 */
 export async function executeScriptJob(subscriptionId: string): Promise<string> {
-  const sub = await prisma.subscription.findUnique({ where: { id: subscriptionId } });
+  const sub = await prisma.subscription.findUnique({
+    where: { id: subscriptionId },
+    include: { owner: { select: { canUseScripts: true } } },
+  });
   if (!sub?.script) throw new Error("订阅不存在或未启用脚本");
+  // 信任标记是真实防线（ADR-0007）：撤销后调度路径同样拒绝
+  if (!sub.owner.canUseScripts) throw new Error("脚本权限已被撤销 scripts_forbidden");
   let env: Record<string, unknown> = {};
   try {
     env = sub.scriptEnv ? (JSON.parse(sub.scriptEnv) as Record<string, unknown>) : {};
@@ -46,8 +51,11 @@ export async function executeScriptJob(subscriptionId: string): Promise<string> 
 /** script:<订阅id> → 任务定义；未启用/不存在为 null。 */
 export async function resolveScriptJob(key: string): Promise<JobDef | null> {
   const subscriptionId = key.slice("script:".length);
-  const sub = await prisma.subscription.findUnique({ where: { id: subscriptionId } });
-  if (!sub?.script || !sub.scriptCron) return null;
+  const sub = await prisma.subscription.findUnique({
+    where: { id: subscriptionId },
+    include: { owner: { select: { canUseScripts: true } } },
+  });
+  if (!sub?.script || !sub.scriptCron || !sub.owner.canUseScripts) return null;
   return {
     key,
     cron: sub.scriptCron,
@@ -88,7 +96,7 @@ export function isValidCron(expr: string): boolean {
 /** DB 中启用脚本的订阅 → 任务定义（启动加载 / 定时对账用）。 */
 export async function loadScriptJobs(): Promise<JobDef[]> {
   const subs = await prisma.subscription.findMany({
-    where: { script: { not: null }, scriptCron: { not: null } },
+    where: { script: { not: null }, scriptCron: { not: null }, owner: { canUseScripts: true } },
     select: { id: true, name: true, scriptCron: true },
   });
   return subs.map((s) => ({
@@ -100,4 +108,38 @@ export async function loadScriptJobs(): Promise<JobDef[]> {
     tz: SCRIPT_TZ,
     handler: () => executeScriptJob(s.id),
   }));
+}
+
+/** 外部 cron 触发（内置调度关闭时的高频逃生门）：运行最近 N 分钟内到点的脚本。 */
+export async function runDueScriptsSince(minutes: number): Promise<{ ran: number; skipped: number; errors: string[] }> {
+  const subs = await prisma.subscription.findMany({
+    where: { script: { not: null }, scriptCron: { not: null } },
+    select: { id: true, name: true, scriptCron: true },
+  });
+  const since = new Date(Date.now() - minutes * 60_000);
+  const result = { ran: 0, skipped: 0, errors: [] as string[] };
+  for (const sub of subs) {
+    try {
+      const cron = new Cron(sub.scriptCron!, { timezone: SCRIPT_TZ });
+      const due = cron.nextRuns(1, since).filter((d) => d <= new Date());
+      cron.stop();
+      if (due.length === 0) {
+        result.skipped += 1;
+        continue;
+      }
+      const key = scriptJobKey(sub.id);
+      const lastRun = await prisma.jobRun.findFirst({ where: { jobKey: key }, orderBy: { startedAt: "desc" } });
+      if (lastRun && lastRun.startedAt >= due[due.length - 1]) {
+        result.skipped += 1;
+        continue;
+      }
+      const { runJob } = await import("../jobs");
+      const r = await runJob(key);
+      result.ran += 1;
+      if (!r.ok) result.errors.push(`${sub.name}: ${r.message.split("\n")[0]}`);
+    } catch (e) {
+      result.errors.push(`${sub.name}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  return result;
 }

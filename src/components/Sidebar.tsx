@@ -19,7 +19,7 @@ import { Led } from "./te";
 
 const NAV: {
   group: string;
-  items: { icon: LucideIcon; label: string; href: string; soon?: boolean; adminOnly?: boolean }[];
+  items: { icon: LucideIcon; label: string; href: string; soon?: boolean; adminOnly?: boolean; trustedOnly?: boolean }[];
 }[] = [
   {
     group: "WORKBENCH / 工作台",
@@ -35,7 +35,7 @@ const NAV: {
     group: "SETTINGS / 设置",
     items: [
       { icon: Bell, label: "通知渠道", href: "/settings/channels" },
-      { icon: SquareTerminal, label: "用量脚本", href: "/settings/scripts", soon: true },
+      { icon: SquareTerminal, label: "用量脚本", href: "/settings/scripts", trustedOnly: true },
       { icon: ArrowLeftRight, label: "汇率", href: "/settings/rates" },
       { icon: Clock, label: "定时任务", href: "/settings/jobs" },
       { icon: Users, label: "用户管理", href: "/settings/users", adminOnly: true },
@@ -43,7 +43,7 @@ const NAV: {
   },
 ];
 
-export function Sidebar({ username, role }: { username: string; role: string }) {
+export function Sidebar({ username, role, canUseScripts }: { username: string; role: string; canUseScripts: boolean }) {
   const pathname = usePathname();
   return (
     <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-black bg-[#E4E3E0]">
@@ -65,7 +65,7 @@ export function Sidebar({ username, role }: { username: string; role: string }) 
               {g.group}
             </div>
             <div className="mt-1.5 space-y-0.5">
-              {g.items.filter((it) => !it.adminOnly || role === "ADMIN").map((it) => {
+              {g.items.filter((it) => (!it.adminOnly || role === "ADMIN") && (!it.trustedOnly || canUseScripts)).map((it) => {
                 const active = pathname.startsWith(it.href);
                 const cls = `flex items-center gap-2.5 px-2 py-1.5 text-[13px] font-medium ${
                   active

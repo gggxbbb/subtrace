@@ -33,7 +33,7 @@ export default async function RatesPage({
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-3xl">
           {error && (
-            <div className="mb-4 border border-black bg-[#ef4444] px-3 py-1.5 text-[10px] uppercase text-white f-mono">
+            <div className="mb-4 border border-black bg-[#FF5A00] px-3 py-1.5 text-[10px] uppercase text-white f-mono">
               保存失败：请检查输入格式
             </div>
           )}

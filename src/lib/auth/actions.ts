@@ -12,6 +12,7 @@ import {
   register,
   resetUserPassword,
   revokeInvite,
+  setCanUseScripts,
   setUserRole,
 } from "./service";
 import { getCurrentUser, SESSION_COOKIE } from "./session";
@@ -99,5 +100,12 @@ export async function resetUserPasswordAction(targetId: string, newPassword: str
 export async function deleteUserAction(targetId: string) {
   const user = await assertAdmin();
   await deleteUser(user.id, targetId);
+  revalidatePath("/settings/users");
+}
+
+/** 勾选/取消脚本权限（仅 ADMIN） */
+export async function setCanUseScriptsAction(targetId: string, allowed: boolean) {
+  const user = await assertAdmin();
+  await setCanUseScripts(targetId, allowed);
   revalidatePath("/settings/users");
 }
