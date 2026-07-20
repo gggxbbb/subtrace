@@ -27,6 +27,13 @@ COPY next.config.ts tsconfig.json ./
 # Prisma client 生成到 src/generated（自定义输出路径），需在构建期产出
 RUN pnpm prisma generate && pnpm build
 
+# 迁移工具：npm 平铺安装 prisma CLI（避开 pnpm 符号链接布局）
+FROM node:22-bookworm-slim AS migrator
+WORKDIR /migrate
+ARG NPM_REGISTRY=https://registry.npmjs.org
+ENV npm_config_registry=$NPM_REGISTRY
+RUN npm install prisma@7.8.0 --omit=dev --no-audit --no-fund
+
 # ---- 运行时 ----
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
@@ -37,10 +44,8 @@ COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 
-# 启动时跑迁移：prisma CLI + schema + migrations
-COPY --from=build /app/node_modules/prisma ./node_modules/prisma
-COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=build /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+# 启动时跑迁移：npm 平铺安装的 CLI + schema + migrations
+COPY --from=migrator /migrate/node_modules /migrate/node_modules
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 COPY docker-entrypoint.sh ./
