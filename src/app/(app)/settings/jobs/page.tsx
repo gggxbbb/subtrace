@@ -24,8 +24,8 @@ export default async function JobsPage() {
       </header>
       <div className="flex-1 overflow-y-auto p-6">
         <p className="mb-4 max-w-3xl text-[10px] uppercase leading-relaxed tracking-wider text-neutral-500 f-mono">
-          进程内 cron 调度（ADR-0006）：系统任务每日 UTC 运行、启动时补跑当日；每次运行落记录（留最近 50 条）。
-          「立即运行」用于调试——提醒投递有唯一键去重、汇率是覆盖式快照，重复触发安全。
+          系统内置的每日任务（检查到期提醒、更新汇率），服务器重启当天会自动补跑。
+          「立即运行」用于调试，重复点击不会造成重复提醒或错误数据。
         </p>
         <Panel index="01" title={`任务 / ${jobs.length}`}>
           <JobsTable

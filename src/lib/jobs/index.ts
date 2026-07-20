@@ -47,7 +47,10 @@ function systemJobs(): JobDef[] {
       retryOnFailureMinutes: 60,
       handler: async () => {
         const s = await runReminderScan(utcToday());
-        return `hits=${s.hits} sent=${s.sent} failed=${s.failed} skipped=${s.skipped}`;
+        if (s.hits === 0) return "没有即将到期的订阅";
+        const parts = [`${s.hits} 条到期提醒`];
+        parts.push(s.failed > 0 ? `投递成功 ${s.sent} 条、失败 ${s.failed} 条` : `已全部投递（${s.sent} 条）`);
+        return parts.join("，");
       },
     },
     {
@@ -59,7 +62,9 @@ function systemJobs(): JobDef[] {
       retryOnFailureMinutes: 60,
       handler: async () => {
         const r = await refreshAllAutoRates();
-        return `updated=${r.updated} failed=${r.failed.length}${r.failed.length > 0 ? ` (${r.failed.map((f) => f.currency).join("/")})` : ""}`;
+        if (r.updated === 0 && r.failed.length === 0) return "没有需要自动更新的币对";
+        if (r.failed.length === 0) return `已更新 ${r.updated} 个币对`;
+        return `更新 ${r.updated} 个，失败 ${r.failed.length} 个（${r.failed.map((f) => f.currency).join("/")}）`;
       },
     },
   ];
