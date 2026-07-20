@@ -9,5 +9,8 @@ export DATABASE_URL="${DATABASE_URL:-file:/app/data/subtrace.db}"
 echo "[subtrace] 应用数据库迁移…"
 (cd /migrate && node node_modules/prisma/build/index.js migrate deploy)
 
-echo "[subtrace] 启动服务器 :${PORT:-3000}"
+export HOSTNAME="${HOSTNAME:-0.0.0.0}"
+export PORT="${PORT:-3000}"
+
+echo "[subtrace] 启动服务器 ${HOSTNAME}:${PORT}"
 exec node server.js

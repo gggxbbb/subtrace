@@ -63,6 +63,8 @@ pm2 save && pm2 startup   # 开机自启
 | `CRON_SECRET` | ✓ | — | 外部 cron 触发 `/api/cron/*` 的 Bearer 密钥 |
 | `DATABASE_URL` | | `file:./data/subtrace.db` | SQLite 路径（Docker 内默认 `file:/app/data/subtrace.db`） |
 | `REMINDER_SCHEDULER` | | 开 | 置 `off` 关闭内置调度（多实例时只留一个开） |
+| `HOSTNAME` | | `0.0.0.0` | 监听地址（本机调试可设 `127.0.0.1`） |
+| `PORT` | | `3000` | 监听端口 |
 
 ## 自动化说明
 

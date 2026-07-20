@@ -15,6 +15,9 @@ services:
       - TZ=Asia/Shanghai
       # 可选：默认 file:/app/data/subtrace.db（绝对路径）
       # - DATABASE_URL=file:/app/data/subtrace.db
+      # 可选：监听地址/端口（默认 0.0.0.0:3000，本机调试用 127.0.0.1）
+      # - HOSTNAME=0.0.0.0
+      # - PORT=3000
       # 可选：置 off 关闭内置调度（多实例时只留一个实例开）
       # - REMINDER_SCHEDULER=off
     volumes:

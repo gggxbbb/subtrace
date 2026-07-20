@@ -12,6 +12,8 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         TZ: "Asia/Shanghai",
+        HOSTNAME: "0.0.0.0",
+        PORT: 3000,
         // CRON_SECRET 与 DATABASE_URL 从 .env 读取（next 自动加载）或在此覆盖
       },
       max_memory_restart: "512M",
