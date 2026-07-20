@@ -4,10 +4,14 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] 正常脚本返回 `{used, total?}`；裸数字按 `{used}` 处理；非对象/非数字返回视为错误
-- [ ] 沙箱内无 require/process/Buffer/globalThis 逃逸面（基础断言）
-- [ ] fetch 超时熔断、1MB 截断、超过 5 次调用抛错
-- [ ] console.log 等被收集进返回的日志
-- [ ] 脚本抛异常与 vm 超时均返回结构化错误（不抛出）
+- [x] 正常脚本返回 `{used, total?}`；裸数字按 `{used}` 处理；非对象/非数字返回视为错误
+- [x] 沙箱内无 require/process/Buffer/globalThis 逃逸面（基础断言）
+- [x] fetch 超时熔断、1MB 截断、超过 5 次调用抛错
+- [x] console.log 等被收集进返回的日志
+- [x] 脚本抛异常与 vm 超时均返回结构化错误（不抛出）
+
+## Answer
+
+实现于 `src/lib/scripts/sandbox.ts`：`runScript` 用 node:vm 执行包装为 async IIFE 的用户脚本（顶层兼容裸表达式与 return），沙箱只暴露受限 fetch（5 次上限、1MB 截断、默认实现带 10s AbortSignal）、console（收日志）与 env；vm timeout + 竞速计时器双熔断，所有异常归一为结构化 `ScriptResult`，不抛出。24 条测试全部通过（`pnpm test src/lib/scripts/sandbox.test.ts`），tsc 无类型错误。

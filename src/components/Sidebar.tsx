@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
   BarChart3,
+  Clock,
   Bell,
   Boxes,
   LayoutDashboard,
@@ -36,6 +37,7 @@ const NAV: {
       { icon: Bell, label: "通知渠道", href: "/settings/channels" },
       { icon: SquareTerminal, label: "用量脚本", href: "/settings/scripts", soon: true },
       { icon: ArrowLeftRight, label: "汇率", href: "/settings/rates" },
+      { icon: Clock, label: "定时任务", href: "/settings/jobs" },
       { icon: Users, label: "用户管理", href: "/settings/users", adminOnly: true },
     ],
   },

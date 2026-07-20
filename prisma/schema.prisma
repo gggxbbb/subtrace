@@ -104,6 +104,21 @@ model Subscription {
   beneficiaries Beneficiary[]
 }
 
+/// 任务运行记录（ADR-0006）：每次周期任务运行落一条，任务大盘数据源
+model JobRun {
+  id         String   @id @default(cuid())
+  /// reminders | rates | script:<订阅id>
+  jobKey     String
+  startedAt  DateTime
+  durationMs Int
+  /// OK | FAIL
+  status     String
+  /// 摘要/日志（截断存储）
+  message    String?
+
+  @@index([jobKey, startedAt])
+}
+
 /// 通知渠道（ticket 08）：WEBHOOK（POST JSON）| EMAIL（SMTP，经 nodemailer）
 model NotificationChannel {
   id        String   @id @default(cuid())

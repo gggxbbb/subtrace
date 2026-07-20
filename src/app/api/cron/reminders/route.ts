@@ -1,9 +1,9 @@
-// 每日提醒扫描入口（ticket 08）：外部 cron 定时 POST，带 Bearer 密钥。
+// 每日系统任务外部触发入口（ticket 08/09）：外部 cron 定时 POST，带 Bearer 密钥。
+// 走 runJob（ADR-0006），运行记录与内置调度同一来源。
 // 例：0 8 * * * curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://host/api/cron/reminders
 
 import { NextResponse } from "next/server";
-import { refreshAllAutoRates } from "@/lib/exchange/service";
-import { runReminderScan } from "@/lib/reminders";
+import { runJob } from "@/lib/jobs";
 
 export async function POST(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -13,10 +13,7 @@ export async function POST(req: Request) {
   if (req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });
   }
-  const now = new Date();
-  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const summary = await runReminderScan(today);
-  // 汇率 AUTO 刷新共用每日节拍（ticket 09），与内置调度器路径对齐
-  const rates = await refreshAllAutoRates();
-  return NextResponse.json({ ok: true, ...summary, rates });
+  const reminders = await runJob("reminders");
+  const rates = await runJob("rates");
+  return NextResponse.json({ ok: reminders.ok && rates.ok, reminders, rates });
 }
