@@ -13,10 +13,16 @@ let otherId: string;
 
 beforeEach(async () => {
   await prisma.jobRun.deleteMany();
+  await prisma.reminderDelivery.deleteMany();
+  await prisma.notificationChannel.deleteMany();
   await prisma.usageRecord.deleteMany();
+  await prisma.beneficiary.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.subscription.deleteMany();
+  await prisma.purchaseEvent.deleteMany();
+  await prisma.purchase.deleteMany();
   await prisma.session.deleteMany();
+  await prisma.invite.deleteMany();
   await prisma.user.deleteMany();
   ownerId = (await prisma.user.create({ data: { username: "me", passwordHash: "x", canUseScripts: true } })).id;
   otherId = (await prisma.user.create({ data: { username: "other", passwordHash: "x" } })).id;
