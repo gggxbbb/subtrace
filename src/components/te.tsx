@@ -1,6 +1,7 @@
 // TE 风共享组件：黑描边面板、LED 点/点阵、KPI 卡。
 // 设计语言：#E4E3E0 底、黑色 1px 描边白面板、橙 #FF5A00 强调（来自已定型的原型）。
 
+import { wallParts } from "@/lib/dates";
 import { ArrowRight } from "lucide-react";
 
 export const ORANGE = "#FF5A00";
@@ -143,6 +144,8 @@ export function Kpi({
 export const fmt = (n: number) =>
   n.toLocaleString("zh-CN", { style: "currency", currency: "CNY" });
 
-/** 日期格式化 YYYY-MM-DD */
-export const fmtDate = (d: Date) =>
-  `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+/** 日期格式化 YYYY-MM-DD（北京墙钟，ADR-0008） */
+export const fmtDate = (d: Date) => {
+  const { year, month, day } = wallParts(d);
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+};

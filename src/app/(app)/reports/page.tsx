@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { isoDay } from "@/lib/dates";
+import { isoDay, wallParts } from "@/lib/dates";
 import { redirect } from "next/navigation";
 import { Kpi, Panel, fmt, ORANGE } from "@/components/te";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -10,10 +10,11 @@ export const dynamic = "force-dynamic";
 function parsePeriod(raw: string | undefined): { kind: "month" | "year"; year: number; month: number } {
   const now = new Date();
   const m = raw?.match(/^(\d{4})(?:-(\d{2}))?$/);
-  if (!m) return { kind: "month", year: now.getUTCFullYear(), month: now.getUTCMonth() + 1 };
+  const wp = wallParts(now);
+  if (!m) return { kind: "month", year: wp.year, month: wp.month + 1 };
   if (m[2]) {
     const month = Number(m[2]);
-    if (month < 1 || month > 12) return { kind: "month", year: now.getUTCFullYear(), month: now.getUTCMonth() + 1 };
+    if (month < 1 || month > 12) return { kind: "month", year: wp.year, month: wp.month + 1 };
     return { kind: "month", year: Number(m[1]), month };
   }
   return { kind: "year", year: Number(m[1]), month: 1 };
@@ -77,7 +78,7 @@ export default async function ReportsPage({
         <div className="flex items-center gap-2.5">
           <div className="grid grid-cols-2 gap-px border border-black bg-black">
             <Link
-              href={`/reports?period=${currentPeriod.length > 4 ? currentPeriod : `${p.year}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}`}`}
+              href={`/reports?period=${currentPeriod.length > 4 ? currentPeriod : `${p.year}-${String(wallParts(new Date()).month + 1).padStart(2, "0")}`}`}
               className={`px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${p.kind === "month" ? "bg-black text-white" : "bg-white hover:bg-black/5"}`}
             >
               月

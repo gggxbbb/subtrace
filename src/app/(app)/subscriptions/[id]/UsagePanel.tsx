@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { isoDay } from "@/lib/dates";
+import { isoDay, wallDow, wallParts } from "@/lib/dates";
 import { Led } from "@/components/te";
 import {
   addQuotaSnapshotAction,
@@ -114,13 +114,13 @@ export function UsageEntryPanel({
     const end = new Date(`${verdict.periodEnd}T00:00:00+08:00`).getTime();
     const todayMs = new Date(`${today}T00:00:00+08:00`).getTime();
     const usedDates = new Set(records.map((r) => r.date));
-    // 对齐周一（UTC getUTCDay: 0=周日）
-    const startDow = (new Date(start).getUTCDay() + 6) % 7;
+    // 对齐周一（北京墙钟，0=周日）
+    const startDow = (wallDow(new Date(start)) + 6) % 7;
     const calStart = start - startDow * 86_400_000;
     for (let t = calStart; t < end; t += 86_400_000) {
       const iso = isoDay(new Date(t));
       calDays.push({
-        day: new Date(t).getUTCDate(),
+        day: wallParts(new Date(t)).day,
         inPeriod: t >= start,
         used: usedDates.has(iso),
         today: t === todayMs,

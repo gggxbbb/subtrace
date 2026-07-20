@@ -93,9 +93,7 @@ export function BundleWizard({
     const n = Number(v);
     if (Number.isFinite(n) && v.trim() !== "" && bundleStart) {
       setBundleEnd(
-        new Date(new Date(`${bundleStart}T00:00:00+08:00`).getTime() + n * 86_400_000)
-          .toISOString()
-          .slice(0, 10),
+        isoDay(new Date(new Date(`${bundleStart}T00:00:00+08:00`).getTime() + n * 86_400_000)),
       );
     }
   };
@@ -105,9 +103,9 @@ export function BundleWizard({
     const n = Number(v);
     const patch: Partial<Item> = { plusDays: v, periodTouched: true };
     if (Number.isFinite(n) && v.trim() !== "" && it.periodStart) {
-      patch.periodEnd = new Date(
-        new Date(`${it.periodStart}T00:00:00+08:00`).getTime() + n * 86_400_000,
-      ).toISOString().slice(0, 10);
+      patch.periodEnd = isoDay(
+        new Date(new Date(`${it.periodStart}T00:00:00+08:00`).getTime() + n * 86_400_000),
+      );
     }
     update(i, patch);
   };

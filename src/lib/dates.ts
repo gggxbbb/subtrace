@@ -37,6 +37,11 @@ export function wallParts(d: Date): { year: number; month: number; day: number }
   return { year: wall.getUTCFullYear(), month: wall.getUTCMonth(), day: wall.getUTCDate() };
 }
 
+/** 北京墙钟的星期几（0=周日，同 getUTCDay 语义） */
+export function wallDow(d: Date): number {
+  return new Date(d.getTime() + TZ_OFFSET_MS).getUTCDay();
+}
+
 /** 由北京墙钟年/月/日构造瞬间（dayStart 的逆运算） */
 export function fromWall(year: number, month: number, day: number): Date {
   return new Date(Date.UTC(year, month, day) - TZ_OFFSET_MS);

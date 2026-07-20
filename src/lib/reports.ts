@@ -49,7 +49,7 @@ export interface ReportData {
   items: ReportItem[];
 }
 
-const atUtc = (d: Date) => dayStart(d).getTime();
+const atDay = (d: Date) => dayStart(d).getTime();
 const iso = (ms: number) => isoDay(new Date(ms));
 
 export function monthRange(year: number, month: number): { startMs: number; endMs: number } {
@@ -95,8 +95,8 @@ export async function getReportData(
     const cat = sub.category ?? "未分类";
     const segments = costSegments(toEngineSub(sub), toEnginePayments(sub.payments), periodEndDate);
     for (const seg of segments) {
-      const s = Math.max(atUtc(seg.start), startMs);
-      const e = Math.min(atUtc(seg.end), endMs);
+      const s = Math.max(atDay(seg.start), startMs);
+      const e = Math.min(atDay(seg.end), endMs);
       if (e <= s) continue;
       const rate = segmentDailyRate(seg) * share;
       bumpItem("sub", sub.id, sub.name, cat, rate * ((e - s) / 86_400_000));
@@ -107,8 +107,8 @@ export async function getReportData(
   // 物品：持有期 ∩ 区间 逐日（费率在寿命窗口外随时间递减，按天算）
   for (const p of purchases) {
     const engine = toEnginePurchase(p);
-    const holdStart = atUtc(p.purchaseDate);
-    const holdEnd = p.endDate ? atUtc(p.endDate) : endMs;
+    const holdStart = atDay(p.purchaseDate);
+    const holdEnd = p.endDate ? atDay(p.endDate) : endMs;
     const s = Math.max(holdStart, startMs);
     const e = Math.min(holdEnd, endMs);
     let itemCost = 0;
@@ -124,15 +124,15 @@ export async function getReportData(
   let totalPaid = 0;
   for (const sub of subs.filter((s) => s.ownerId === userId)) {
     for (const p of sub.payments) {
-      const ms = atUtc(p.paidAt);
+      const ms = atDay(p.paidAt);
       if (ms >= startMs && ms < endMs) totalPaid += (p.amountBase ?? 0) - p.refundedBase;
     }
   }
   for (const p of purchases) {
-    const ms = atUtc(p.purchaseDate);
+    const ms = atDay(p.purchaseDate);
     if (ms >= startMs && ms < endMs) totalPaid += p.amountBase;
     for (const ev of p.events ?? []) {
-      const ems = atUtc(ev.date);
+      const ems = atDay(ev.date);
       if (ems >= startMs && ems < endMs) totalPaid += ev.amountBase;
     }
   }

@@ -101,9 +101,6 @@ function rateOn(sub: SubscriptionWithPayments, date: Date): number {
     .reduce((sum, s) => sum + segmentDailyRate(s), 0);
 }
 
-const atUtcMidnight = (d: Date) =>
-  new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-
 export async function getDashboardData(userId: string): Promise<DashboardData> {
   const subs = await listSubscriptions(userId);
   const purchasesRaw = await listPurchases(userId);
