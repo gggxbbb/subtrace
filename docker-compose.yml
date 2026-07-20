@@ -1,11 +1,18 @@
+# 本地开发用 compose（生产建议直接拉 ghcr 镜像，见 README）。
+# 服务器上免构建部署：把 build 段注释掉、启用 image 行即可。
+
 services:
   subtrace:
+    # 生产：直接用 CI 构建好的多架构镜像
+    # image: ghcr.io/gggxbbb/subtrace:latest
     build: .
     ports:
       - "3000:3000"
     environment:
-      # 必填：外部 cron 触发 /api/cron/* 的 Bearer 密钥（用 openssl rand -hex 24 生成）
+      # 必填：外部 cron 触发 /api/cron/* 的 Bearer 密钥（openssl rand -hex 24 生成）
       - CRON_SECRET=${CRON_SECRET:?请在 .env 或环境中设置 CRON_SECRET}
+      # 日志时间戳时区（应用内部时间一律北京，见 ADR-0008）
+      - TZ=Asia/Shanghai
       # 可选：默认 file:/app/data/subtrace.db（绝对路径）
       # - DATABASE_URL=file:/app/data/subtrace.db
       # 可选：置 off 关闭内置调度（多实例时只留一个实例开）
@@ -13,6 +20,12 @@ services:
     volumes:
       - subtrace-data:/app/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
 volumes:
   subtrace-data:
