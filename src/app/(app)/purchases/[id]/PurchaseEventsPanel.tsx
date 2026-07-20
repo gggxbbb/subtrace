@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isoDay } from "@/lib/dates";
 import { EVENT_KIND_LABEL } from "@/lib/purchases/kinds";
 import {
   addPurchaseEventAction,
@@ -28,7 +29,7 @@ export interface EventRow {
   note: string | null;
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => isoDay(new Date());
 
 function EventFields({ row }: { row?: EventRow }) {
   const [kind, setKind] = useState(row?.kind ?? "ACCESSORY");

@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { isoDay } from "@/lib/dates";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getSubscription } from "@/lib/subscriptions/service";
 import { listUsage } from "@/lib/usage/service";
@@ -21,8 +22,8 @@ export default async function UsageRecordsPage({
   if (!sub) notFound();
   if (!sub.usageKind) redirect(`/subscriptions/${id}/usage`);
 
-  const from = sp.from ? new Date(`${sp.from}T00:00:00Z`) : null;
-  const to = sp.to ? new Date(`${sp.to}T00:00:00Z`) : null;
+  const from = sp.from ? new Date(`${sp.from}T00:00:00+08:00`) : null;
+  const to = sp.to ? new Date(`${sp.to}T00:00:00+08:00`) : null;
 
   const all = await listUsage(sub.id);
   // 用户名映射：所有者 + USER 受益人
@@ -34,7 +35,7 @@ export default async function UsageRecordsPage({
     id: r.id,
     userId: r.userId,
     userName: names.get(r.userId) ?? r.userId,
-    date: r.date.toISOString().slice(0, 10),
+    date: isoDay(r.date),
     quantity: r.quantity,
     kind: r.kind,
     unitPrice: r.unitPrice,
@@ -42,8 +43,8 @@ export default async function UsageRecordsPage({
   }));
   if (sp.userId) rows = rows.filter((r) => r.userId === sp.userId);
   if (sp.kind) rows = rows.filter((r) => r.kind === sp.kind);
-  if (from) rows = rows.filter((r) => new Date(`${r.date}T00:00:00Z`) >= from);
-  if (to) rows = rows.filter((r) => new Date(`${r.date}T00:00:00Z`) <= to);
+  if (from) rows = rows.filter((r) => new Date(`${r.date}T00:00:00+08:00`) >= from);
+  if (to) rows = rows.filter((r) => new Date(`${r.date}T00:00:00+08:00`) <= to);
   rows = rows.reverse();
 
   const back = new URLSearchParams(

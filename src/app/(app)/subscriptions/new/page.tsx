@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isoDay } from "@/lib/dates";
 import { useSearchParams } from "next/navigation";
 import { createSubscriptionAction } from "@/lib/subscriptions/actions";
 
@@ -13,7 +14,7 @@ export default function NewSubscriptionPage() {
   const [mode, setMode] = useState<"CYCLE" | "MANUAL">("CYCLE");
   const [cycleKind, setCycleKind] = useState<"CALENDAR" | "FIXED_DAYS">("CALENDAR");
   const error = useSearchParams().get("error");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = isoDay(new Date());
 
   return (
     <div className="mx-auto max-w-xl px-6 py-8">

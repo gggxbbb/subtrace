@@ -1,6 +1,7 @@
 // 提醒扫描引擎（ticket 08）：每日命中「到期日 − remindDays = 今天」的订阅，经启用渠道投递并落记录。
 
 import { currentExpiry, dayDiff } from "./cost-engine";
+import { isoDay } from "./dates";
 import { deliver, type DeliverResult } from "./notifications/dispatch";
 import { prisma } from "./db";
 import { toEnginePayments, toEngineSub } from "./subscriptions/service";
@@ -92,7 +93,7 @@ export async function runReminderScan(today: Date, deliverFn: DeliverFn = delive
         } catch {
           config = undefined;
         }
-        const iso = hit.dueDate.toISOString().slice(0, 10);
+        const iso = isoDay(hit.dueDate);
         const result = config === undefined
           ? { ok: false as const, error: "渠道配置损坏" }
           : await deliverFn(channel.kind, config, {

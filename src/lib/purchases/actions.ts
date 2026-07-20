@@ -18,7 +18,7 @@ import {
   type PurchaseInput,
 } from "./service";
 
-const parseDate = (v: FormDataEntryValue | null) => new Date(`${String(v)}T00:00:00Z`);
+const parseDate = (v: FormDataEntryValue | null) => new Date(`${String(v)}T00:00:00+08:00`);
 
 const parseNum = (v: FormDataEntryValue | null) => {
   if (v == null || String(v).trim() === "") return undefined;

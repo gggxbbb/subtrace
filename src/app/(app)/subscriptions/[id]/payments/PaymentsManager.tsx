@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isoDay } from "@/lib/dates";
 import { attachRatePrefill } from "@/lib/exchange/prefill";
 import { Led } from "@/components/te";
 import {
@@ -37,7 +38,7 @@ export interface PaymentRow {
   note: string | null;
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => isoDay(new Date());
 
 /** 单笔表单字段（新增/编辑共用） */
 function PaymentFields({ row, defaultCurrency }: { row?: PaymentRow; defaultCurrency: string }) {

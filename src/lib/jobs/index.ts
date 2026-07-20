@@ -14,8 +14,10 @@ const MESSAGE_MAX = 2000;
 export interface JobDef {
   /** 唯一键：reminders | rates | script:<订阅id> */
   key: string;
-  /** cron 表达式（UTC） */
+  /** cron 表达式（按 tz 解释，默认北京时间，ADR-0008） */
   cron: string;
+  /** cron 时区，默认 Asia/Shanghai */
+  tz?: string;
   /** 大盘显示名 */
   title: string;
   /** 大盘"配置"跳转链接 */
@@ -28,12 +30,7 @@ export interface JobDef {
   retryOnFailureMinutes?: number;
 }
 
-const utcToday = () => {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-};
-
-const utcDayStart = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+import { dayStart, today } from "../dates";
 
 /** 系统任务静态定义。 */
 function systemJobs(): JobDef[] {
@@ -46,7 +43,7 @@ function systemJobs(): JobDef[] {
       catchUp: true,
       retryOnFailureMinutes: 60,
       handler: async () => {
-        const s = await runReminderScan(utcToday());
+        const s = await runReminderScan(today());
         if (s.hits === 0) return "没有即将到期的订阅";
         const parts = [`${s.hits} 条到期提醒`];
         parts.push(s.failed > 0 ? `投递成功 ${s.sent} 条、失败 ${s.failed} 条` : `已全部投递（${s.sent} 条）`);
@@ -62,10 +59,20 @@ function systemJobs(): JobDef[] {
       retryOnFailureMinutes: 60,
       handler: async () => {
         const r = await refreshAllAutoRates();
+
         if (r.updated === 0 && r.failed.length === 0) return "没有需要自动更新的币对";
         if (r.failed.length === 0) return `已更新 ${r.updated} 个币对`;
         return `更新 ${r.updated} 个，失败 ${r.failed.length} 个（${r.failed.map((f) => f.currency).join("/")}）`;
       },
+    },
+    {
+      // 对账：把 DB 中启用脚本的订阅注册为独立 cron 任务（dev 多模块实例下由调度实例自同步）
+      key: "scripts-sync",
+      cron: "9 * * * *",
+      title: "脚本调度同步",
+      link: "/settings/scripts",
+      catchUp: false,
+      handler: () => reconcileScriptJobs(),
     },
   ];
 }
@@ -121,7 +128,7 @@ const timers = new Map<string, { def: JobDef; cron: Cron }>();
 export function scheduleJob(def: JobDef): void {
   unscheduleJob(def.key);
   extraDefs.set(def.key, def);
-  const cron = new Cron(def.cron, { protect: true, timezone: "UTC" }, () => {
+  const cron = new Cron(def.cron, { protect: true, timezone: def.tz ?? "Asia/Shanghai" }, () => {
     void runJob(def.key).then((r) => {
       if (!r.ok && def.retryOnFailureMinutes) {
         console.warn(`[jobs] ${def.key} 失败，${def.retryOnFailureMinutes} 分钟后重试: ${r.message}`);
@@ -139,6 +146,26 @@ export function unscheduleJob(key: string): void {
   extraDefs.delete(key);
 }
 
+/** 把 DB 中启用脚本的订阅注册为独立 cron 任务；移除已下线脚本。返回摘要。 */
+export async function reconcileScriptJobs(): Promise<string> {
+  const { loadScriptJobs, scriptJobKey } = await import("../scripts/job");
+  const defs = await loadScriptJobs();
+  const wanted = new Set(defs.map((d) => d.key));
+  for (const def of defs) {
+    const cur = timers.get(def.key);
+    if (!cur || cur.def.cron !== def.cron) scheduleJob(def);
+  }
+  let removed = 0;
+  for (const key of [...timers.keys()]) {
+    if (key.startsWith("script:") && !wanted.has(key)) {
+      unscheduleJob(key);
+      removed += 1;
+    }
+  }
+  void scriptJobKey; // 类型锚定
+  return `已同步 ${defs.length} 个脚本任务${removed > 0 ? `，下线 ${removed} 个` : ""}`;
+}
+
 let started = false;
 
 /** 启动调度（instrumentation 调用一次）：系统任务起表，catchUp 任务当日无 OK 记录即补跑。 */
@@ -152,9 +179,10 @@ export async function startJobScheduler(): Promise<void> {
   for (const def of systemJobs()) {
     scheduleJob(def);
   }
+  await reconcileScriptJobs();
   for (const def of systemJobs().filter((d) => d.catchUp)) {
     const ran = await prisma.jobRun.findFirst({
-      where: { jobKey: def.key, status: "OK", startedAt: { gte: utcDayStart(new Date()) } },
+      where: { jobKey: def.key, status: "OK", startedAt: { gte: today() } },
     });
     if (!ran) {
       console.log(`[jobs] 启动补跑: ${def.key}`);
@@ -165,9 +193,9 @@ export async function startJobScheduler(): Promise<void> {
 }
 
 /** 不调度、只算下次触发时间（用一次性实例避免在任意实例里起表）。 */
-function peekNextRun(cronExpr: string): Date | null {
+function peekNextRun(cronExpr: string, tz?: string): Date | null {
   try {
-    const c = new Cron(cronExpr, { timezone: "UTC", protect: true }, () => {});
+    const c = new Cron(cronExpr, { timezone: tz ?? "Asia/Shanghai", protect: true }, () => {});
     const next = c.nextRun();
     c.stop();
     return next;
@@ -187,8 +215,8 @@ export interface JobView {
 
 /** 任务大盘数据：系统任务 + DB 中启用的脚本任务 + 各 job 最近一次运行。 */
 export async function listJobs(): Promise<JobView[]> {
-  const defs: { key: string; title: string; cron: string; link: string }[] = systemJobs().map(
-    ({ key, title, cron, link }) => ({ key, title, cron, link }),
+  const defs: { key: string; title: string; cron: string; link: string; tz?: string }[] = systemJobs().map(
+    ({ key, title, cron, link, tz }) => ({ key, title, cron, link, tz }),
   );
   const { listScriptJobMeta } = await import("../scripts/job");
   defs.push(...(await listScriptJobMeta()));
@@ -201,7 +229,7 @@ export async function listJobs(): Promise<JobView[]> {
     });
     views.push({
       ...def,
-      nextRun: peekNextRun(def.cron),
+      nextRun: peekNextRun(def.cron, def.tz),
       lastRun: lastRun
         ? { startedAt: lastRun.startedAt, durationMs: lastRun.durationMs, status: lastRun.status, message: lastRun.message }
         : null,

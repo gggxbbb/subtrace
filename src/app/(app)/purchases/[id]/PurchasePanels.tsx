@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isoDay } from "@/lib/dates";
 import {
   addPurchaseIncomeAction,
   deletePurchaseAction,
@@ -75,7 +76,7 @@ export function PurchaseIncomePanel({
   purchaseId: string;
   incomes: IncomeRow[];
 }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = isoDay(new Date());
   return (
     <div className="px-4 py-4">
       <form action={addPurchaseIncomeAction.bind(null, purchaseId)} className="mb-3 flex items-end gap-2">

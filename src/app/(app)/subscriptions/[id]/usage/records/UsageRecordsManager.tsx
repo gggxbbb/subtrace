@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isoDay } from "@/lib/dates";
 import {
   addQuotaSnapshotAction,
   addUsageAction,
@@ -24,7 +25,7 @@ export interface UsageRow {
   quotaTotal: number | null;
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => isoDay(new Date());
 
 export function UsageRecordsManager({
   subscriptionId,

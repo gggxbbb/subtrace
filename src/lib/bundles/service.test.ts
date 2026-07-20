@@ -5,7 +5,7 @@ import { prisma } from "../db";
 import { createSubscription, getSubscription } from "../subscriptions/service";
 import { createBundle, listBundles } from "./service";
 
-const d = (s: string) => new Date(`${s}T00:00:00Z`);
+const d = (s: string) => new Date(`${s}T00:00:00+08:00`);
 
 let ownerId: string;
 

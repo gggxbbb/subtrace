@@ -22,7 +22,7 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
       <thead>
         <tr className="border-b border-black text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
           <th className="px-4 py-2 font-medium">任务</th>
-          <th className="px-4 py-2 font-medium">cron (UTC)</th>
+          <th className="px-4 py-2 font-medium">cron（北京时间）</th>
           <th className="px-4 py-2 font-medium">下次运行</th>
           <th className="px-4 py-2 font-medium">上次运行</th>
           <th className="px-4 py-2 font-medium">消息</th>

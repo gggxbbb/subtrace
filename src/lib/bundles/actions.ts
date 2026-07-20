@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "../auth/session";
 import { createBundle, deleteBundle, replaceBundle, setBundleArchived, type BundleInput, type BundleItemInput } from "./service";
 
-const parseDate = (v: FormDataEntryValue | null) => new Date(`${String(v)}T00:00:00Z`);
+const parseDate = (v: FormDataEntryValue | null) => new Date(`${String(v)}T00:00:00+08:00`);
 
 /** 解析向导提交：主体字段 + 子会员 JSON */
 function parsePayload(formData: FormData): BundleInput {
@@ -24,8 +24,8 @@ function parsePayload(formData: FormData): BundleInput {
     newSubscription: it.newName ? { name: it.newName } : undefined,
     listPriceBase: it.listPriceBase,
     allocatedBase: it.allocatedBase,
-    periodStart: it.periodStart ? new Date(`${it.periodStart}T00:00:00Z`) : periodStart,
-    periodEnd: it.periodEnd ? new Date(`${it.periodEnd}T00:00:00Z`) : periodEnd,
+    periodStart: it.periodStart ? new Date(`${it.periodStart}T00:00:00+08:00`) : periodStart,
+    periodEnd: it.periodEnd ? new Date(`${it.periodEnd}T00:00:00+08:00`) : periodEnd,
   }));
   return {
     name: String(formData.get("name") ?? ""),

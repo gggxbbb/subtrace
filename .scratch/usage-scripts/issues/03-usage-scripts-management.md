@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 调度器重构 + 任务大盘, 02 沙箱执行器
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] 信任用户在 /settings/scripts 可为额度型订阅增改删脚本与 cron、env（脱敏）
 - [ ] cron 表达式非法时保存被拒并提示；档位预填可用

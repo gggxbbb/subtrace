@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isoDay } from "@/lib/dates";
 import { Plus } from "lucide-react";
 import { Led, Panel, fmt, fmtDate } from "@/components/te";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -104,7 +105,7 @@ export default async function SubscriptionsPage() {
                 id: a.id,
                 name: a.name,
                 category: a.category,
-                startDate: a.startDate.toISOString().slice(0, 10),
+                startDate: isoDay(a.startDate),
               }))}
             />
           </Panel>

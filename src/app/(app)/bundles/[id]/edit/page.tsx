@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { isoDay } from "@/lib/dates";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getBundle } from "@/lib/bundles/service";
@@ -16,7 +17,7 @@ export default async function EditBundlePage({ params }: { params: Promise<{ id:
   const bundle = await getBundle(user.id, id);
   if (!bundle) notFound();
 
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const iso = (d: Date) => isoDay(d);
   // 联合会员候选：自己拥有的订阅（共享来的不能转包）
   const subs = (await listSubscriptions(user.id)).filter((s) => s.ownerId === user.id);
   const today = new Date();

@@ -23,7 +23,7 @@ import {
   type SubscriptionDef,
 } from "./index";
 
-const d = (s: string) => new Date(`${s}T00:00:00Z`);
+const d = (s: string) => new Date(`${s}T00:00:00+08:00`);
 
 const monthlyCycle: CycleSpec = { kind: "calendar", unit: "month", count: 1 };
 

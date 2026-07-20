@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { isoDay } from "@/lib/dates";
 import { PrefillForm } from "@/components/PrefillForm";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getPurchase } from "@/lib/purchases/service";
@@ -53,7 +54,7 @@ export default async function EditPurchasePage({ params }: { params: Promise<{ i
             </div>
             <div>
               <label className={labelCls}>购买日期</label>
-              <input name="purchaseDate" type="date" defaultValue={purchase.purchaseDate.toISOString().slice(0, 10)} required className={`${inputCls} f-mono`} />
+              <input name="purchaseDate" type="date" defaultValue={isoDay(purchase.purchaseDate)} required className={`${inputCls} f-mono`} />
             </div>
             <div className="col-span-2">
               <label className={labelCls}>预期寿命（天，留空=未定）</label>

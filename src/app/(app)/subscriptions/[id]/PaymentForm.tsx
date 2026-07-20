@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { isoDay } from "@/lib/dates";
 import { attachRatePrefill } from "@/lib/exchange/prefill";
 import { useSearchParams } from "next/navigation";
 import { recordPaymentAction } from "@/lib/subscriptions/actions";
@@ -10,7 +11,7 @@ const inputCls =
 const labelCls =
   "mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
 
-const iso = (d: Date) => d.toISOString().slice(0, 10);
+const iso = (d: Date) => isoDay(d);
 
 export function PaymentForm({
   subscriptionId,
@@ -35,7 +36,7 @@ export function PaymentForm({
     setPlusDays(v);
     const n = Number(v);
     if (Number.isFinite(n) && v.trim() !== "" && periodStart) {
-      const start = new Date(`${periodStart}T00:00:00Z`);
+      const start = new Date(`${periodStart}T00:00:00+08:00`);
       setPeriodEnd(iso(new Date(start.getTime() + n * 86_400_000)));
     }
   };

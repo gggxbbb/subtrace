@@ -1,5 +1,6 @@
 // 报表数据装配（ticket 11）：成本段按天切片聚合，分类占比与趋势。
 
+import { dayStart, fromWall } from "./dates";
 import {
   costSegments,
   dayDiff,
@@ -12,6 +13,7 @@ import {
   toEngineSub,
 } from "./subscriptions/service";
 import { listPurchases, toEnginePurchase } from "./purchases/service";
+import { isoDay } from "./dates";
 import { shareForViewer } from "./beneficiaries/service";
 
 export interface ReportDay {
@@ -47,17 +49,17 @@ export interface ReportData {
   items: ReportItem[];
 }
 
-const atUtc = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+const atUtc = (d: Date) => dayStart(d).getTime();
+const iso = (ms: number) => isoDay(new Date(ms));
 
 export function monthRange(year: number, month: number): { startMs: number; endMs: number } {
-  const startMs = Date.UTC(year, month - 1, 1);
-  const endMs = month === 12 ? Date.UTC(year + 1, 0, 1) : Date.UTC(year, month, 1);
+  const startMs = fromWall(year, month - 1, 1).getTime();
+  const endMs = (month === 12 ? fromWall(year + 1, 0, 1) : fromWall(year, month, 1)).getTime();
   return { startMs, endMs };
 }
 
 export function yearRange(year: number): { startMs: number; endMs: number } {
-  return { startMs: Date.UTC(year, 0, 1), endMs: Date.UTC(year + 1, 0, 1) };
+  return { startMs: fromWall(year, 0, 1).getTime(), endMs: fromWall(year + 1, 0, 1).getTime() };
 }
 
 /** 区间内每日摊销成本 + 分类聚合（订阅按份额切片，物品单列一类） */

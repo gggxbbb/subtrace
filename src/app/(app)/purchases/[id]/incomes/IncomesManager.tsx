@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isoDay } from "@/lib/dates";
 import {
   addPurchaseIncomeAction,
   deletePurchaseIncomeAction,
@@ -24,7 +25,7 @@ export interface IncomeRow {
   note: string | null;
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => isoDay(new Date());
 
 export function IncomesManager({
   purchaseId,

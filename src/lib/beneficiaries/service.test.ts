@@ -13,7 +13,7 @@ import {
 } from "./service";
 import { createSubscription, getSubscription, listSubscriptions } from "../subscriptions/service";
 
-const d = (s: string) => new Date(`${s}T00:00:00Z`);
+const d = (s: string) => new Date(`${s}T00:00:00+08:00`);
 
 let ownerId: string;
 let memberId: string;

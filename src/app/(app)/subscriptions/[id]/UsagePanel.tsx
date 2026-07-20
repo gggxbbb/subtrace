@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isoDay } from "@/lib/dates";
 import { Led } from "@/components/te";
 import {
   addQuotaSnapshotAction,
@@ -68,7 +69,7 @@ export function UsageEntryPanel({
   records: UsageRecordRow[];
   verdict: VerdictData | null;
 }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = isoDay(new Date());
   const last = records[records.length - 1];
   const kind: "COUNT" | "QUOTA" = usageKind ?? "COUNT";
   // 从历史提取去重的 用量×单价 元组（最近优先）
@@ -109,15 +110,15 @@ export function UsageEntryPanel({
   // 日历数据：从区间首日所在周的周一开始，到区间末日止
   const calDays: { day: number; inPeriod: boolean; used: boolean; today: boolean }[] = [];
   if (verdict) {
-    const start = new Date(`${verdict.periodStart}T00:00:00Z`).getTime();
-    const end = new Date(`${verdict.periodEnd}T00:00:00Z`).getTime();
-    const todayMs = new Date(`${today}T00:00:00Z`).getTime();
+    const start = new Date(`${verdict.periodStart}T00:00:00+08:00`).getTime();
+    const end = new Date(`${verdict.periodEnd}T00:00:00+08:00`).getTime();
+    const todayMs = new Date(`${today}T00:00:00+08:00`).getTime();
     const usedDates = new Set(records.map((r) => r.date));
     // 对齐周一（UTC getUTCDay: 0=周日）
     const startDow = (new Date(start).getUTCDay() + 6) % 7;
     const calStart = start - startDow * 86_400_000;
     for (let t = calStart; t < end; t += 86_400_000) {
-      const iso = new Date(t).toISOString().slice(0, 10);
+      const iso = isoDay(new Date(t));
       calDays.push({
         day: new Date(t).getUTCDate(),
         inPeriod: t >= start,

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { isoDay } from "@/lib/dates";
 import { getCurrentUser } from "@/lib/auth/session";
 import { listRates } from "@/lib/exchange/service";
 import { prisma } from "@/lib/db";
@@ -44,7 +45,7 @@ export default async function RatesPage({
             ratesApiUrl={me.ratesApiUrl ?? ""}
             rates={rates.map((r) => ({
               ...r,
-              updatedAt: r.updatedAt.toISOString().slice(0, 10),
+              updatedAt: isoDay(r.updatedAt),
             }))}
           />
         </div>

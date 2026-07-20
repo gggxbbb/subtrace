@@ -1,6 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { isoDay } from "@/lib/dates";
 import { PrefillForm } from "@/components/PrefillForm";
 import { createPurchaseAction } from "@/lib/purchases/actions";
 
@@ -11,7 +12,7 @@ const labelCls =
 
 export default function NewPurchasePage() {
   const error = useSearchParams().get("error");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = isoDay(new Date());
 
   return (
     <div className="mx-auto max-w-xl px-6 py-8">

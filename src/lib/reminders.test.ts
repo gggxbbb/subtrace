@@ -5,7 +5,7 @@ import { prisma } from "./db";
 import { createSubscription } from "./subscriptions/service";
 import { computeHits, parseRemindDays, runReminderScan } from "./reminders";
 
-const d = (s: string) => new Date(`${s}T00:00:00Z`);
+const d = (s: string) => new Date(`${s}T00:00:00+08:00`);
 const TODAY = d("2026-07-19");
 
 let ownerId: string;

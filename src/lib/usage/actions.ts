@@ -12,7 +12,7 @@ import {
 } from "./service";
 import { prisma } from "../db";
 
-const parseDate = (v: FormDataEntryValue | null) => new Date(`${String(v)}T00:00:00Z`);
+const parseDate = (v: FormDataEntryValue | null) => new Date(`${String(v)}T00:00:00+08:00`);
 
 export async function setUsageConfigAction(subscriptionId: string, formData: FormData) {
   const user = await getCurrentUser();

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { isoDay } from "@/lib/dates";
 import { Kpi, Panel, fmt, fmtDate } from "@/components/te";
 import { getCurrentUser } from "@/lib/auth/session";
 import { costSegments, currentDailyRate, currentExpiry, dayDiff } from "@/lib/cost-engine";
@@ -59,14 +60,14 @@ export default async function SubscriptionDetailPage({
   const estimatedRows = costSegments(engineSub, payments, today)
     .filter((seg) => seg.estimated && (lastRecordedEnd === null || seg.start >= lastRecordedEnd))
     .map((seg) => ({
-      start: seg.start.toISOString().slice(0, 10),
-      end: seg.end.toISOString().slice(0, 10),
+      start: isoDay(seg.start),
+      end: isoDay(seg.end),
       net: seg.net,
     }));
   const totalPaid = sub.payments.reduce((s, p) => s + (p.amountBase ?? 0) - p.refundedBase, 0);
   const unknownPayments = sub.payments.filter((p) => p.amountBase === null).length;
   const prefillRaw = paymentPrefill(sub, sub.payments);
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const iso = (d: Date) => isoDay(d);
   const prefill = {
     paidAt: iso(today),
     periodStart: iso(prefillRaw.periodStart),
@@ -107,7 +108,7 @@ export default async function SubscriptionDetailPage({
       : [];
   const usageRecordRows: UsageRecordRow[] = myUsageRecords.map((r) => ({
     id: r.id,
-    date: r.date.toISOString().slice(0, 10),
+    date: isoDay(r.date),
     quantity: r.quantity,
     kind: r.kind,
     unitPrice: r.unitPrice,
@@ -304,9 +305,9 @@ export default async function SubscriptionDetailPage({
                 currency: p.currency,
                 amountBase: p.amountBase,
                 refundedBase: p.refundedBase,
-                paidAt: p.paidAt.toISOString().slice(0, 10),
-                periodStart: p.periodStart.toISOString().slice(0, 10),
-                periodEnd: p.periodEnd.toISOString().slice(0, 10),
+                paidAt: isoDay(p.paidAt),
+                periodStart: isoDay(p.periodStart),
+                periodEnd: isoDay(p.periodEnd),
                 source: p.source,
                 note: p.note,
               }))}

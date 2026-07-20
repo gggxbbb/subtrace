@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isoDay } from "@/lib/dates";
 import { Plus } from "lucide-react";
 import { Panel, ORANGE, fmt, fmtDate } from "@/components/te";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -80,7 +81,7 @@ export default async function PurchasesPage() {
                 name: a.name,
                 category: a.category,
                 status: a.status,
-                purchaseDate: a.purchaseDate.toISOString().slice(0, 10),
+                purchaseDate: isoDay(a.purchaseDate),
               }))}
             />
           </Panel>

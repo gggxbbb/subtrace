@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { isoDay } from "@/lib/dates";
 import { getCurrentUser } from "@/lib/auth/session";
 import { currentExpiry } from "@/lib/cost-engine";
 import {
@@ -18,7 +19,7 @@ export default async function NewBundlePage() {
     return {
       id: s.id,
       name: s.name,
-      expiry: expiry ? expiry.toISOString().slice(0, 10) : null,
+      expiry: expiry ? isoDay(expiry) : null,
     };
   });
 

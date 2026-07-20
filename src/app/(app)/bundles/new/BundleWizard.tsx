@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { isoDay } from "@/lib/dates";
 import { useSearchParams } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { createBundleAction } from "@/lib/bundles/actions";
@@ -60,8 +61,8 @@ export function BundleWizard({
   submitLabel?: string;
 }) {
   const error = useSearchParams().get("error");
-  const today = new Date().toISOString().slice(0, 10);
-  const nextYear = new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10);
+  const today = isoDay(new Date());
+  const nextYear = isoDay(new Date(Date.now() + 365 * 86_400_000));
   const [items, setItems] = useState<Item[]>(initial?.items ?? [newItem(today, nextYear)]);
   const [total, setTotal] = useState(initial?.totalAmount ?? "");
 
@@ -92,7 +93,7 @@ export function BundleWizard({
     const n = Number(v);
     if (Number.isFinite(n) && v.trim() !== "" && bundleStart) {
       setBundleEnd(
-        new Date(new Date(`${bundleStart}T00:00:00Z`).getTime() + n * 86_400_000)
+        new Date(new Date(`${bundleStart}T00:00:00+08:00`).getTime() + n * 86_400_000)
           .toISOString()
           .slice(0, 10),
       );
@@ -105,7 +106,7 @@ export function BundleWizard({
     const patch: Partial<Item> = { plusDays: v, periodTouched: true };
     if (Number.isFinite(n) && v.trim() !== "" && it.periodStart) {
       patch.periodEnd = new Date(
-        new Date(`${it.periodStart}T00:00:00Z`).getTime() + n * 86_400_000,
+        new Date(`${it.periodStart}T00:00:00+08:00`).getTime() + n * 86_400_000,
       ).toISOString().slice(0, 10);
     }
     update(i, patch);

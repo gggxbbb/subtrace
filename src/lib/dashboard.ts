@@ -15,6 +15,7 @@ import {
   toEngineSub,
   type SubscriptionWithPayments,
 } from "./subscriptions/service";
+import { dayStart, fromWall, wallParts } from "./dates";
 import { listPurchases, toEnginePurchase } from "./purchases/service";
 import { getUsageVerdict, listUsage } from "./usage/service";
 import { shareForViewer } from "./beneficiaries/service";
@@ -106,7 +107,7 @@ const atUtcMidnight = (d: Date) =>
 export async function getDashboardData(userId: string): Promise<DashboardData> {
   const subs = await listSubscriptions(userId);
   const purchasesRaw = await listPurchases(userId);
-  const today = atUtcMidnight(new Date());
+  const today = dayStart(new Date());
 
   const rows: DashboardRow[] = subs.map((sub) => {
     const engineSub = toEngineSub(sub);
@@ -200,8 +201,9 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     trend.push(subCost + itemCost);
   }
 
-  const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
-  const yearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
+  const tp = wallParts(today);
+  const monthStart = fromWall(tp.year, tp.month, 1);
+  const yearStart = fromWall(tp.year, 0, 1);
   // 实付只计自己拥有的订阅（共享订阅的钱是所有者出的）
   const spent = subs.filter((s) => s.ownerId === userId).flatMap((s) => s.payments);
   const monthSpent = spent

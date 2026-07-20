@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { isoDay } from "@/lib/dates";
 import { Kpi, Panel, fmt, fmtDate } from "@/components/te";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
@@ -29,7 +30,7 @@ export default async function PurchaseDetailPage({
   const inUse = purchase.status === "IN_USE";
   const daily = purchaseDailyRate(engine, today);
   const progress = breakevenProgress(engine, today);
-  const todayIso = today.toISOString().slice(0, 10);
+  const todayIso = isoDay(today);
   // TCO（ADR-0003）：物品净额 + 订阅份额 − 累计收益
   const shareLines = await subscriptionShareCost(user.id, purchase, today);
   const subShareTotal = shareLines.reduce((s, l) => l.amount, 0);
@@ -124,7 +125,7 @@ export default async function PurchaseDetailPage({
                 kind: e.kind,
                 amount: e.amount,
                 amountBase: e.amountBase,
-                date: e.date.toISOString().slice(0, 10),
+                date: isoDay(e.date),
                 extendDays: e.extendDays,
                 note: e.note,
               }))}
@@ -145,7 +146,7 @@ export default async function PurchaseDetailPage({
                 id: i.id,
                 amount: i.amount,
                 amountBase: i.amountBase,
-                date: i.date.toISOString().slice(0, 10),
+                date: isoDay(i.date),
                 note: i.note,
               }))}
             />

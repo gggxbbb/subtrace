@@ -26,14 +26,11 @@ export interface PaymentRec {
   periodEnd: Date;
 }
 
-const DAY_MS = 86_400_000;
+import { DAY_MS, dayStart, fromWall, wallParts } from "../dates";
 
-const atUtcMidnight = (date: Date) =>
-  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-
-/** 整日天数差（end − start），日期归一到 UTC 零点 */
+/** 整日天数差（end − start），日期归一到北京日历日零点 */
 export function dayDiff(start: Date, end: Date): number {
-  return Math.round((atUtcMidnight(end).getTime() - atUtcMidnight(start).getTime()) / DAY_MS);
+  return Math.round((dayStart(end).getTime() - dayStart(start).getTime()) / DAY_MS);
 }
 
 /**
@@ -41,13 +38,11 @@ export function dayDiff(start: Date, end: Date): number {
  * 日历月/年锚定原始日：目标月没有该日则取月末（1/31 + 1月 = 2/28，+ 2月 = 3/31）。
  */
 export function advanceCycle(anchor: Date, cycle: CycleSpec, n: number): Date {
+  const a = dayStart(anchor);
   if (cycle.kind === "fixedDays") {
-    return new Date(atUtcMidnight(anchor).getTime() + n * cycle.days * DAY_MS);
+    return new Date(a.getTime() + n * cycle.days * DAY_MS);
   }
-  const a = atUtcMidnight(anchor);
-  const y = a.getUTCFullYear();
-  const m = a.getUTCMonth();
-  const day = a.getUTCDate();
+  const { year: y, month: m, day } = wallParts(a);
   switch (cycle.unit) {
     case "day":
       return new Date(a.getTime() + n * cycle.count * DAY_MS);
@@ -60,7 +55,7 @@ export function advanceCycle(anchor: Date, cycle: CycleSpec, n: number): Date {
       const ty = Math.floor(total / 12);
       const tm = ((total % 12) + 12) % 12;
       const monthLen = new Date(Date.UTC(ty, tm + 1, 0)).getUTCDate();
-      return new Date(Date.UTC(ty, tm, Math.min(day, monthLen)));
+      return fromWall(ty, tm, Math.min(day, monthLen));
     }
   }
 }
@@ -196,7 +191,7 @@ export function purchaseDailyRate(p: PurchaseDef, today: Date): number {
   const lifeDays = p.expectedDays != null ? p.expectedDays + (p.extraDays ?? 0) : undefined;
   const expectedEnd =
     lifeDays != null
-      ? new Date(atUtcMidnight(p.purchaseDate).getTime() + lifeDays * DAY_MS)
+      ? new Date(dayStart(p.purchaseDate).getTime() + lifeDays * DAY_MS)
       : undefined;
   const end =
     p.status !== "in_use" && p.endDate

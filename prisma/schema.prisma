@@ -16,6 +16,8 @@ model User {
   baseCurrency  String    @default("CNY")
   /// 汇率 API 模板（{base} 占位），默认 open.er-api.com；ticket 09
   ratesApiUrl   String?
+  /// 信任用户：可编写用量脚本（ADR-0007）
+  canUseScripts Boolean  @default(false)
   createdAt     DateTime  @default(now())
   sessions      Session[]
   invitesCreated Invite[] @relation("creator")
@@ -97,6 +99,12 @@ model Subscription {
   altUnitPrice  Float?
   /// 额度型：周期总额度
   quotaTotal    Float?
+  /// 用量脚本（ticket 03）：JS 源码；空 = 未启用
+  script        String?
+  /// cron 表达式（UTC）
+  scriptCron    String?
+  /// 脚本级 JSON 密钥（沙箱内 env 暴露，回显脱敏）
+  scriptEnv     String?
   startDate     DateTime
   createdAt     DateTime @default(now())
   payments      Payment[]

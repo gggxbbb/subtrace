@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { isoDay } from "@/lib/dates";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getSubscription } from "@/lib/subscriptions/service";
 import { parseRemindDays } from "@/lib/reminders";
@@ -41,7 +42,7 @@ export default async function EditSubscriptionPage({ params }: { params: Promise
             listCurrency: sub.listCurrency ?? "CNY",
             autoRenew: sub.autoRenew,
             remindDays: parseRemindDays(sub.remindDays).join(","),
-            startDate: sub.startDate.toISOString().slice(0, 10),
+            startDate: isoDay(sub.startDate),
           }}
         />
         <p className="mt-3 text-[10px] text-neutral-400 f-mono">

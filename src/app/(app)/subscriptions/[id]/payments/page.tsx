@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { isoDay } from "@/lib/dates";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getSubscription } from "@/lib/subscriptions/service";
 import { planRechain } from "@/lib/subscriptions/service";
@@ -24,8 +25,8 @@ export default async function PaymentsPage({
   // URL query 驱动筛选：备注文本 / 来源 / 区间
   const q = (sp.q ?? "").trim().toLowerCase();
   const source = sp.source ?? "";
-  const from = sp.from ? new Date(`${sp.from}T00:00:00Z`) : null;
-  const to = sp.to ? new Date(`${sp.to}T00:00:00Z`) : null;
+  const from = sp.from ? new Date(`${sp.from}T00:00:00+08:00`) : null;
+  const to = sp.to ? new Date(`${sp.to}T00:00:00+08:00`) : null;
 
   let rows: PaymentRow[] = sub.payments.map((p) => ({
     id: p.id,
@@ -33,16 +34,16 @@ export default async function PaymentsPage({
     currency: p.currency,
     amountBase: p.amountBase,
     refundedBase: p.refundedBase,
-    paidAt: p.paidAt.toISOString().slice(0, 10),
-    periodStart: p.periodStart.toISOString().slice(0, 10),
-    periodEnd: p.periodEnd.toISOString().slice(0, 10),
+    paidAt: isoDay(p.paidAt),
+    periodStart: isoDay(p.periodStart),
+    periodEnd: isoDay(p.periodEnd),
     source: p.source,
     note: p.note,
   }));
   if (q) rows = rows.filter((r) => (r.note ?? "").toLowerCase().includes(q));
   if (source) rows = rows.filter((r) => r.source === source);
-  if (from) rows = rows.filter((r) => new Date(`${r.paidAt}T00:00:00Z`) >= from);
-  if (to) rows = rows.filter((r) => new Date(`${r.paidAt}T00:00:00Z`) <= to);
+  if (from) rows = rows.filter((r) => new Date(`${r.paidAt}T00:00:00+08:00`) >= from);
+  if (to) rows = rows.filter((r) => new Date(`${r.paidAt}T00:00:00+08:00`) <= to);
   rows = rows.reverse();
 
   const back = new URLSearchParams(

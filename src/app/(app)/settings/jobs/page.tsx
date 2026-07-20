@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Panel } from "@/components/te";
 import { getCurrentUser } from "@/lib/auth/session";
+import { fmtDateTime } from "@/lib/dates";
 import { listJobs } from "@/lib/jobs";
 import { JobsTable } from "./JobsTable";
 
@@ -10,7 +11,7 @@ export default async function JobsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const jobs = await listJobs();
-  const iso = (d: Date) => d.toISOString().slice(0, 16).replace("T", " ");
+
 
   return (
     <>
@@ -31,8 +32,8 @@ export default async function JobsPage() {
           <JobsTable
             jobs={jobs.map((j) => ({
               ...j,
-              nextRun: j.nextRun ? iso(j.nextRun) : null,
-              lastRun: j.lastRun ? { ...j.lastRun, startedAt: iso(j.lastRun.startedAt) } : null,
+              nextRun: j.nextRun ? fmtDateTime(j.nextRun) : null,
+              lastRun: j.lastRun ? { ...j.lastRun, startedAt: fmtDateTime(j.lastRun.startedAt) } : null,
             }))}
           />
         </Panel>

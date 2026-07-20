@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { isoDay } from "@/lib/dates";
 import { getCurrentUser } from "@/lib/auth/session";
 import { listInvites, listUsers } from "@/lib/auth/service";
 import { InviteManager } from "./InviteManager";
@@ -12,7 +13,7 @@ export default async function UsersPage() {
   if (user.role !== "ADMIN") redirect("/dashboard");
 
   const [users, invites] = await Promise.all([listUsers(), listInvites()]);
-  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const iso = (d: Date) => isoDay(d);
 
   return (
     <>

@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { isoDay } from "@/lib/dates";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getPurchase, listPurchaseIncomes } from "@/lib/purchases/service";
 import { IncomesManager, type IncomeRow } from "./IncomesManager";
@@ -20,8 +21,8 @@ export default async function IncomesPage({
   if (!purchase) notFound();
 
   const q = (sp.q ?? "").trim().toLowerCase();
-  const from = sp.from ? new Date(`${sp.from}T00:00:00Z`) : null;
-  const to = sp.to ? new Date(`${sp.to}T00:00:00Z`) : null;
+  const from = sp.from ? new Date(`${sp.from}T00:00:00+08:00`) : null;
+  const to = sp.to ? new Date(`${sp.to}T00:00:00+08:00`) : null;
 
   const all = await listPurchaseIncomes(purchase.id);
   let rows: IncomeRow[] = all.map((i) => ({
@@ -29,12 +30,12 @@ export default async function IncomesPage({
     amount: i.amount,
     currency: i.currency,
     amountBase: i.amountBase,
-    date: i.date.toISOString().slice(0, 10),
+    date: isoDay(i.date),
     note: i.note,
   }));
   if (q) rows = rows.filter((r) => (r.note ?? "").toLowerCase().includes(q));
-  if (from) rows = rows.filter((r) => new Date(`${r.date}T00:00:00Z`) >= from);
-  if (to) rows = rows.filter((r) => new Date(`${r.date}T00:00:00Z`) <= to);
+  if (from) rows = rows.filter((r) => new Date(`${r.date}T00:00:00+08:00`) >= from);
+  if (to) rows = rows.filter((r) => new Date(`${r.date}T00:00:00+08:00`) <= to);
   rows = rows.reverse();
 
   const back = new URLSearchParams(

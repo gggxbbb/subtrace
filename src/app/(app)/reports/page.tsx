@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isoDay } from "@/lib/dates";
 import { redirect } from "next/navigation";
 import { Kpi, Panel, fmt, ORANGE } from "@/components/te";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -56,7 +57,7 @@ export default async function ReportsPage({
   const delta = prev.totalAmortized > 0 ? (r.totalAmortized - prev.totalAmortized) / prev.totalAmortized : null;
 
   // 趋势：月视图逐日柱；年视图聚合 12 个月
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = isoDay(new Date());
   const bars = r.days.map((d) => ({
     label: p.kind === "month" ? d.date.slice(8) : d.date.slice(5),
     cost: d.cost,

@@ -6,7 +6,7 @@ import { createSubscription } from "./subscriptions/service";
 import { createPurchase } from "./purchases/service";
 import { getReportData, monthRange, yearRange } from "./reports";
 
-const d = (s: string) => new Date(`${s}T00:00:00Z`);
+const d = (s: string) => new Date(`${s}T00:00:00+08:00`);
 
 let ownerId: string;
 
