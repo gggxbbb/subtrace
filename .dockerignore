@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+*.md
+!README.md
+data
+.scratch
+docs
+*.png
+Dockerfile
+docker-compose.yml
+docker-entrypoint.sh

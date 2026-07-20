@@ -1,0 +1,18 @@
+services:
+  subtrace:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      # 必填：外部 cron 触发 /api/cron/* 的 Bearer 密钥（用 openssl rand -hex 24 生成）
+      - CRON_SECRET=${CRON_SECRET:?请在 .env 或环境中设置 CRON_SECRET}
+      # 可选：默认 file:./data/subtrace.db（容器内 /app/data）
+      # - DATABASE_URL=file:./data/subtrace.db
+      # 可选：置 off 关闭内置调度（多实例时只留一个实例开）
+      # - REMINDER_SCHEDULER=off
+    volumes:
+      - subtrace-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  subtrace-data:
