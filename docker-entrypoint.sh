@@ -3,7 +3,8 @@
 # instrumentation 钩子在 server.js 内拉起内置调度（提醒/汇率/脚本对账）。
 set -e
 
-export DATABASE_URL="${DATABASE_URL:-file:./data/subtrace.db}"
+# 绝对路径：迁移（/migrate）与服务器（/app）工作目录不同，相对路径会指到两个库
+export DATABASE_URL="${DATABASE_URL:-file:/app/data/subtrace.db}"
 
 echo "[subtrace] 应用数据库迁移…"
 (cd /migrate && node node_modules/prisma/build/index.js migrate deploy)
