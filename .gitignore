@@ -53,3 +53,6 @@ next-env.d.ts
 
 # generated prisma client
 /src/generated
+
+# 构建/临时日志
+.scratch/*.log

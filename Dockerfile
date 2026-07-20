@@ -12,7 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
 
 RUN corepack enable && corepack prepare pnpm@11.3.0 --activate
 
-COPY package.json pnpm-lock.yaml ./
+# 网络受限环境可换镜像源：docker build --build-arg NPM_REGISTRY=https://registry.npmmirror.com .
+ARG NPM_REGISTRY=https://registry.npmjs.org
+ENV npm_config_registry=$NPM_REGISTRY
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 COPY prisma ./prisma

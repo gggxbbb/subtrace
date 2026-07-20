@@ -9,6 +9,3 @@ data
 .scratch
 docs
 *.png
-Dockerfile
-docker-compose.yml
-docker-entrypoint.sh
