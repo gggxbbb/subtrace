@@ -44,7 +44,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-6">
+      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             01 / overview
@@ -66,7 +66,7 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <div className="space-y-4 px-6 py-5">
+      <div className="space-y-4 px-4 py-5 md:px-6">
         {d.upcoming.length > 0 && (
           <div className="flex items-center justify-between border border-black bg-white px-4 py-2.5">
             <div className="flex min-w-0 items-center gap-3">
@@ -88,7 +88,7 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Kpi index="A1" label="当日总日均" value={fmt(d.totalDailyCost)} sub={`≈ 每月 ${fmt(d.totalMonthlyCost)}`} led={ORANGE} />
           <Kpi index="A2" label="本月支出" value={fmt(d.monthSpent)} sub={`年度累计 ${fmt(d.yearSpent)}`} />
           <Kpi index="A3" label="活跃订阅" value={`${d.activeCount}`} sub={`物品 ${d.purchases.length} 件 · 日均 ${fmt(d.itemDailyCost)}`} />
@@ -106,7 +106,7 @@ export default async function DashboardPage() {
           </div>
         </Panel>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Panel index="03" title="即将到期" action="全部" href="/subscriptions">            {d.upcoming.length === 0 && (
               <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
                 未来 30 天没有到期订阅
@@ -182,7 +182,7 @@ export default async function DashboardPage() {
               还没有登记物品
             </div>
           )}
-          <div className="grid grid-cols-3 gap-px bg-white">
+          <div className="grid grid-cols-1 gap-px bg-white sm:grid-cols-2 lg:grid-cols-3">
             {d.purchases.map((p) => (
               <a key={p.id} href={`/purchases/${p.id}`} className="block border border-neutral-200 bg-white px-4 py-3 hover:bg-black/[0.03]">
                 <div className="flex items-center justify-between gap-2">
@@ -210,7 +210,8 @@ export default async function DashboardPage() {
         </Panel>
 
         <Panel index="06" title="订阅明细" action="管理" href="/subscriptions">
-          <table className="w-full text-[13px]">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-[13px]">
             <thead>
               <tr className="border-b border-black text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
                 <th className="px-4 py-2 font-medium">名称</th>
@@ -285,6 +286,7 @@ export default async function DashboardPage() {
               )}
             </tbody>
           </table>
+          </div>
         </Panel>
       </div>
     </>

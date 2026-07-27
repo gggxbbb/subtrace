@@ -51,7 +51,7 @@ export function PaymentForm({
           记录失败：请检查日期与金额
         </div>
       )}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className={labelCls}>实付金额（留空 = 金额未知，只记区间）</label>
           <input name="amount" type="number" step="0.01" min="0" defaultValue={prefill.amount ?? undefined} className={inputCls} />
@@ -65,7 +65,7 @@ export function PaymentForm({
         <label className={labelCls}>折算主币种金额（快照，默认同实付；实付留空则同未知）</label>
         <input name="amountBase" type="number" step="0.01" min="0" placeholder="留空 = 实付金额" className={inputCls} />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className={labelCls}>支付日期</label>
           <input name="paidAt" type="date" defaultValue={prefill.paidAt} required className={`${inputCls} f-mono`} />
@@ -113,7 +113,7 @@ export function PaymentForm({
           止期为排他日：到期日当天起不再覆盖 · 服务起 = 上一笔止期即无缝顺延 · 右侧 +N 天快速顺延
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className={labelCls}>来源</label>
           <select name="source" defaultValue="MANUAL" className={inputCls}>

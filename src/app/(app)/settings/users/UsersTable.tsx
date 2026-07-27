@@ -38,7 +38,8 @@ export function UsersTable({ users }: { users: UserRow[] }) {
           {error}
         </div>
       )}
-      <table className="w-full text-[13px]">
+      <div className="overflow-x-auto">
+      <table className="w-full min-w-[520px] text-[13px]">
         <thead>
           <tr className="border-b border-black text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
             <th className="px-4 py-2 font-medium">用户名</th>
@@ -116,6 +117,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
           ))}
         </tbody>
       </table>
+      </div>
     </Panel>
   );
 }

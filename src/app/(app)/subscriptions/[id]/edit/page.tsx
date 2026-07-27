@@ -18,7 +18,7 @@ export default async function EditSubscriptionPage({ params }: { params: Promise
 
   return (
     <>
-      <header className="flex h-16 items-center border-b border-black bg-[#E4E3E0] px-6">
+      <header className="flex h-16 items-center border-b border-black bg-[#E4E3E0] px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             subscriptions / {sub.name} / edit
@@ -26,7 +26,7 @@ export default async function EditSubscriptionPage({ params }: { params: Promise
           <h1 className="text-xl font-bold uppercase tracking-tight">编辑订阅</h1>
         </div>
       </header>
-      <main className="mx-auto max-w-xl px-6 py-8">
+      <main className="mx-auto max-w-xl px-4 py-8 md:px-6">
         <SubscriptionEditForm
           subscriptionId={sub.id}
           action={updateSubscriptionAction.bind(null, sub.id)}

@@ -86,7 +86,7 @@ export function ScriptEditor({
             spellCheck={false}
           />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className={labelCls}>cron（北京时间）</label>
             <input name="scriptCron" value={cron} onChange={(e) => setCron(e.target.value)} className={`${inputCls} f-mono`} />

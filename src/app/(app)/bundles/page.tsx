@@ -12,7 +12,7 @@ export default async function BundlesPage() {
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-6">
+      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             04 / bundles
@@ -27,7 +27,7 @@ export default async function BundlesPage() {
         </Link>
       </header>
 
-      <div className="space-y-4 px-6 py-5">
+      <div className="space-y-4 px-4 py-5 md:px-6">
         {bundles.length === 0 && (
           <Panel index="01" title="联合会员 / 0">
             <div className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
@@ -42,7 +42,8 @@ export default async function BundlesPage() {
             title={`${b.name} · ${fmt(b.totalAmountBase)} · ${fmtDate(b.periodStart)} → ${fmtDate(b.periodEnd)}`}
             actions={<BundleRowActions bundleId={b.id} archived={false} />}
           >
-            <table className="w-full text-[13px]">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] text-[13px]">
               <thead>
                 <tr className="border-b border-black text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
                   <th className="px-4 py-2 font-medium">子会员</th>
@@ -66,6 +67,7 @@ export default async function BundlesPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </Panel>
         ))}
 

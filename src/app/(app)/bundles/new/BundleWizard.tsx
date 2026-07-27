@@ -117,7 +117,7 @@ export function BundleWizard({
           创建失败：请检查打包信息与子会员
         </div>
       )}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className={labelCls}>联合会员名称</label>
           <input name="name" required defaultValue={initial?.name} placeholder="88VIP 联名" className={inputCls} />
@@ -139,7 +139,7 @@ export function BundleWizard({
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className={labelCls}>权益起</label>
           <input name="periodStart" type="date" value={bundleStart} onChange={(e) => setBundleStart(e.target.value)} required className={`${inputCls} f-mono`} />
@@ -247,7 +247,7 @@ export function BundleWizard({
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
-              <div className="grid grid-cols-3 items-end gap-3">
+              <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-3">
                 <div>
                   <label className={labelCls}>单买原价</label>
                   <input
@@ -279,7 +279,7 @@ export function BundleWizard({
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 items-end gap-3">
+              <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2">
                 <div>
                   <label className={labelCls}>服务起</label>
                   <input

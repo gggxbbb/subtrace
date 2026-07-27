@@ -36,7 +36,7 @@ function PurchaseCards({ rows }: { rows: Row[] }) {
     );
   }
   return (
-    <div className="grid grid-cols-3 gap-px bg-white">
+    <div className="grid grid-cols-1 gap-px bg-white sm:grid-cols-2 lg:grid-cols-3">
       {rows.map((p) => (
         <Link key={p.id} href={`/purchases/${p.id}`} className="block border border-neutral-200 bg-white px-4 py-3 hover:bg-black/[0.03]">
           <div className="flex items-center justify-between gap-2">
@@ -66,7 +66,8 @@ function PurchaseCards({ rows }: { rows: Row[] }) {
 
 function PurchaseTable({ rows }: { rows: Row[] }) {
   return (
-    <table className="w-full text-[13px]">
+    <div className="overflow-x-auto">
+    <table className="w-full min-w-[680px] text-[13px]">
       <thead>
         <tr className="border-b border-black text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
           <th className="px-4 py-2 font-medium">名称</th>
@@ -117,6 +118,7 @@ function PurchaseTable({ rows }: { rows: Row[] }) {
         )}
       </tbody>
     </table>
+    </div>
   );
 }
 
@@ -160,7 +162,7 @@ export default async function PurchasesPage({
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-6">
+      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             03 / purchases
@@ -175,7 +177,7 @@ export default async function PurchasesPage({
         </Link>
       </header>
 
-      <div className="px-6 py-5">
+      <div className="px-4 py-5 md:px-6">
         <ViewSwitcher
           storageKey="subtrace:view:purchases"
           desktopDefault="card"

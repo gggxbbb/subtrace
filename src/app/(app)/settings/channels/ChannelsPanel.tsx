@@ -32,7 +32,7 @@ function headersToText(headers: unknown): string {
 function WebhookFields({ config }: { config: Record<string, unknown> }) {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div>
           <label className={labelCls}>方法</label>
           <select name="method" defaultValue={String(config.method ?? "POST")} className={`${inputCls} f-mono`}>
@@ -87,7 +87,7 @@ function WebhookFields({ config }: { config: Record<string, unknown> }) {
 function EmailFields({ config, edit }: { config: Record<string, unknown>; edit: boolean }) {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="col-span-2">
           <label className={labelCls}>SMTP 主机</label>
           <input name="host" required defaultValue={String(config.host ?? "")} placeholder="smtp.qq.com" className={`${inputCls} f-mono`} />
@@ -97,7 +97,7 @@ function EmailFields({ config, edit }: { config: Record<string, unknown>; edit: 
           <input name="port" required type="number" defaultValue={config.port != null ? Number(config.port) : 465} className={`${inputCls} f-mono`} />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className={labelCls}>账号（可选）</label>
           <input name="user" autoComplete="off" defaultValue={String(config.user ?? "")} className={`${inputCls} f-mono`} />
@@ -113,7 +113,7 @@ function EmailFields({ config, edit }: { config: Record<string, unknown>; edit: 
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className={labelCls}>发件人</label>
           <input name="from" required defaultValue={String(config.from ?? "")} placeholder="subtrace@example.com" className={`${inputCls} f-mono`} />
@@ -201,7 +201,7 @@ function ChannelRow({ channel }: { channel: ChannelView }) {
           className="space-y-4 border-t border-neutral-200 bg-[#E4E3E0]/40 p-4"
         >
           <input type="hidden" name="kind" value={channel.kind} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className={labelCls}>名称</label>
               <input name="name" required defaultValue={channel.name} className={inputCls} />
@@ -262,7 +262,7 @@ export function ChannelsPanel({ channels }: { channels: ChannelView[] }) {
           action={(fd) => start(() => createChannelAction(fd))}
           className="space-y-4 p-4"
         >
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className={labelCls}>名称</label>
               <input name="name" required placeholder="我的 Bark / 邮箱" className={inputCls} />

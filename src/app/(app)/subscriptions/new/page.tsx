@@ -85,7 +85,7 @@ export default function NewSubscriptionPage() {
   };
 
   return (
-    <div className="mx-auto max-w-xl px-6 py-8">
+    <div className="mx-auto max-w-xl px-4 py-8 md:px-6">
       <div className="mb-1 text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
         subscriptions / new
       </div>
@@ -177,7 +177,7 @@ export default function NewSubscriptionPage() {
                   </div>
                 </div>
                 {cycleKind === "CALENDAR" ? (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                       <label className={labelCls}>每</label>
                       <input name="cycleCount" type="number" min="1" defaultValue="1" required className={inputCls} />
@@ -198,7 +198,7 @@ export default function NewSubscriptionPage() {
                     <input name="fixedDays" type="number" min="1" placeholder="30" required className={inputCls} />
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <label className={labelCls}>标准价</label>
                     <input name="listPriceBase" type="number" step="0.01" min="0" placeholder="25.00" required className={inputCls} />

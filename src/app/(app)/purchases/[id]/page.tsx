@@ -42,7 +42,7 @@ export default async function PurchaseDetailPage({
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-6">
+      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             purchases / {purchase.category ?? "uncategorized"}
@@ -52,8 +52,8 @@ export default async function PurchaseDetailPage({
         <PurchaseHeaderActions purchaseId={purchase.id} archived={purchase.archived} />
       </header>
 
-      <div className="space-y-4 px-6 py-5">
-        <div className="grid grid-cols-4 gap-4">
+      <div className="space-y-4 px-4 py-5 md:px-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Kpi index="C1" label="买入价" value={fmt(purchase.amountBase)} sub={`购于 ${fmtDate(purchase.purchaseDate)}`} />
           <Kpi index="C2" label="持有天数" value={`${dayDiff(purchase.purchaseDate, today)}`} sub={
             purchase.expectedDays
@@ -154,11 +154,11 @@ export default async function PurchaseDetailPage({
         </div>
 
         {inUse && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Panel index="03" title="卖出登记">
               <form action={closePurchaseAction.bind(null, purchase.id)} className="space-y-4 px-4 py-4">
                 <input type="hidden" name="status" value="SOLD" />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">卖出日期</label>
                     <input name="endDate" type="date" defaultValue={todayIso} required className="w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white f-mono" />

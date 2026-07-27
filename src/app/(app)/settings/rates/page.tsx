@@ -22,7 +22,7 @@ export default async function RatesPage({
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-black bg-[#E4E3E0] px-6">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-black bg-[#E4E3E0] px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             settings / rates

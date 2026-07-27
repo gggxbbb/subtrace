@@ -28,7 +28,7 @@ export default async function RegisterPage({
           name="username"
           required
           autoComplete="username"
-          className="mb-4 w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white"
+          className="mb-4 min-h-[44px] w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white md:min-h-0"
         />
         <label className="mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
           密码
@@ -38,7 +38,7 @@ export default async function RegisterPage({
           type="password"
           required
           autoComplete="new-password"
-          className="mb-4 w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white"
+          className="mb-4 min-h-[44px] w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white md:min-h-0"
         />
         <label className="mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
           邀请 token（首个用户留空）
@@ -46,9 +46,9 @@ export default async function RegisterPage({
         <input
           name="invite"
           defaultValue={invite ?? ""}
-          className="mb-5 w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white f-mono"
+          className="mb-5 min-h-[44px] w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white f-mono md:min-h-0"
         />
-        <button className="w-full bg-black py-2 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800">
+        <button className="min-h-[44px] w-full bg-black py-2 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800 md:min-h-0">
           注册 →
         </button>
       </form>

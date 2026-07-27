@@ -40,7 +40,7 @@ export function RatesPanel({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <form action={(fd) => start(() => setBaseCurrencyAction(fd))} className="border border-black bg-white p-4">
           <label className={labelCls}>主币种（所有成本的计价单位）</label>
           <div className="flex gap-2">

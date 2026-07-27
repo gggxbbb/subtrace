@@ -145,7 +145,7 @@ export default async function SubscriptionDetailPage({
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-6">
+      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             subscriptions / {sub.category ?? "uncategorized"}
@@ -190,7 +190,7 @@ export default async function SubscriptionDetailPage({
         </div>
       </header>
 
-      <div className="space-y-4 px-6 py-5">
+      <div className="space-y-4 px-4 py-5 md:px-6">
         {sp.rechain === "1" && (() => {
           const plan = planRechain(sub.payments);
           if (!plan) return null;
@@ -204,7 +204,7 @@ export default async function SubscriptionDetailPage({
             />
           );
         })()}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Kpi
             index="B1"
             label="当前到期日"
@@ -272,7 +272,7 @@ export default async function SubscriptionDetailPage({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {isOwner ? (
             <Panel index="01" title="记一笔付费">
               <PaymentForm subscriptionId={sub.id} prefill={prefill} />
@@ -316,7 +316,7 @@ export default async function SubscriptionDetailPage({
         </div>
 
         {sub.usageKind && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Panel
               index="03"
               title={`用量录入${sub.script ? " · 脚本同步中" : ""}`}

@@ -15,7 +15,7 @@ export default function NewPurchasePage() {
   const today = isoDay(new Date());
 
   return (
-    <div className="mx-auto max-w-xl px-6 py-8">
+    <div className="mx-auto max-w-xl px-4 py-8 md:px-6">
       <div className="mb-1 text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
         purchases / new
       </div>
@@ -34,7 +34,7 @@ export default function NewPurchasePage() {
           <label className={labelCls}>分类（可选）</label>
           <input name="category" placeholder="数码 / 家具…" className={inputCls} />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className={labelCls}>买入价</label>
             <input name="amount" type="number" step="0.01" min="0" required className={inputCls} />
@@ -48,7 +48,7 @@ export default function NewPurchasePage() {
           <label className={labelCls}>折算主币种金额（快照，默认同买入价）</label>
           <input name="amountBase" type="number" step="0.01" min="0" placeholder="留空 = 买入价" className={inputCls} />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className={labelCls}>购买日期</label>
             <input name="purchaseDate" type="date" defaultValue={today} required className={`${inputCls} f-mono`} />

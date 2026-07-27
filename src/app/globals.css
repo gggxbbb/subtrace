@@ -39,3 +39,23 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* 移动端底线（ADR-0009，<md）：
+   可点元素 ≥44px；11px 数值/正文提到 12px；9–10px 装饰 mono 标签不动 */
+@media (max-width: 767px) {
+  main button,
+  main select,
+  main input:not([type="checkbox"]):not([type="hidden"]),
+  main textarea,
+  main header a {
+    min-height: 44px;
+  }
+  main td a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  main .text-\[11px\] {
+    font-size: 12px;
+  }
+}

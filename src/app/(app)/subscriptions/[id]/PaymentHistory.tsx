@@ -70,7 +70,7 @@ export function PaymentHistory({
             }}
             className="space-y-3 border-b border-black bg-[#E4E3E0] px-4 py-3"
           >
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
                 <label className={labelCls}>实付</label>
                 <input name="amount" type="number" step="0.01" min="0" defaultValue={p.amount ?? ""} placeholder="留空 = 未知" className={inputCls} />
@@ -84,7 +84,7 @@ export function PaymentHistory({
                 <input name="amountBase" type="number" step="0.01" min="0" defaultValue={p.amountBase ?? ""} placeholder="留空 = 未知" className={inputCls} />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
                 <label className={labelCls}>支付日期</label>
                 <input name="paidAt" type="date" defaultValue={p.paidAt} required className={`${inputCls} f-mono`} />
@@ -98,7 +98,7 @@ export function PaymentHistory({
                 <input name="periodEnd" type="date" defaultValue={p.periodEnd} required className={`${inputCls} f-mono`} />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
                 <label className={labelCls}>来源</label>
                 <select name="source" defaultValue={p.source} className={inputCls}>

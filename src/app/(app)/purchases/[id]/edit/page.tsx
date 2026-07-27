@@ -21,7 +21,7 @@ export default async function EditPurchasePage({ params }: { params: Promise<{ i
 
   return (
     <>
-      <header className="flex h-16 items-center border-b border-black bg-[#E4E3E0] px-6">
+      <header className="flex h-16 items-center border-b border-black bg-[#E4E3E0] px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             purchases / {purchase.name} / edit
@@ -29,9 +29,9 @@ export default async function EditPurchasePage({ params }: { params: Promise<{ i
           <h1 className="text-xl font-bold uppercase tracking-tight">编辑物品</h1>
         </div>
       </header>
-      <main className="mx-auto max-w-xl px-6 py-8">
+      <main className="mx-auto max-w-xl px-4 py-8 md:px-6">
         <PrefillForm action={updatePurchaseAction.bind(null, purchase.id)} className="space-y-4 border border-black bg-white p-5">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className={labelCls}>名称</label>
               <input name="name" defaultValue={purchase.name} required className={inputCls} />

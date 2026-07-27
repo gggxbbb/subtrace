@@ -67,7 +67,7 @@ export function SubscriptionEditForm({
             </div>
           </div>
           {cycleKind === "CALENDAR" ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label className={labelCls}>每</label>
                 <input name="cycleCount" type="number" min="1" defaultValue={initial.cycleCount} required className={inputCls} />
@@ -88,7 +88,7 @@ export function SubscriptionEditForm({
               <input name="fixedDays" type="number" min="1" defaultValue={initial.fixedDays ?? ""} placeholder="30" required className={inputCls} />
             </div>
           )}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className={labelCls}>标准价</label>
               <input name="listPriceBase" type="number" step="0.01" min="0" defaultValue={initial.listPriceBase ?? ""} required className={inputCls} />

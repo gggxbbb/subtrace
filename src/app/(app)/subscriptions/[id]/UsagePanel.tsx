@@ -337,7 +337,7 @@ export function UsageVerdictPanel({
     n.toLocaleString("zh-CN", { style: "currency", currency: "CNY" });
   return (
     <div className="px-4 py-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <div className="text-[9px] uppercase text-neutral-400 f-mono">已摊成本</div>
           <div className="text-lg font-bold tabular-nums">{fmtMoney(v.cost)}</div>

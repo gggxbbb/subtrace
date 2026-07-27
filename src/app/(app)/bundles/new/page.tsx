@@ -24,7 +24,7 @@ export default async function NewBundlePage() {
   });
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-8">
+    <div className="mx-auto max-w-3xl px-4 py-8 md:px-6">
       <div className="mb-1 text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
         bundles / new
       </div>
