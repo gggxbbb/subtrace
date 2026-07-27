@@ -44,7 +44,7 @@ function EventFields({ row }: { row?: EventRow }) {
               key={k}
               type="button"
               onClick={() => setKind(k)}
-              className={`px-2 py-1.5 text-[10px] uppercase f-mono ${kind === k ? "bg-black text-white" : "bg-white hover:bg-black/5"}`}
+              className={`px-2 py-1.5 text-[10px] uppercase f-mono ${kind === k ? "bg-black text-white" : "bg-white hover:bg-[#E4E3E0]"}`}
             >
               {EVENT_KIND_LABEL[k]}
             </button>

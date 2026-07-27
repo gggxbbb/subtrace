@@ -79,13 +79,13 @@ export default async function ReportsPage({
           <div className="grid grid-cols-2 gap-px border border-black bg-black">
             <Link
               href={`/reports?period=${currentPeriod.length > 4 ? currentPeriod : `${p.year}-${String(wallParts(new Date()).month + 1).padStart(2, "0")}`}`}
-              className={`px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${p.kind === "month" ? "bg-black text-white" : "bg-white hover:bg-black/5"}`}
+              className={`px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${p.kind === "month" ? "bg-black text-white" : "bg-white hover:bg-[#E4E3E0]"}`}
             >
               月
             </Link>
             <Link
               href={`/reports?period=${p.year}`}
-              className={`px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${p.kind === "year" ? "bg-black text-white" : "bg-white hover:bg-black/5"}`}
+              className={`px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${p.kind === "year" ? "bg-black text-white" : "bg-white hover:bg-[#E4E3E0]"}`}
             >
               年
             </Link>

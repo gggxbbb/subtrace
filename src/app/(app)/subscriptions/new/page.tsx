@@ -146,7 +146,7 @@ export default function NewSubscriptionPage() {
                     type="button"
                     key={m}
                     onClick={() => setMode(m)}
-                    className={`px-3 py-2 text-[11px] uppercase tracking-wider f-mono ${mode === m ? "bg-black text-white" : "bg-white hover:bg-black/5"}`}
+                    className={`px-3 py-2 text-[11px] uppercase tracking-wider f-mono ${mode === m ? "bg-black text-white" : "bg-white hover:bg-[#E4E3E0]"}`}
                   >
                     {label}
                   </button>
@@ -169,7 +169,7 @@ export default function NewSubscriptionPage() {
                         type="button"
                         key={k}
                         onClick={() => setCycleKind(k)}
-                        className={`px-3 py-2 text-[11px] uppercase tracking-wider f-mono ${cycleKind === k ? "bg-black text-white" : "bg-white hover:bg-black/5"}`}
+                        className={`px-3 py-2 text-[11px] uppercase tracking-wider f-mono ${cycleKind === k ? "bg-black text-white" : "bg-white hover:bg-[#E4E3E0]"}`}
                       >
                         {label}
                       </button>

@@ -46,7 +46,7 @@ export function ViewSwitcher({
       aria-pressed={view === v}
       title={label}
       className={`flex items-center gap-1 px-2.5 py-1 text-[10px] uppercase tracking-wider f-mono ${
-        view === v ? "bg-black text-white" : "bg-white hover:bg-black/5"
+        view === v ? "bg-black text-white" : "bg-white hover:bg-[#E4E3E0]"
       }`}
     >
       <Icon className="h-3 w-3" strokeWidth={2.5} /> {label}
