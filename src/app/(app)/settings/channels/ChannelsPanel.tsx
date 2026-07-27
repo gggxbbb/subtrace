@@ -27,10 +27,10 @@ function ChannelRow({ channel }: { channel: ChannelView }) {
   return (
     <div className="flex items-center gap-3 border-b border-neutral-200 px-4 py-3 last:border-0">
       <span
-        className={`inline-block h-2 w-2 rounded-full ${channel.enabled ? "bg-[#FF6B00]" : "bg-neutral-300"}`}
+        className={`inline-block h-2 w-2 shrink-0 rounded-full ${channel.enabled ? "bg-[#FF6B00]" : "bg-neutral-300"}`}
       />
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium">
+        <div className="truncate text-sm font-medium" title={channel.name}>
           {channel.name}
           <span className="ml-2 text-[9px] uppercase text-neutral-400 f-mono">{channel.kind}</span>
         </div>
@@ -46,21 +46,21 @@ function ChannelRow({ channel }: { channel: ChannelView }) {
             setTestResult(r.ok ? "✓ 测试消息已发送" : `✗ ${r.error}`);
           })
         }
-        className="border border-black bg-white px-2.5 py-1.5 text-[9px] uppercase tracking-wider f-mono hover:bg-black hover:text-white disabled:opacity-40"
+        className="shrink-0 border border-black bg-white px-2.5 py-1.5 text-[9px] uppercase tracking-wider f-mono hover:bg-black hover:text-white disabled:opacity-40"
       >
         试发
       </button>
       <button
         disabled={pending}
         onClick={() => start(() => toggleChannelAction(channel.id, !channel.enabled))}
-        className="border border-black bg-white px-2.5 py-1.5 text-[9px] uppercase tracking-wider f-mono hover:bg-black hover:text-white disabled:opacity-40"
+        className="shrink-0 border border-black bg-white px-2.5 py-1.5 text-[9px] uppercase tracking-wider f-mono hover:bg-black hover:text-white disabled:opacity-40"
       >
         {channel.enabled ? "停用" : "启用"}
       </button>
       <button
         disabled={pending}
         onClick={() => start(() => deleteChannelAction(channel.id))}
-        className="border border-black bg-white px-2.5 py-1.5 text-[9px] uppercase tracking-wider text-[#ef4444] f-mono hover:bg-[#ef4444] hover:text-white disabled:opacity-40"
+        className="shrink-0 border border-black bg-white px-2.5 py-1.5 text-[9px] uppercase tracking-wider text-[#ef4444] f-mono hover:bg-[#ef4444] hover:text-white disabled:opacity-40"
       >
         删除
       </button>

@@ -21,7 +21,7 @@ export function ArchivedPurchaseList({
     <div>
       {rows.map((r) => (
         <div key={r.id} className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 text-[13px] last:border-0">
-          <div>
+          <div className="min-w-0 truncate" title={r.name}>
             <a href={`/purchases/${r.id}`} className="font-medium hover:underline">
               {r.name}
             </a>
@@ -29,7 +29,7 @@ export function ArchivedPurchaseList({
               {r.category ?? "—"} · {r.status === "IN_USE" ? "持有中" : r.status === "SOLD" ? "已卖出" : "已报废"} · 购于 {r.purchaseDate}
             </span>
           </div>
-          <span className="flex items-center gap-1.5">
+          <span className="flex shrink-0 items-center gap-1.5">
             <button
               onClick={async () => setPurchaseArchivedAction(r.id, false)}
               className="border border-black bg-white px-2.5 py-1 text-[10px] uppercase hover:bg-black hover:text-white"

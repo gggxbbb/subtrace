@@ -69,9 +69,9 @@ export default async function DashboardPage() {
       <div className="space-y-4 px-6 py-5">
         {d.upcoming.length > 0 && (
           <div className="flex items-center justify-between border border-black bg-white px-4 py-2.5">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="h-4 w-4" style={{ color: ORANGE }} />
-              <span className="text-[13px]">
+            <div className="flex min-w-0 items-center gap-3">
+              <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: ORANGE }} />
+              <span className="truncate text-[13px]">
                 <span className="mr-2 border border-black bg-[#E4E3E0] px-1.5 py-0.5 text-[9px] uppercase tracking-wider f-mono">
                   待续费
                 </span>
@@ -81,7 +81,7 @@ export default async function DashboardPage() {
             </div>
             <Link
               href="/subscriptions"
-              className="text-[10px] uppercase tracking-wider underline underline-offset-2 f-mono"
+              className="shrink-0 text-[10px] uppercase tracking-wider underline underline-offset-2 f-mono"
             >
               查看全部 →
             </Link>
@@ -114,7 +114,7 @@ export default async function DashboardPage() {
             )}
             {d.upcoming.map((u) => (
               <div key={u.id} className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 last:border-0">
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <LedMatrix
                     rows={2}
                     cols={8}
@@ -128,14 +128,14 @@ export default async function DashboardPage() {
                         : false
                     }
                   />
-                  <div>
-                    <div className="text-[13px] font-medium">{u.name}</div>
+                  <div className="min-w-0">
+                    <div className="truncate text-[13px] font-medium" title={u.name}>{u.name}</div>
                     <div className="text-[9px] uppercase tracking-wider text-neutral-400 f-mono">
                       {fmtDate(u.date)} · {u.auto ? "auto" : "manual"}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex shrink-0 items-center gap-3">
                   <span className="text-sm font-bold tabular-nums">
                     {u.amount != null ? fmt(u.amount) : "—"}
                   </span>
@@ -159,14 +159,14 @@ export default async function DashboardPage() {
             )}
             {d.usageBoard.map((u) => (
               <a key={u.id} href={`/subscriptions/${u.id}`} className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 last:border-0 hover:bg-black/[0.03]">
-                <div>
-                  <div className="text-[13px] font-medium">{u.name}</div>
-                  <div className="text-[9px] text-neutral-400 f-mono">{u.detail}</div>
+                <div className="min-w-0">
+                  <div className="truncate text-[13px] font-medium" title={u.name}>{u.name}</div>
+                  <div className="truncate text-[9px] text-neutral-400 f-mono">{u.detail}</div>
                 </div>
                 {u.costUnknown ? (
-                  <span className="text-sm font-bold text-neutral-400 f-mono">成本未知</span>
+                  <span className="shrink-0 text-sm font-bold text-neutral-400 f-mono">成本未知</span>
                 ) : (
-                  <span className="flex items-center gap-1.5 text-sm font-bold tabular-nums f-mono">
+                  <span className="flex shrink-0 items-center gap-1.5 text-sm font-bold tabular-nums f-mono">
                     {u.verdictAmount >= 0 ? "+" : "−"}{fmt(Math.abs(u.verdictAmount))}
                     <Led color={u.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
                   </span>
@@ -185,9 +185,9 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-3 gap-px bg-white">
             {d.purchases.map((p) => (
               <a key={p.id} href={`/purchases/${p.id}`} className="block border border-neutral-200 bg-white px-4 py-3 hover:bg-black/[0.03]">
-                <div className="flex items-center justify-between">
-                  <span className="text-[13px] font-medium">{p.name}</span>
-                  <span className="text-[9px] uppercase text-neutral-400 f-mono">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-[13px] font-medium" title={p.name}>{p.name}</span>
+                  <span className="shrink-0 text-[9px] uppercase text-neutral-400 f-mono">
                     {p.status === "IN_USE" ? `${p.daysHeld}d held` : p.status === "SOLD" ? "已卖出" : "已报废"}
                   </span>
                 </div>

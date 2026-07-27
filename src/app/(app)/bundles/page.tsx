@@ -72,14 +72,16 @@ export default async function BundlesPage() {
         {archived.length > 0 && (
           <Panel index={String(bundles.length + 1).padStart(2, "0")} title={`已归档 / ${archived.length}`}>
             {archived.map((b) => (
-              <div key={b.id} className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 text-[13px] last:border-0">
-                <span>
+              <div key={b.id} className="flex items-center justify-between gap-3 border-b border-neutral-200 px-4 py-2.5 text-[13px] last:border-0">
+                <span className="min-w-0 truncate" title={b.name}>
                   {b.name}
                   <span className="ml-2 text-[10px] text-neutral-400 f-mono">
                     {fmt(b.totalAmountBase)} · {fmtDate(b.periodStart)} → {fmtDate(b.periodEnd)}
                   </span>
                 </span>
-                <BundleRowActions bundleId={b.id} archived />
+                <div className="shrink-0">
+                  <BundleRowActions bundleId={b.id} archived />
+                </div>
               </div>
             ))}
           </Panel>

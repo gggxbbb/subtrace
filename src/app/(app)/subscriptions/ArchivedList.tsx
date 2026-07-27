@@ -21,7 +21,7 @@ export function ArchivedList({
     <div>
       {rows.map((r) => (
         <div key={r.id} className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 text-[13px] last:border-0">
-          <div>
+          <div className="min-w-0 truncate" title={r.name}>
             <a href={`/subscriptions/${r.id}`} className="font-medium hover:underline">
               {r.name}
             </a>
@@ -30,7 +30,7 @@ export function ArchivedList({
             </span>
           </div>
           {confirmId === r.id ? (
-            <span className="flex items-center gap-1.5">
+            <span className="flex shrink-0 items-center gap-1.5">
               <button
                 onClick={async () => deleteSubscriptionAction(r.id)}
                 className="bg-red-700 px-2.5 py-1 text-[10px] uppercase text-white hover:bg-red-800"
@@ -47,7 +47,7 @@ export function ArchivedList({
           ) : (
             <button
               onClick={() => setConfirmId(r.id)}
-              className="border border-red-700 bg-white px-2.5 py-1 text-[10px] uppercase text-red-700 hover:bg-red-700 hover:text-white"
+              className="shrink-0 border border-red-700 bg-white px-2.5 py-1 text-[10px] uppercase text-red-700 hover:bg-red-700 hover:text-white"
             >
               删除
             </button>

@@ -92,19 +92,24 @@ export function Panel({
 }) {
   return (
     <section className="flex flex-col border border-black bg-white">
-      <header className="flex shrink-0 items-center justify-between border-b border-black px-4 py-2.5">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.15em] f-mono">
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-black px-4 py-2.5">
+        <span
+          className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.15em] f-mono"
+          title={`${index} — ${title}`}
+        >
           <span className="text-neutral-400">{index}</span> — {title}
         </span>
-        {actions ??
-          (action && (
+        <div className="shrink-0">
+          {actions ??
+            (action && (
             <a
               href={href}
-              className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-black"
+              className="flex shrink-0 items-center gap-1 text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-black"
             >
               {action} <ArrowRight className="h-3 w-3" />
             </a>
           ))}
+        </div>
       </header>
       <div className="flex-1">{children}</div>
     </section>
@@ -126,16 +131,16 @@ export function Kpi({
 }) {
   return (
     <div className="border border-black bg-white p-4">
-      <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
-        <span>{label}</span>
-        <span className="flex items-center gap-1.5 text-neutral-400">
+      <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+        <span className="min-w-0 truncate" title={label}>{label}</span>
+        <span className="flex shrink-0 items-center gap-1.5 text-neutral-400">
           {index} {led && <Led color={led} />}
         </span>
       </div>
-      <div className="mt-2 text-[28px] font-bold leading-none tracking-tight tabular-nums">
+      <div className="mt-2 truncate text-[28px] font-bold leading-none tracking-tight tabular-nums" title={value}>
         {value}
       </div>
-      <div className="mt-2 text-[10px] text-neutral-500 f-mono">{sub}</div>
+      <div className="mt-2 truncate text-[10px] text-neutral-500 f-mono" title={sub}>{sub}</div>
     </div>
   );
 }

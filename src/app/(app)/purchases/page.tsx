@@ -49,9 +49,9 @@ export default async function PurchasesPage() {
           <div className="grid grid-cols-3 gap-px bg-white">
             {rows.map((p) => (
               <Link key={p.id} href={`/purchases/${p.id}`} className="block border border-neutral-200 bg-white px-4 py-3 hover:bg-black/[0.03]">
-                <div className="flex items-center justify-between">
-                  <span className="text-[13px] font-medium">{p.name}</span>
-                  <span className="text-[9px] uppercase text-neutral-400 f-mono">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-[13px] font-medium" title={p.name}>{p.name}</span>
+                  <span className="shrink-0 text-[9px] uppercase text-neutral-400 f-mono">
                     {p.status === "IN_USE" ? `${p.daysHeld}d held` : p.status === "SOLD" ? "已卖出" : "已报废"}
                   </span>
                 </div>
