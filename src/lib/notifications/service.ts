@@ -51,6 +51,41 @@ export async function setChannelEnabled(userId: string, channelId: string, enabl
   await prisma.notificationChannel.updateMany({ where: { id: channelId, userId }, data: { enabled } });
 }
 
+/** 视图脱敏时下剥的敏感头名（与 toView 同口径） */
+const SENSITIVE_HEADERS = ["authorization", "x-api-key", "token"];
+
+/**
+ * 原地更新渠道：仅名称与配置可改，类型与启停状态不被触碰。
+ * 密钥语义：pass / 敏感头（authorization、x-api-key、token）在输入中缺席 = 保留原值
+ * （客户端拿不到这些字段，编辑提交自然缺席）；显式提供 = 替换。
+ */
+export async function updateChannel(
+  userId: string,
+  channelId: string,
+  input: { name: string; config: Record<string, unknown> },
+): Promise<void> {
+  const existing = await prisma.notificationChannel.findFirst({ where: { id: channelId, userId } });
+  if (!existing) throw new Error("渠道不存在 channel_not_found");
+  const oldConfig = JSON.parse(existing.config) as Record<string, unknown>;
+  const config: Record<string, unknown> = { ...input.config };
+
+  if (config.pass === undefined && oldConfig.pass !== undefined) config.pass = oldConfig.pass;
+
+  const oldHeaders = (oldConfig.headers ?? {}) as Record<string, string>;
+  const newHeaders = { ...((config.headers ?? {}) as Record<string, string>) };
+  for (const [k, v] of Object.entries(oldHeaders)) {
+    if (SENSITIVE_HEADERS.includes(k.toLowerCase()) && !(k in newHeaders)) newHeaders[k] = v;
+  }
+  if (config.headers !== undefined || Object.keys(newHeaders).length > 0) {
+    config.headers = newHeaders;
+  }
+
+  await prisma.notificationChannel.updateMany({
+    where: { id: channelId, userId },
+    data: { name: input.name, config: JSON.stringify(config) },
+  });
+}
+
 export async function deleteChannel(userId: string, channelId: string): Promise<void> {
   await prisma.notificationChannel.deleteMany({ where: { id: channelId, userId } });
 }
