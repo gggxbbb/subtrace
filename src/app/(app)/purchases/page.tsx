@@ -4,7 +4,7 @@ import { Plus } from "lucide-react";
 import { Panel, ORANGE, fmt, fmtDate } from "@/components/te";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
 import { ListToolbar } from "@/components/ListToolbar";
-import { matchesKeyword, sortBy, type SortDir } from "@/lib/list-query";
+import { matchesKeyword, parseListQuery, sortBy } from "@/lib/list-query";
 import { getCurrentUser } from "@/lib/auth/session";
 import { breakevenProgress, dayDiff, purchaseCurrentDailyRate } from "@/lib/cost-engine";
 import { listArchivedPurchases, listPurchases, toEnginePurchase } from "@/lib/purchases/service";
@@ -139,16 +139,8 @@ export default async function PurchasesPage({
   const all = await buildRows(user.id);
   const archived = await listArchivedPurchases(user.id);
   const sp = await searchParams;
-  const str = (k: string) => {
-    const v = sp[k];
-    return typeof v === "string" && v ? v : undefined;
-  };
-
-  const sortKey = str("sort") as SortKey | undefined;
-  const dir: SortDir = str("dir") === "desc" ? "desc" : "asc";
-  const cat = str("cat");
-  const status = str("status");
-  const q = str("q");
+  const { sort: sortRaw, dir, cat, status, q } = parseListQuery(sp);
+  const sortKey = sortRaw as SortKey | undefined;
 
   let rows = all;
   if (cat) rows = rows.filter((r) => r.category === cat);

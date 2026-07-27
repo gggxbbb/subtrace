@@ -36,3 +36,26 @@ export function subStatusOf(s: { status: string; daysUntilExpiry: number | null 
 export function matchesKeyword(text: string, q: string): boolean {
   return text.toLowerCase().includes(q.trim().toLowerCase());
 }
+
+/** 列表页 URL 查询：sort/dir/cat/status/q（searchParams 原始记录 → 规范形态） */
+export interface ListQuery {
+  sort?: string;
+  dir: SortDir;
+  cat?: string;
+  status?: string;
+  q?: string;
+}
+
+export function parseListQuery(sp: Record<string, string | string[] | undefined>): ListQuery {
+  const str = (k: string) => {
+    const v = sp[k];
+    return typeof v === "string" && v ? v : undefined;
+  };
+  return {
+    sort: str("sort"),
+    dir: str("dir") === "desc" ? "desc" : "asc",
+    cat: str("cat"),
+    status: str("status"),
+    q: str("q"),
+  };
+}

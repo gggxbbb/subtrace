@@ -57,10 +57,6 @@ const NAV: { group: string; items: NavItem[] }[] = [
 
 const WORKBENCH = NAV[0].items;
 
-function visible(items: NavItem[], role: string, canUseScripts: boolean) {
-  return items.filter((it) => (!it.adminOnly || role === "ADMIN") && (!it.trustedOnly || canUseScripts));
-}
-
 /** 分组导航链接（侧边栏与移动抽屉共用） */
 function NavGroups({
   role,
@@ -80,7 +76,9 @@ function NavGroups({
             {g.group}
           </div>
           <div className="mt-1.5 space-y-0.5">
-            {visible(g.items, role, canUseScripts).map((it) => {
+            {g.items
+              .filter((it) => (!it.adminOnly || role === "ADMIN") && (!it.trustedOnly || canUseScripts))
+              .map((it) => {
               const active = pathname.startsWith(it.href);
               const cls = `flex items-center gap-2.5 px-2 py-1.5 text-[13px] font-medium ${
                 active
