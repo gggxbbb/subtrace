@@ -206,9 +206,9 @@ function ChannelRow({ channel }: { channel: ChannelView }) {
               <label className={labelCls}>名称</label>
               <input name="name" required defaultValue={channel.name} className={inputCls} />
             </div>
-            <div>
+            <div className="flex flex-col">
               <label className={labelCls}>类型</label>
-              <div className="border border-neutral-300 bg-neutral-100 px-3 py-2 text-[10px] uppercase tracking-wider text-neutral-500 f-mono">
+              <div className="flex flex-1 items-center border border-neutral-300 bg-neutral-100 px-3 py-2 text-[10px] uppercase tracking-wider text-neutral-500 f-mono">
                 {channel.kind === "WEBHOOK" ? "Webhook（不可改）" : "SMTP 邮件（不可改）"}
               </div>
             </div>
@@ -267,15 +267,15 @@ export function ChannelsPanel({ channels }: { channels: ChannelView[] }) {
               <label className={labelCls}>名称</label>
               <input name="name" required placeholder="我的 Bark / 邮箱" className={inputCls} />
             </div>
-            <div>
+            <div className="flex flex-col">
               <label className={labelCls}>类型</label>
-              <div className="flex border border-black">
+              <div className="flex flex-1 border border-black">
                 {(["WEBHOOK", "EMAIL"] as const).map((k) => (
                   <button
                     key={k}
                     type="button"
                     onClick={() => setKind(k)}
-                    className={`flex-1 px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${
+                    className={`flex flex-1 items-center justify-center px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${
                       kind === k ? "bg-black text-white" : "bg-white hover:bg-black/5"
                     }`}
                   >

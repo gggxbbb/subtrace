@@ -131,15 +131,15 @@ export function RatesPanel({
             <label className={labelCls}>1 原币 = N {baseCurrency}</label>
             <input name="rateToBase" required type="number" step="0.0001" min="0.0001" placeholder="7.25" className={`${inputCls} f-mono`} />
           </div>
-          <div>
+          <div className="flex flex-col self-stretch">
             <label className={labelCls}>模式</label>
-            <div className="flex border border-black">
+            <div className="flex flex-1 border border-black">
               {(["MANUAL", "AUTO"] as const).map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setMode(m)}
-                  className={`px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${
+                  className={`flex flex-1 items-center justify-center px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${
                     mode === m ? "bg-black text-white" : "bg-white hover:bg-black/5"
                   }`}
                 >
@@ -149,7 +149,7 @@ export function RatesPanel({
             </div>
             <input type="hidden" name="mode" value={mode} />
           </div>
-          <button disabled={pending} className="border border-black bg-black px-4 py-2 text-[10px] uppercase tracking-wider text-white f-mono hover:bg-[#FF6B00] hover:border-[#FF6B00] disabled:opacity-40">
+          <button disabled={pending} className="h-[38px] shrink-0 border border-black bg-black px-4 text-[10px] uppercase tracking-wider text-white f-mono hover:bg-[#FF6B00] hover:border-[#FF6B00] disabled:opacity-40">
             添加
           </button>
         </form>
