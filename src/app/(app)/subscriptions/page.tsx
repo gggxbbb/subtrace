@@ -3,6 +3,8 @@ import { isoDay } from "@/lib/dates";
 import { Plus } from "lucide-react";
 import { Led, ORANGE, Panel, fmt, fmtDate } from "@/components/te";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
+import { ListToolbar } from "@/components/ListToolbar";
+import { matchesKeyword, sortBy, subStatusOf, type SortDir } from "@/lib/list-query";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getDashboardData, type DashboardRow } from "@/lib/dashboard";
 import { listArchivedSubscriptions } from "@/lib/subscriptions/service";
@@ -10,26 +12,28 @@ import { ArchivedList } from "./ArchivedList";
 
 type Row = DashboardRow;
 
-/** 到期状态徽标：表格与卡片视图共用 */
+/** 到期状态徽标：表格与卡片视图共用（口径同 subStatusOf） */
 function StatusPill({ s }: { s: Row }) {
-  if (s.status === "CANCELLED") {
+  const st = subStatusOf(s);
+  if (st === "cancelled") {
     return (
       <span className="flex w-fit shrink-0 items-center gap-1.5 px-1.5 py-0.5 text-[9px] uppercase f-mono">
         <Led color="#ef4444" /> 已取消
       </span>
     );
   }
-  if (s.daysUntilExpiry !== null && s.daysUntilExpiry < 0) {
+  if (st === "expired") {
+    // subStatusOf 已担保 daysUntilExpiry < 0
     return (
       <span className="flex w-fit shrink-0 items-center gap-1.5 px-1.5 py-0.5 text-[9px] uppercase text-white f-mono" style={{ background: "#ef4444" }}>
-        <Led color="#fff" /> 过期 {-s.daysUntilExpiry}d
+        <Led color="#fff" /> 过期 {-s.daysUntilExpiry!}d
       </span>
     );
   }
-  if (s.daysUntilExpiry !== null && s.daysUntilExpiry <= 14) {
+  if (st === "soon") {
     return (
       <span className="flex w-fit shrink-0 items-center gap-1.5 px-1.5 py-0.5 text-[9px] uppercase text-white f-mono" style={{ background: ORANGE }}>
-        <Led color="#fff" /> {s.daysUntilExpiry}d
+        <Led color="#fff" /> {s.daysUntilExpiry!}d
       </span>
     );
   }
@@ -132,10 +136,43 @@ function SubscriptionCards({ rows }: { rows: Row[] }) {
   );
 }
 
-export default async function SubscriptionsPage() {
+const SORT_KEYS = {
+  name: { label: "名称", key: (r: Row) => r.name },
+  expiry: { label: "到期日", key: (r: Row) => r.expiry },
+  daily: { label: "日均", key: (r: Row) => r.dailyCost },
+  monthly: { label: "月均", key: (r: Row) => r.monthlyCost },
+} as const;
+type SortKey = keyof typeof SORT_KEYS;
+
+export default async function SubscriptionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = (await getCurrentUser())!;
   const d = await getDashboardData(user.id);
   const archived = await listArchivedSubscriptions(user.id);
+  const sp = await searchParams;
+  const str = (k: string) => {
+    const v = sp[k];
+    return typeof v === "string" && v ? v : undefined;
+  };
+
+  const sortKey = str("sort") as SortKey | undefined;
+  const dir: SortDir = str("dir") === "desc" ? "desc" : "asc";
+  const cat = str("cat");
+  const status = str("status");
+  const q = str("q");
+
+  let rows = d.rows;
+  if (cat) rows = rows.filter((r) => r.category === cat);
+  if (status) rows = rows.filter((r) => subStatusOf(r) === status);
+  if (q) rows = rows.filter((r) => matchesKeyword(r.name, q));
+  if (sortKey && SORT_KEYS[sortKey]) rows = sortBy(rows, dir, SORT_KEYS[sortKey].key);
+
+  const categories = Array.from(
+    new Set(d.rows.map((r) => r.category).filter((c): c is string => !!c)),
+  ).sort();
 
   return (
     <>
@@ -158,14 +195,27 @@ export default async function SubscriptionsPage() {
         <ViewSwitcher
           storageKey="subtrace:view:subscriptions"
           desktopDefault="list"
+          toolbar={
+            <ListToolbar
+              sortOptions={Object.entries(SORT_KEYS).map(([value, o]) => ({ value, label: o.label }))}
+              statusOptions={[
+                { value: "ok", label: "正常" },
+                { value: "soon", label: "临期" },
+                { value: "expired", label: "已过期" },
+                { value: "cancelled", label: "已取消" },
+              ]}
+              categories={categories}
+              current={{ sort: sortKey, dir, cat, status, q }}
+            />
+          }
           list={
-            <Panel index="01" title={`全部订阅 / ${d.rows.length}`}>
-              <SubscriptionTable rows={d.rows} />
+            <Panel index="01" title={`全部订阅 / ${rows.length}`}>
+              <SubscriptionTable rows={rows} />
             </Panel>
           }
           card={
-            <Panel index="01" title={`全部订阅 / ${d.rows.length}`}>
-              <SubscriptionCards rows={d.rows} />
+            <Panel index="01" title={`全部订阅 / ${rows.length}`}>
+              <SubscriptionCards rows={rows} />
             </Panel>
           }
         />

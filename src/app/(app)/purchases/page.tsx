@@ -3,6 +3,8 @@ import { isoDay } from "@/lib/dates";
 import { Plus } from "lucide-react";
 import { Panel, ORANGE, fmt, fmtDate } from "@/components/te";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
+import { ListToolbar } from "@/components/ListToolbar";
+import { matchesKeyword, sortBy, type SortDir } from "@/lib/list-query";
 import { getCurrentUser } from "@/lib/auth/session";
 import { breakevenProgress, dayDiff, purchaseCurrentDailyRate } from "@/lib/cost-engine";
 import { listArchivedPurchases, listPurchases, toEnginePurchase } from "@/lib/purchases/service";
@@ -118,10 +120,43 @@ function PurchaseTable({ rows }: { rows: Row[] }) {
   );
 }
 
-export default async function PurchasesPage() {
+const SORT_KEYS = {
+  name: { label: "名称", key: (r: Row) => r.name },
+  purchaseDate: { label: "购入日期", key: (r: Row) => r.purchaseDate },
+  daily: { label: "日均", key: (r: Row) => r.dailyCost },
+  amount: { label: "金额", key: (r: Row) => r.amountBase },
+} as const;
+type SortKey = keyof typeof SORT_KEYS;
+
+export default async function PurchasesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = (await getCurrentUser())!;
-  const rows = await buildRows(user.id);
+  const all = await buildRows(user.id);
   const archived = await listArchivedPurchases(user.id);
+  const sp = await searchParams;
+  const str = (k: string) => {
+    const v = sp[k];
+    return typeof v === "string" && v ? v : undefined;
+  };
+
+  const sortKey = str("sort") as SortKey | undefined;
+  const dir: SortDir = str("dir") === "desc" ? "desc" : "asc";
+  const cat = str("cat");
+  const status = str("status");
+  const q = str("q");
+
+  let rows = all;
+  if (cat) rows = rows.filter((r) => r.category === cat);
+  if (status) rows = rows.filter((r) => r.status === status);
+  if (q) rows = rows.filter((r) => matchesKeyword(r.name, q));
+  if (sortKey && SORT_KEYS[sortKey]) rows = sortBy(rows, dir, SORT_KEYS[sortKey].key);
+
+  const categories = Array.from(
+    new Set(all.map((r) => r.category).filter((c): c is string => !!c)),
+  ).sort();
 
   return (
     <>
@@ -144,6 +179,18 @@ export default async function PurchasesPage() {
         <ViewSwitcher
           storageKey="subtrace:view:purchases"
           desktopDefault="card"
+          toolbar={
+            <ListToolbar
+              sortOptions={Object.entries(SORT_KEYS).map(([value, o]) => ({ value, label: o.label }))}
+              statusOptions={[
+                { value: "IN_USE", label: "使用中" },
+                { value: "SOLD", label: "已卖出" },
+                { value: "RETIRED", label: "已报废" },
+              ]}
+              categories={categories}
+              current={{ sort: sortKey, dir, cat, status, q }}
+            />
+          }
           card={
             <Panel index="01" title={`全部物品 / ${rows.length}`}>
               <PurchaseCards rows={rows} />

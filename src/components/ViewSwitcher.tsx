@@ -14,11 +14,14 @@ export function ViewSwitcher({
   desktopDefault,
   list,
   card,
+  toolbar,
 }: {
   storageKey: string;
   desktopDefault: ViewKind;
   list: React.ReactNode;
   card: React.ReactNode;
+  /** 面板上方工具栏（排序/筛选控件），与切换按钮同行 */
+  toolbar?: React.ReactNode;
 }) {
   const [view, setView] = useState<ViewKind>(desktopDefault);
 
@@ -52,8 +55,9 @@ export function ViewSwitcher({
 
   return (
     <div>
-      <div className="mb-2 flex justify-end">
-        <div className="flex gap-px border border-black bg-black">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        {toolbar ?? <span />}
+        <div className="flex shrink-0 gap-px border border-black bg-black">
           {btn("card", LayoutGrid, "卡片")}
           {btn("list", List, "列表")}
         </div>
