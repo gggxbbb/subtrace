@@ -14,29 +14,53 @@
   font-family: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 
+/* 语义色 token（dark-mode 01）：浅色值 = 原硬编码值；.dark 下翻转（暖黑镜像，spec 色板）。
+   此后组件只写语义类（bg-base/bg-surface/text-ink/border-line…），不写 hex。 */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --base: #e4e3e0; /* 页面底 */
+  --surface: #ffffff; /* 面板底 */
+  --ink: #000000; /* 主文字 / 描边 / 实底按钮 */
+  --accent: #ff5a00;
+  --muted: #737373; /* 次级文字（neutral-500） */
+  --faint: #a3a3a3; /* 装饰/占位文字（neutral-400） */
+  --line: #e5e5e5; /* 细分隔线（neutral-200） */
+  --band: #f5f5f5; /* 浅底带（neutral-100，推算段行） */
+  --destructive: #b91c1c; /* red-700 */
+  --income: #0f766e; /* teal-700 */
+}
+
+.dark {
+  --base: #1c1b1a;
+  --surface: #262522;
+  --ink: #e8e7e4;
+  --accent: #ff5a00;
+  --muted: #a3a09b;
+  --faint: #6e6b66;
+  --line: #3a3835;
+  --band: #302e2b;
+  --destructive: #ef4444;
+  --income: #2dd4bf;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-base: var(--base);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-band: var(--band);
+  --color-destructive: var(--destructive);
+  --color-income: var(--income);
   --font-sans: "JetBrains Mono", system-ui, -apple-system, "Segoe UI", "PingFang SC",
     "HarmonyOS Sans SC", "MiSans VF", "MiSans", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--base);
+  color: var(--ink);
   font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "HarmonyOS Sans SC",
     "MiSans VF", "MiSans", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
 }
