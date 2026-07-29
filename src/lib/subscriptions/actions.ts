@@ -39,6 +39,8 @@ export async function createSubscriptionAction(formData: FormData) {
 
   const trackingMode = String(formData.get("trackingMode")) as "CYCLE" | "MANUAL";
   const cycleKind = String(formData.get("cycleKind") ?? "") || undefined;
+  if (!String(formData.get("name") ?? "").trim()) redirect("/subscriptions/new?error=1");
+  let createdId: string;
   try {
     // 标准价三件套仅周期模式渲染（ADR-0010 决策树兜底）
     const list =
@@ -67,9 +69,8 @@ export async function createSubscriptionAction(formData: FormData) {
       remindDays: parseRemindDaysField(formData.get("remindDays")),
       startDate: dayField(formData.get("startDate")),
     };
-    if (!input.name.trim()) redirect("/subscriptions/new?error=1");
     const created = await createSubscription(user.id, input);
-    const createdId = created.id;
+    createdId = created.id;
     // 同时记一笔付费（推荐路径）：到期日与成本立即以实付为准
     if (formData.get("firstPayment") !== null) {
       const first = await resolveMoney(formData, user, { prefix: "first", allowUnknown: true });
@@ -100,10 +101,10 @@ export async function createSubscriptionAction(formData: FormData) {
     }
     redirect(`/subscriptions/${createdId}`);
   } catch (e) {
-    if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
     if (e instanceof NoRateError) redirect("/subscriptions/new?error=fx");
     redirect("/subscriptions/new?error=1");
   }
+  redirect(`/subscriptions/${createdId}`);
 }
 
 export async function recordPaymentAction(subscriptionId: string, formData: FormData) {

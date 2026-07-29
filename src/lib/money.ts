@@ -36,6 +36,8 @@ export interface ResolveMoneyOptions {
   names?: { amount: string; currency: string; amountBase: string };
   /** 金额留空 = 金额未知（ticket 12）：输出三字段全 null */
   allowUnknown?: boolean;
+  /** 金额必须为正（追加费用/收益等不可为 0 或负） */
+  requirePositive?: boolean;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -56,6 +58,7 @@ export async function resolveMoney(
     if (opts.allowUnknown) return { amount: null, currency: null, amountBase: null };
     throw new BadAmountError();
   }
+  if (opts.requirePositive && amount <= 0) throw new BadAmountError();
 
   const base = user.baseCurrency;
   const rawCur = String(formData.get(names.currency) ?? "").trim().toUpperCase();

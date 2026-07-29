@@ -16,8 +16,7 @@ import {
   deletePurchaseIncome,
   setPurchaseArchived,
   updatePurchaseIncome,
-  updatePurchase,
-  type PurchaseInput,
+  updatePurchase
 } from "./service";
 
 
@@ -25,10 +24,11 @@ import {
 export async function createPurchaseAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  if (!String(formData.get("name") ?? "").trim()) redirect("/purchases/new?error=1");
   let createdId: string;
   try {
     const money = await resolveMoney(formData, user);
-    const input: PurchaseInput = {
+    createdId = (await createPurchase(user.id, {
       name: String(formData.get("name") ?? ""),
       category: String(formData.get("category") ?? "") || undefined,
       amount: money.amount!,
@@ -36,11 +36,8 @@ export async function createPurchaseAction(formData: FormData) {
       amountBase: money.amountBase!,
       purchaseDate: dayField(formData.get("purchaseDate")),
       expectedDays: numField(formData.get("expectedDays")),
-    };
-    if (!input.name.trim()) redirect("/purchases/new?error=1");
-    createdId = (await createPurchase(user.id, input)).id;
+    })).id;
   } catch (e) {
-    if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
     if (e instanceof NoRateError) redirect("/purchases/new?error=fx");
     redirect("/purchases/new?error=1");
   }
@@ -90,7 +87,7 @@ export async function addPurchaseIncomeAction(purchaseId: string, formData: Form
   const back = formData.get("back");
   const sep = back ? "&" : "";
   try {
-    const money = await resolveMoney(formData, user);
+    const money = await resolveMoney(formData, user, { requirePositive: true });
     await addPurchaseIncome(user.id, purchaseId, {
       amount: money.amount!,
       currency: money.currency!,
@@ -136,7 +133,7 @@ export async function updatePurchaseIncomeAction(purchaseId: string, incomeId: s
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   try {
-    const money = await resolveMoney(formData, user);
+    const money = await resolveMoney(formData, user, { requirePositive: true });
     await updatePurchaseIncome(user.id, incomeId, {
       amount: money.amount!,
       currency: money.currency!,
@@ -156,7 +153,7 @@ export async function addPurchaseEventAction(purchaseId: string, formData: FormD
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   try {
-    const money = await resolveMoney(formData, user);
+    const money = await resolveMoney(formData, user, { requirePositive: true });
     await addPurchaseEvent(user.id, purchaseId, {
       kind: String(formData.get("kind") ?? "OTHER") as "ACCESSORY" | "REPAIR" | "OTHER",
       amount: money.amount!,
@@ -180,7 +177,7 @@ export async function updatePurchaseEventAction(purchaseId: string, eventId: str
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   try {
-    const money = await resolveMoney(formData, user);
+    const money = await resolveMoney(formData, user, { requirePositive: true });
     await updatePurchaseEvent(user.id, eventId, {
       kind: String(formData.get("kind") ?? "OTHER") as "ACCESSORY" | "REPAIR" | "OTHER",
       amount: money.amount!,

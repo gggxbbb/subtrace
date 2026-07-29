@@ -3,7 +3,7 @@
 import { dayStart, fromWall } from "./dates";
 import { dayDiff } from "./cost-engine";
 import { listSubscriptions } from "./subscriptions/service";
-import { costOverPeriod, paidInPeriod, paidNet } from "./subscriptions/cost-view";
+import { costOverPeriod, paidInPeriod } from "./subscriptions/cost-view";
 import { listPurchases } from "./purchases/service";
 import { isoDay } from "./dates";
 

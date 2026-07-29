@@ -15,7 +15,6 @@ import { RechainBanner } from "./RechainBanner";
 import {
   beneficiaryRows as serviceBeneficiaryRows,
   listBeneficiaryCandidates,
-  shareForViewer,
 } from "@/lib/beneficiaries/service";
 import { getUsageVerdict, listUsage } from "@/lib/usage/service";
 import { PaymentForm } from "./PaymentForm";
@@ -65,7 +64,7 @@ export default async function SubscriptionDetailPage({
     periodStart: iso(prefillRaw.periodStart),
     periodEnd: iso(prefillRaw.periodEnd),
     amount: prefillRaw.amountBase,
-    currency: sub.listCurrency ?? "CNY",
+    currency: sub.listCurrency ?? cur,
   };
 
   const usageRecords = sub.usageKind ? await listUsage(sub.id) : [];

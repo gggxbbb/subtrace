@@ -30,7 +30,7 @@ export interface EventRow {
 
 const today = () => isoDay(new Date());
 
-function EventFields({ row }: { row?: EventRow }) {
+function EventFields({ row, currency }: { row?: EventRow; currency: string }) {
   const [kind, setKind] = useState(row?.kind ?? "ACCESSORY");
   return (
     <>
@@ -50,7 +50,7 @@ function EventFields({ row }: { row?: EventRow }) {
           ))}
         </div>
       </div>
-      <MoneyFields layout="inline" defaults={{ amount: row?.amount, currency: row?.currency ?? "CNY", amountBase: row?.amountBase }} />
+      <MoneyFields layout="inline" defaults={{ amount: row?.amount, currency: row?.currency ?? currency, amountBase: row?.amountBase }} />
       <div>
         <label className={labelCls}>日期</label>
         <input name="date" type="date" defaultValue={row?.date ?? today()} required className={`${inputCls} f-mono`} />
@@ -106,7 +106,7 @@ export function PurchaseEventsPanel({
 
       {adding && (
         <form action={addPurchaseEventAction.bind(null, purchaseId)} className="mb-3 flex items-end gap-2 border border-black bg-[#E4E3E0] p-3">
-          <EventFields />
+          <EventFields currency={currency} />
           <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
             保存 →
           </button>
@@ -120,7 +120,7 @@ export function PurchaseEventsPanel({
       {events.map((e) =>
         editingId === e.id ? (
           <form key={e.id} action={updatePurchaseEventAction.bind(null, purchaseId, e.id)} className="mb-2 flex items-end gap-2 border border-black bg-[#E4E3E0] p-3">
-            <EventFields row={e} />
+            <EventFields row={e} currency={currency} />
             <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
               保存
             </button>

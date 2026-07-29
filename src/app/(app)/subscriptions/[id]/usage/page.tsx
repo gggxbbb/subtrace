@@ -32,6 +32,7 @@ export default async function UsageWizardPage({ params }: { params: Promise<{ id
           initialAltUnitPrice={sub.altUnitPrice}
           initialQuotaTotal={sub.quotaTotal}
           recordCount={recordCount}
+          currency={user.baseCurrency}
         />
       </main>
     </>

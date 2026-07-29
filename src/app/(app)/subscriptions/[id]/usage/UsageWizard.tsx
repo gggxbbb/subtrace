@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Led } from "@/components/te";
+import { fmtMoney } from "@/lib/format";
 import { setUsageConfigAction, disableUsageAction, purgeUsageAction } from "@/lib/usage/actions";
 
 const inputCls =
@@ -20,6 +21,7 @@ export function UsageWizard({
   initialAltUnitPrice,
   initialQuotaTotal,
   recordCount,
+  currency,
 }: {
   subscriptionId: string;
   initialKind: Kind | null;
@@ -28,6 +30,7 @@ export function UsageWizard({
   initialQuotaTotal: number | null;
   /** 已有用量记录条数（用于重设警告） */
   recordCount: number;
+  currency: string;
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -57,7 +60,7 @@ export function UsageWizard({
                 ["当前类型", initialKind === "COUNT" ? "计数型" : "额度型"],
                 ["单位", initialUnit ?? "（未填）"],
                 ...(initialKind === "COUNT"
-                  ? [["替代单价", initialAltUnitPrice != null ? `¥${initialAltUnitPrice}` : "（未填）"]]
+                  ? [["替代单价", initialAltUnitPrice != null ? fmtMoney(initialAltUnitPrice, currency) : "（未填）"]]
                   : [["每月总额度", initialQuotaTotal != null ? `${initialQuotaTotal}` : "（未填）"]]),
                 ["已有记录", `${recordCount} 条`],
               ] as const
@@ -272,7 +275,7 @@ export function UsageWizard({
                   ["类型", kind === "COUNT" ? "计数型（按次算回本）" : "额度型（看使用率）"],
                   ["单位", unit || "（未填）"],
                   ...(kind === "COUNT"
-                    ? [["替代单价", altUnitPrice ? `¥${altUnitPrice} / ${unit || "次"}` : "（未填）"]]
+                    ? [["替代单价", altUnitPrice ? `${fmtMoney(Number(altUnitPrice), currency)} / ${unit || "次"}` : "（未填）"]]
                     : [["每月总额度", quotaTotal ? `${quotaTotal} ${unit || ""}` : "（未填）"]]),
                 ] as const
               ).map(([k, v]) => (

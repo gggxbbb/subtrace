@@ -81,7 +81,7 @@ export function PurchaseIncomePanel({
   return (
     <div className="px-4 py-4">
       <form action={addPurchaseIncomeAction.bind(null, purchaseId)} className="mb-3 flex items-end gap-2">
-        <MoneyFields layout="inline" defaults={{ currency: "CNY" }} />
+        <MoneyFields layout="inline" defaults={{ currency }} />
         <div className="flex-1">
           <label className={labelCls}>日期</label>
           <input name="date" type="date" defaultValue={today} required className={`${inputCls} f-mono`} />

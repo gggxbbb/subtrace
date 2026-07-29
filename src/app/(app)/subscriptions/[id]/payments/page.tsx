@@ -88,7 +88,7 @@ export default async function PaymentsPage({
           filters={{ q: sp.q ?? "", source, from: sp.from ?? "", to: sp.to ?? "" }}
           back={back}
           canEdit={sub.ownerId === user.id}
-          defaultCurrency={sub.listCurrency ?? "CNY"}
+          defaultCurrency={sub.listCurrency ?? user.baseCurrency}
           currency={user.baseCurrency}
         />
       </main>

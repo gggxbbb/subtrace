@@ -69,4 +69,16 @@ describe("resolveMoney 决策树", () => {
     });
     expect(b).toEqual({ amount: 15.99, currency: "USD", amountBase: 115.13 });
   });
+
+  it("requirePositive：0 与负数抛 BadAmountError", async () => {
+    await expect(resolveMoney(fd({ amount: "0" }), owner, { requirePositive: true })).rejects.toThrow(
+      BadAmountError,
+    );
+    await expect(resolveMoney(fd({ amount: "-5" }), owner, { requirePositive: true })).rejects.toThrow(
+      BadAmountError,
+    );
+    await expect(resolveMoney(fd({ amount: "0.01" }), owner, { requirePositive: true })).resolves.toMatchObject({
+      amount: 0.01,
+    });
+  });
 });

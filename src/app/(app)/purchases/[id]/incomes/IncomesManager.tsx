@@ -83,7 +83,7 @@ export function IncomesManager({
       {adding && (
         <form action={addPurchaseIncomeAction.bind(null, purchaseId)} className="flex items-end gap-2 border border-black bg-white p-3">
           {backInput}
-          <MoneyFields layout="inline" defaults={{ currency: "CNY" }} />
+          <MoneyFields layout="inline" defaults={{ currency }} />
           <div>
             <label className={labelCls}>日期</label>
             <input name="date" type="date" defaultValue={today()} required className={`${inputCls} f-mono`} />
