@@ -18,15 +18,9 @@ import {
 } from "./service";
 import { advanceCycle } from "../cost-engine";
 import { NoRateError, resolveMoney } from "../money";
+import { dayField, numField } from "../form";
 
-const parseDate = (v: FormDataEntryValue | null) =>
-  new Date(`${String(v)}T00:00:00+08:00`);
 
-const parseNum = (v: FormDataEntryValue | null) => {
-  if (v == null || String(v).trim() === "") return undefined;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : undefined;
-};
 
 /** "7,3,0" → [7,3,0]；空串 → []（关闭提醒）；非法项丢弃 */
 const parseRemindDaysField = (v: FormDataEntryValue | null): number[] | undefined => {
@@ -64,14 +58,14 @@ export async function createSubscriptionAction(formData: FormData) {
         | "MONTH"
         | "YEAR"
         | undefined,
-      cycleCount: parseNum(formData.get("cycleCount")),
-      fixedDays: parseNum(formData.get("fixedDays")),
+      cycleCount: numField(formData.get("cycleCount")),
+      fixedDays: numField(formData.get("fixedDays")),
       listPrice: list?.amount ?? undefined,
       listCurrency: list?.currency ?? undefined,
       listPriceBase: list?.amountBase ?? undefined,
       autoRenew: formData.get("autoRenew") !== null,
       remindDays: parseRemindDaysField(formData.get("remindDays")),
-      startDate: parseDate(formData.get("startDate")),
+      startDate: dayField(formData.get("startDate")),
     };
     if (!input.name.trim()) redirect("/subscriptions/new?error=1");
     const created = await createSubscription(user.id, input);
@@ -83,10 +77,10 @@ export async function createSubscriptionAction(formData: FormData) {
       const amount = first.amount ?? list?.amount ?? null;
       const amountBase = first.amountBase ?? list?.amountBase ?? null;
       const periodStart = formData.get("firstPeriodStart")
-        ? parseDate(formData.get("firstPeriodStart"))
+        ? dayField(formData.get("firstPeriodStart"))
         : input.startDate;
       let periodEnd = formData.get("firstPeriodEnd")
-        ? parseDate(formData.get("firstPeriodEnd"))
+        ? dayField(formData.get("firstPeriodEnd"))
         : null;
       if (!periodEnd && created.trackingMode === "CYCLE") {
         const cycle = toEngineSub(created).cycle;
@@ -97,7 +91,7 @@ export async function createSubscriptionAction(formData: FormData) {
           amount,
           currency: first.currency ?? list?.currency ?? null,
           amountBase,
-          paidAt: formData.get("firstPaidAt") ? parseDate(formData.get("firstPaidAt")) : input.startDate,
+          paidAt: formData.get("firstPaidAt") ? dayField(formData.get("firstPaidAt")) : input.startDate,
           periodStart,
           periodEnd,
           source: (String(formData.get("firstSource")) || "AUTO") as PaymentInput["source"],
@@ -121,10 +115,10 @@ export async function recordPaymentAction(subscriptionId: string, formData: Form
     const money = await resolveMoney(formData, user, { allowUnknown: true });
     const input: PaymentInput = {
       ...money,
-      refundedBase: parseNum(formData.get("refundedBase")) ?? 0,
-      paidAt: parseDate(formData.get("paidAt")),
-      periodStart: parseDate(formData.get("periodStart")),
-      periodEnd: parseDate(formData.get("periodEnd")),
+      refundedBase: numField(formData.get("refundedBase")) ?? 0,
+      paidAt: dayField(formData.get("paidAt")),
+      periodStart: dayField(formData.get("periodStart")),
+      periodEnd: dayField(formData.get("periodEnd")),
       source: String(formData.get("source") ?? "MANUAL") as PaymentInput["source"],
       note: String(formData.get("note") ?? "") || undefined,
     };
@@ -156,10 +150,10 @@ const paymentInputFrom = async (user: { id: string; baseCurrency: string }, form
   const money = await resolveMoney(formData, user, { allowUnknown: true });
   return {
     ...money,
-    refundedBase: parseNum(formData.get("refundedBase")) ?? 0,
-    paidAt: parseDate(formData.get("paidAt")),
-    periodStart: parseDate(formData.get("periodStart")),
-    periodEnd: parseDate(formData.get("periodEnd")),
+    refundedBase: numField(formData.get("refundedBase")) ?? 0,
+    paidAt: dayField(formData.get("paidAt")),
+    periodStart: dayField(formData.get("periodStart")),
+    periodEnd: dayField(formData.get("periodEnd")),
     source: String(formData.get("source") ?? "MANUAL") as PaymentInput["source"],
     note: String(formData.get("note") ?? "") || undefined,
   };
@@ -220,14 +214,14 @@ export async function updateSubscriptionAction(subscriptionId: string, formData:
       category: String(formData.get("category") ?? ""),
       cycleKind: (String(formData.get("cycleKind") ?? "") || undefined) as "CALENDAR" | "FIXED_DAYS" | undefined,
       cycleUnit: (String(formData.get("cycleUnit") ?? "") || undefined) as "DAY" | "WEEK" | "MONTH" | "YEAR" | undefined,
-      cycleCount: parseNum(formData.get("cycleCount")),
-      fixedDays: parseNum(formData.get("fixedDays")),
+      cycleCount: numField(formData.get("cycleCount")),
+      fixedDays: numField(formData.get("fixedDays")),
       listPrice: list?.amount ?? undefined,
       listPriceBase: list?.amountBase ?? undefined,
       listCurrency: list?.currency ?? undefined,
       autoRenew: formData.get("autoRenew") !== null,
       remindDays: parseRemindDaysField(formData.get("remindDays")),
-      startDate: parseDate(formData.get("startDate")),
+      startDate: dayField(formData.get("startDate")),
     });
   } catch (e) {
     if (e instanceof NoRateError) redirect(`/subscriptions/${subscriptionId}/edit?error=fx`);

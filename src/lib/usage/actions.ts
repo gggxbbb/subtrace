@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "../auth/session";
+import { dayField } from "../form";
 import {
   addQuotaSnapshot,
   addUsage,
@@ -12,7 +13,6 @@ import {
 } from "./service";
 import { prisma } from "../db";
 
-const parseDate = (v: FormDataEntryValue | null) => new Date(`${String(v)}T00:00:00+08:00`);
 
 export async function setUsageConfigAction(subscriptionId: string, formData: FormData) {
   const user = await getCurrentUser();
@@ -32,7 +32,7 @@ export async function addUsageAction(subscriptionId: string, formData: FormData)
   if (!user) redirect("/login");
   const unitPrice = formData.get("unitPrice");
   await addUsage(user.id, subscriptionId, user.id, {
-    date: parseDate(formData.get("date")),
+    date: dayField(formData.get("date")),
     quantity: Number(formData.get("quantity")),
     unitPrice: unitPrice && String(unitPrice).trim() !== "" ? Number(unitPrice) : undefined,
   });
@@ -49,7 +49,7 @@ export async function addQuotaSnapshotAction(subscriptionId: string, formData: F
   const unitPrice = formData.get("unitPrice");
   const quotaTotal = formData.get("quotaTotal");
   await addQuotaSnapshot(user.id, subscriptionId, user.id, {
-    date: parseDate(formData.get("date")),
+    date: dayField(formData.get("date")),
     percent: percent && String(percent).trim() !== "" ? Number(percent) : undefined,
     used: used && String(used).trim() !== "" ? Number(used) : undefined,
     unitPrice: unitPrice && String(unitPrice).trim() !== "" ? Number(unitPrice) : undefined,
@@ -103,7 +103,7 @@ export async function updateUsageAction(subscriptionId: string, usageId: string,
     return v && String(v).trim() !== "" ? Number(v) : undefined;
   };
   await updateUsage(user.id, usageId, {
-    date: formData.get("date") ? parseDate(formData.get("date")) : undefined,
+    date: formData.get("date") ? dayField(formData.get("date")) : undefined,
     quantity: num("quantity"),
     unitPrice: num("unitPrice"),
     quotaTotal: num("quotaTotal"),

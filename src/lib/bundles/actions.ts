@@ -4,9 +4,10 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "../auth/session";
 import { resolveMoney } from "../money";
+import { dayField } from "../form";
+import { parseDay } from "../dates";
 import { createBundle, deleteBundle, replaceBundle, setBundleArchived, type BundleInput, type BundleItemInput } from "./service";
 
-const parseDate = (v: FormDataEntryValue | null) => new Date(`${String(v)}T00:00:00+08:00`);
 
 /** 解析向导提交：主体字段 + 子会员 JSON */
 async function parsePayload(
@@ -21,15 +22,15 @@ async function parsePayload(
     periodStart?: string;
     periodEnd?: string;
   }[];
-  const periodStart = parseDate(formData.get("periodStart"));
-  const periodEnd = parseDate(formData.get("periodEnd"));
+  const periodStart = dayField(formData.get("periodStart"));
+  const periodEnd = dayField(formData.get("periodEnd"));
   const items: BundleItemInput[] = parsed.map((it) => ({
     subscriptionId: it.subscriptionId || undefined,
     newSubscription: it.newName ? { name: it.newName } : undefined,
     listPriceBase: it.listPriceBase,
     allocatedBase: it.allocatedBase,
-    periodStart: it.periodStart ? new Date(`${it.periodStart}T00:00:00+08:00`) : periodStart,
-    periodEnd: it.periodEnd ? new Date(`${it.periodEnd}T00:00:00+08:00`) : periodEnd,
+    periodStart: it.periodStart ? parseDay(it.periodStart) : periodStart,
+    periodEnd: it.periodEnd ? parseDay(it.periodEnd) : periodEnd,
   }));
   // 打包实付三件套（ADR-0010 决策树兜底，无汇率拒绝）
   const total = await resolveMoney(formData, user, {

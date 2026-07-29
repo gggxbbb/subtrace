@@ -6,6 +6,7 @@
 //   外币 + 未手填 + 无汇率 → 抛 NoRateError（action 映射 ?error=fx），不再静默 1:1
 
 import { getRate } from "./exchange/service";
+import { numField } from "./form";
 
 export interface MoneyResult {
   amount: number | null;
@@ -37,12 +38,6 @@ export interface ResolveMoneyOptions {
   allowUnknown?: boolean;
 }
 
-const num = (v: FormDataEntryValue | null): number | undefined => {
-  if (v == null || String(v).trim() === "") return undefined;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : undefined;
-};
-
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export async function resolveMoney(
@@ -56,7 +51,7 @@ export async function resolveMoney(
     currency: suffix("currency"),
     amountBase: suffix("amountBase"),
   };
-  const amount = num(formData.get(names.amount));
+  const amount = numField(formData.get(names.amount));
   if (amount === undefined) {
     if (opts.allowUnknown) return { amount: null, currency: null, amountBase: null };
     throw new BadAmountError();
@@ -67,7 +62,7 @@ export async function resolveMoney(
   const currency = rawCur || base;
   if (currency === base) return { amount, currency, amountBase: amount };
 
-  const manual = num(formData.get(names.amountBase));
+  const manual = numField(formData.get(names.amountBase));
   if (manual !== undefined) return { amount, currency, amountBase: manual };
 
   const rate = await getRate(user.id, currency);

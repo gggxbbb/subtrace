@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "../auth/session";
 import { NoRateError, resolveMoney } from "../money";
+import { dayField, numField } from "../form";
 import {
   addPurchaseEvent,
   addPurchaseIncome,
@@ -19,13 +20,7 @@ import {
   type PurchaseInput,
 } from "./service";
 
-const parseDate = (v: FormDataEntryValue | null) => new Date(`${String(v)}T00:00:00+08:00`);
 
-const parseNum = (v: FormDataEntryValue | null) => {
-  if (v == null || String(v).trim() === "") return undefined;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : undefined;
-};
 
 export async function createPurchaseAction(formData: FormData) {
   const user = await getCurrentUser();
@@ -39,8 +34,8 @@ export async function createPurchaseAction(formData: FormData) {
       amount: money.amount!,
       currency: money.currency!,
       amountBase: money.amountBase!,
-      purchaseDate: parseDate(formData.get("purchaseDate")),
-      expectedDays: parseNum(formData.get("expectedDays")),
+      purchaseDate: dayField(formData.get("purchaseDate")),
+      expectedDays: numField(formData.get("expectedDays")),
     };
     if (!input.name.trim()) redirect("/purchases/new?error=1");
     createdId = (await createPurchase(user.id, input)).id;
@@ -58,8 +53,8 @@ export async function closePurchaseAction(purchaseId: string, formData: FormData
   const status = String(formData.get("status")) as "SOLD" | "RETIRED";
   await closePurchase(user.id, purchaseId, {
     status,
-    endDate: parseDate(formData.get("endDate")),
-    resaleBase: parseNum(formData.get("resaleBase")),
+    endDate: dayField(formData.get("endDate")),
+    resaleBase: numField(formData.get("resaleBase")),
   });
   revalidatePath("/purchases");
   revalidatePath("/dashboard");
@@ -77,8 +72,8 @@ export async function updatePurchaseAction(purchaseId: string, formData: FormDat
       amount: money.amount!,
       currency: money.currency ?? "CNY",
       amountBase: money.amountBase!,
-      purchaseDate: parseDate(formData.get("purchaseDate")),
-      expectedDays: parseNum(formData.get("expectedDays")),
+      purchaseDate: dayField(formData.get("purchaseDate")),
+      expectedDays: numField(formData.get("expectedDays")),
     });
   } catch (e) {
     if (e instanceof NoRateError) redirect(`/purchases/${purchaseId}/edit?error=fx`);
@@ -100,7 +95,7 @@ export async function addPurchaseIncomeAction(purchaseId: string, formData: Form
       amount: money.amount!,
       currency: money.currency!,
       amountBase: money.amountBase!,
-      date: parseDate(formData.get("date")),
+      date: dayField(formData.get("date")),
       note: String(formData.get("note") ?? "") || undefined,
     });
   } catch (e) {
@@ -146,7 +141,7 @@ export async function updatePurchaseIncomeAction(purchaseId: string, incomeId: s
       amount: money.amount!,
       currency: money.currency!,
       amountBase: money.amountBase!,
-      date: parseDate(formData.get("date")),
+      date: dayField(formData.get("date")),
       note: String(formData.get("note") ?? "") || null,
     });
   } catch (e) {
@@ -167,8 +162,8 @@ export async function addPurchaseEventAction(purchaseId: string, formData: FormD
       amount: money.amount!,
       currency: money.currency!,
       amountBase: money.amountBase!,
-      date: parseDate(formData.get("date")),
-      extendDays: parseNum(formData.get("extendDays")),
+      date: dayField(formData.get("date")),
+      extendDays: numField(formData.get("extendDays")),
       note: String(formData.get("note") ?? "") || undefined,
     });
   } catch (e) {
@@ -190,8 +185,8 @@ export async function updatePurchaseEventAction(purchaseId: string, eventId: str
       kind: String(formData.get("kind") ?? "OTHER") as "ACCESSORY" | "REPAIR" | "OTHER",
       amount: money.amount!,
       amountBase: money.amountBase!,
-      date: parseDate(formData.get("date")),
-      extendDays: parseNum(formData.get("extendDays")) ?? null,
+      date: dayField(formData.get("date")),
+      extendDays: numField(formData.get("extendDays")) ?? null,
       note: String(formData.get("note") ?? "") || null,
     });
   } catch (e) {
