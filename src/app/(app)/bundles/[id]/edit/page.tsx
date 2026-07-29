@@ -52,6 +52,7 @@ export default async function EditBundlePage({ params }: { params: Promise<{ id:
       <Suspense>
         <BundleWizard
           existingSubs={existingSubs}
+          currency={user.baseCurrency}
           initial={{
             name: bundle.name,
             totalAmount: bundle.totalAmount.toString(),

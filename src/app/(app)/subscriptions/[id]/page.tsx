@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { isoDay } from "@/lib/dates";
-import { Kpi, Panel, fmt, fmtDate } from "@/components/te";
+import { Kpi, Panel } from "@/components/te";
+import { fmtMoney } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth/session";
 import { costSegments, currentDailyRate, currentExpiry, dayDiff } from "@/lib/cost-engine";
 import {
@@ -38,6 +39,7 @@ export default async function SubscriptionDetailPage({
   const { id } = await params;
   const sp = await searchParams;
   const user = (await getCurrentUser())!;
+  const cur = user.baseCurrency;
   const sub = await getSubscription(user.id, id);
   if (!sub) notFound();
 
@@ -208,7 +210,7 @@ export default async function SubscriptionDetailPage({
           <Kpi
             index="B1"
             label="当前到期日"
-            value={expiry ? fmtDate(expiry) : "—"}
+            value={expiry ? isoDay(expiry) : "—"}
             sub={
               expiry
                 ? daysToExpiry! < 0
@@ -221,18 +223,18 @@ export default async function SubscriptionDetailPage({
           <Kpi
             index="B2"
             label="当日费率"
-            value={daily === 0 && coveringUnknown ? "未知" : fmt(daily)}
+            value={daily === 0 && coveringUnknown ? "未知" : fmtMoney(daily, cur)}
             sub={
               daily === 0 && coveringUnknown
                 ? "当前区间金额未记录，成本不计"
                 : coveringEstimated
                   ? "按标准价推算中（未记账，记一笔后按实付修正）"
                   : sub.beneficiaries.length > 0
-                  ? `我的份额 ${Math.round(myShare * 100)}% · ${fmt(daily * myShare)}/日`
-                  : `≈ 每月 ${fmt(daily * 30.4)}`
+                  ? `我的份额 ${Math.round(myShare * 100)}% · ${fmtMoney(daily * myShare, cur)}/日`
+                  : `≈ 每月 ${fmtMoney(daily * 30.4, cur)}`
             }
           />
-          <Kpi index="B3" label="累计实付" value={fmt(totalPaid)} sub={`${sub.payments.length} 笔付费记录${unknownPayments > 0 ? ` · ${unknownPayments} 笔金额未知` : ""}`} />
+          <Kpi index="B3" label="累计实付" value={fmtMoney(totalPaid, cur)} sub={`${sub.payments.length} 笔付费记录${unknownPayments > 0 ? ` · ${unknownPayments} 笔金额未知` : ""}`} />
           <Kpi
             index="B4"
             label="状态"
@@ -299,6 +301,7 @@ export default async function SubscriptionDetailPage({
               subscriptionId={sub.id}
               canEdit={isOwner}
               estimatedRows={estimatedRows}
+              currency={cur}
               payments={[...sub.payments].reverse().map((p): HistoryPayment => ({
                 id: p.id,
                 amount: p.amount,
@@ -351,6 +354,7 @@ export default async function SubscriptionDetailPage({
                 verdict={verdictData}
                 usageUnit={sub.usageUnit}
                 subscriptionId={sub.id}
+                currency={cur}
                 records={usageRecordRows}
                 perUser={perUserVerdicts}
               />

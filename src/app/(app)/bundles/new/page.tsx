@@ -30,7 +30,7 @@ export default async function NewBundlePage() {
       </div>
       <h1 className="mb-5 text-xl font-bold uppercase tracking-tight">新建联合会员</h1>
       <Suspense>
-        <BundleWizard existingSubs={existingSubs} />
+        <BundleWizard existingSubs={existingSubs} currency={user.baseCurrency} />
       </Suspense>
     </div>
   );

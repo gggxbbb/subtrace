@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Led } from "@/components/te";
+import { fmtMoney } from "@/lib/format";
 import {
   deletePaymentAction,
   updatePaymentAction,
@@ -18,9 +19,6 @@ const SOURCE_LABEL: Record<string, string> = {
   PROMO: "活动价",
   BUNDLE: "联合会员",
 };
-
-const fmtMoney = (n: number) =>
-  n.toLocaleString("zh-CN", { style: "currency", currency: "CNY" });
 
 export interface HistoryPayment {
   id: string;
@@ -41,6 +39,7 @@ export function PaymentHistory({
   payments,
   canEdit = true,
   estimatedRows = [],
+  currency,
 }: {
   subscriptionId: string;
   payments: HistoryPayment[];
@@ -48,6 +47,7 @@ export function PaymentHistory({
   canEdit?: boolean;
   /** 未记账的推算段（ticket 09  polish）：底部强区分展示，非真实付费记录 */
   estimatedRows?: { start: string; end: string; net: number }[];
+  currency: string;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -139,10 +139,10 @@ export function PaymentHistory({
               <div className="text-[13px] font-medium">
                 {p.amountBase !== null ? (
                   <>
-                    {fmtMoney(p.amountBase)}
+                    {fmtMoney(p.amountBase, currency)}
                     {p.refundedBase > 0 && (
                       <span className="ml-2 text-[10px] text-neutral-400 f-mono">
-                        退 {fmtMoney(p.refundedBase)} · 净 {fmtMoney(p.amountBase - p.refundedBase)}
+                        退 {fmtMoney(p.refundedBase, currency)} · 净 {fmtMoney(p.amountBase - p.refundedBase, currency)}
                       </span>
                     )}
                   </>
@@ -192,7 +192,7 @@ export function PaymentHistory({
             >
               <div>
                 <div className="text-[13px] font-medium text-neutral-400">
-                  {fmtMoney(seg.net)}
+                  {fmtMoney(seg.net, currency)}
                   <span className="ml-2 inline-block border border-dashed border-neutral-400 px-1.5 py-0.5 text-[9px] uppercase tracking-wider f-mono">
                     推算 · 未记账
                   </span>

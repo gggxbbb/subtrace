@@ -61,6 +61,7 @@ export default async function IncomesPage({
       <main className="mx-auto max-w-3xl space-y-4 p-6">
         <IncomesManager
           purchaseId={purchase.id}
+          currency={user.baseCurrency}
           rows={rows}
           total={all.length}
           filters={{ q: sp.q ?? "", from: sp.from ?? "", to: sp.to ?? "" }}

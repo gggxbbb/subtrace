@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { isoDay } from "@/lib/dates";
 import { MoneyFields } from "@/components/MoneyFields";
+import { fmtMoney } from "@/lib/format";
 import { Led } from "@/components/te";
 import {
   deletePaymentAction,
@@ -21,9 +22,6 @@ const SOURCE_LABEL: Record<string, string> = {
   PROMO: "活动价",
   BUNDLE: "联合会员",
 };
-
-const fmtMoney = (n: number) =>
-  n.toLocaleString("zh-CN", { style: "currency", currency: "CNY" });
 
 export interface PaymentRow {
   id: string;
@@ -98,6 +96,7 @@ export function PaymentsManager({
   back,
   canEdit,
   defaultCurrency,
+  currency,
 }: {
   subscriptionId: string;
   rows: PaymentRow[];
@@ -106,6 +105,7 @@ export function PaymentsManager({
   back: string;
   canEdit: boolean;
   defaultCurrency: string;
+  currency: string;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -195,10 +195,10 @@ export function PaymentsManager({
                 <div className="text-[13px] font-medium">
                   {p.amountBase !== null ? (
                     <>
-                      {fmtMoney(p.amountBase)}
+                      {fmtMoney(p.amountBase, currency)}
                       {p.refundedBase > 0 && (
                         <span className="ml-2 text-[10px] text-neutral-400 f-mono">
-                          退 {fmtMoney(p.refundedBase)} · 净 {fmtMoney(p.amountBase - p.refundedBase)}
+                          退 {fmtMoney(p.refundedBase, currency)} · 净 {fmtMoney(p.amountBase - p.refundedBase, currency)}
                         </span>
                       )}
                     </>

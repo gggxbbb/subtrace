@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { isoDay, wallDow, wallParts } from "@/lib/dates";
+import { fmtMoney } from "@/lib/format";
 import { Led } from "@/components/te";
 import {
   addQuotaSnapshotAction,
@@ -318,6 +319,7 @@ export function UsageVerdictPanel({
   subscriptionId,
   records,
   perUser = [],
+  currency,
 }: {
   verdict: VerdictData | null;
   usageUnit: string | null;
@@ -325,6 +327,7 @@ export function UsageVerdictPanel({
   records: UsageRecordRow[];
   /** 所有者视角：各受益人用量与盈亏对比 */
   perUser?: { name: string; usageLabel: string; verdictAmount: number }[];
+  currency: string;
 }) {
   if (!v) {
     return (
@@ -333,14 +336,12 @@ export function UsageVerdictPanel({
       </div>
     );
   }
-  const fmtMoney = (n: number) =>
-    n.toLocaleString("zh-CN", { style: "currency", currency: "CNY" });
   return (
     <div className="px-4 py-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <div className="text-[9px] uppercase text-neutral-400 f-mono">已摊成本</div>
-          <div className="text-lg font-bold tabular-nums">{fmtMoney(v.cost)}</div>
+          <div className="text-lg font-bold tabular-nums">{fmtMoney(v.cost, currency)}</div>
         </div>
         {v.kind === "COUNT" ? (
           <>
@@ -353,7 +354,7 @@ export function UsageVerdictPanel({
             <div>
               <div className="text-[9px] uppercase text-neutral-400 f-mono">每次实际成本</div>
               <div className="text-lg font-bold tabular-nums">
-                {v.costPerUse != null ? fmtMoney(v.costPerUse) : "—"}
+                {v.costPerUse != null ? fmtMoney(v.costPerUse, currency) : "—"}
               </div>
             </div>
             <div>
@@ -362,7 +363,7 @@ export function UsageVerdictPanel({
                 <div className="text-lg font-bold text-neutral-400">未知</div>
               ) : (
                 <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.verdictAmount >= 0 ? "text-teal-700" : "text-red-700"}`}>
-                  {v.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(v.verdictAmount))}
+                  {v.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(v.verdictAmount), currency)}
                   <Led color={v.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
                 </div>
               )}
@@ -401,7 +402,7 @@ export function UsageVerdictPanel({
             <div>
               <div className="text-[9px] uppercase text-neutral-400 f-mono">浪费</div>
               <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.wastedAmount <= 0 ? "text-teal-700" : "text-red-700"}`}>
-                {v.wastedAmount <= 0 ? "¥0" : `−${fmtMoney(v.wastedAmount)}`}
+                {v.wastedAmount <= 0 ? fmtMoney(0, currency) : `−${fmtMoney(v.wastedAmount, currency)}`}
                 <Led color={v.wastedAmount <= 0 ? "#22c55e" : "#ef4444"} />
               </div>
             </div>
@@ -411,8 +412,8 @@ export function UsageVerdictPanel({
       <div className="mt-3 border-t border-dashed border-neutral-300 pt-1.5 text-[9px] uppercase text-neutral-400 f-mono">
         {v.periodStart} → {v.periodEnd} ·{" "}
         {v.kind === "COUNT"
-          ? `价值 ${fmtMoney(v.value)} − 成本 ${fmtMoney(v.cost)}`
-          : `未用 ${Math.round((1 - v.usageRate) * 100)}% × 成本 ${fmtMoney(v.cost)}`}
+          ? `价值 ${fmtMoney(v.value, currency)} − 成本 ${fmtMoney(v.cost, currency)}`
+          : `未用 ${Math.round((1 - v.usageRate) * 100)}% × 成本 ${fmtMoney(v.cost, currency)}`}
       </div>
       {perUser.length > 0 && (
         <div className="mt-2 border-t border-dashed border-neutral-300 pt-2">
@@ -423,7 +424,7 @@ export function UsageVerdictPanel({
               <span className="flex items-center gap-2">
                 <span className="text-neutral-500">{u.usageLabel}</span>
                 <span className={u.verdictAmount >= 0 ? "text-teal-700" : "text-red-700"}>
-                  {u.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(u.verdictAmount))}
+                  {u.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(u.verdictAmount), currency)}
                 </span>
               </span>
             </div>

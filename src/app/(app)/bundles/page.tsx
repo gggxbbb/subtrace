@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { Panel, fmt, fmtDate } from "@/components/te";
+import { Panel } from "@/components/te";
+import { isoDay } from "@/lib/dates";
+import { fmtMoney } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth/session";
 import { listArchivedBundles, listBundles } from "@/lib/bundles/service";
 import { BundleRowActions } from "./BundleRowActions";
 
 export default async function BundlesPage() {
   const user = (await getCurrentUser())!;
+  const cur = user.baseCurrency;
   const bundles = await listBundles(user.id);
   const archived = await listArchivedBundles(user.id);
 
@@ -39,7 +42,7 @@ export default async function BundlesPage() {
           <Panel
             key={b.id}
             index={String(idx + 1).padStart(2, "0")}
-            title={`${b.name} · ${fmt(b.totalAmountBase)} · ${fmtDate(b.periodStart)} → ${fmtDate(b.periodEnd)}`}
+            title={`${b.name} · ${fmtMoney(b.totalAmountBase, cur)} · ${isoDay(b.periodStart)} → ${isoDay(b.periodEnd)}`}
             actions={<BundleRowActions bundleId={b.id} archived={false} />}
           >
             <div className="overflow-x-auto">
@@ -59,9 +62,9 @@ export default async function BundlesPage() {
                         {p.subscription.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-2.5 text-right tabular-nums f-mono text-[11px]">{fmt(p.amountBase ?? 0)}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums f-mono text-[11px]">{fmtMoney(p.amountBase ?? 0, cur)}</td>
                     <td className="px-4 py-2.5 text-[11px] tabular-nums text-neutral-500 f-mono">
-                      {fmtDate(p.periodStart)} → {fmtDate(p.periodEnd)}
+                      {isoDay(p.periodStart)} → {isoDay(p.periodEnd)}
                     </td>
                   </tr>
                 ))}
@@ -78,7 +81,7 @@ export default async function BundlesPage() {
                 <span className="min-w-0 truncate" title={b.name}>
                   {b.name}
                   <span className="ml-2 text-[10px] text-neutral-400 f-mono">
-                    {fmt(b.totalAmountBase)} · {fmtDate(b.periodStart)} → {fmtDate(b.periodEnd)}
+                    {fmtMoney(b.totalAmountBase, cur)} · {isoDay(b.periodStart)} → {isoDay(b.periodEnd)}
                   </span>
                 </span>
                 <div className="shrink-0">

@@ -89,6 +89,7 @@ export default async function PaymentsPage({
           back={back}
           canEdit={sub.ownerId === user.id}
           defaultCurrency={sub.listCurrency ?? "CNY"}
+          currency={user.baseCurrency}
         />
       </main>
     </>

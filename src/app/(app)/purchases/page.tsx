@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { isoDay } from "@/lib/dates";
 import { Plus } from "lucide-react";
-import { Panel, ORANGE, fmt, fmtDate } from "@/components/te";
+import { Panel, ORANGE } from "@/components/te";
+import { fmtMoney } from "@/lib/format";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
 import { ListToolbar } from "@/components/ListToolbar";
 import { matchesKeyword, parseListQuery, sortBy } from "@/lib/list-query";
@@ -27,7 +28,7 @@ async function buildRows(userId: string): Promise<Row[]> {
   });
 }
 
-function PurchaseCards({ rows }: { rows: Row[] }) {
+function PurchaseCards({ rows, cur }: { rows: Row[]; cur: string }) {
   if (rows.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
@@ -55,8 +56,8 @@ function PurchaseCards({ rows }: { rows: Row[] }) {
             />
           </div>
           <div className="mt-1.5 flex justify-between text-[9px] text-neutral-500 f-mono">
-            <span>{p.status === "IN_USE" ? `${fmt(p.dailyCost)}/day` : "—"}</span>
-            <span>{fmt(p.amountBase)}</span>
+            <span>{p.status === "IN_USE" ? `${fmtMoney(p.dailyCost, cur)}/day` : "—"}</span>
+            <span>{fmtMoney(p.amountBase, cur)}</span>
           </div>
         </Link>
       ))}
@@ -64,7 +65,7 @@ function PurchaseCards({ rows }: { rows: Row[] }) {
   );
 }
 
-function PurchaseTable({ rows }: { rows: Row[] }) {
+function PurchaseTable({ rows, cur }: { rows: Row[]; cur: string }) {
   return (
     <div className="overflow-x-auto">
     <table className="w-full min-w-[680px] text-[13px]">
@@ -90,13 +91,13 @@ function PurchaseTable({ rows }: { rows: Row[] }) {
             </td>
             <td className="px-4 py-2.5 text-neutral-500">{p.category ?? "—"}</td>
             <td className="px-4 py-2.5 text-[11px] tabular-nums text-neutral-500 f-mono">
-              {fmtDate(p.purchaseDate)}
+              {isoDay(p.purchaseDate)}
             </td>
             <td className="px-4 py-2.5 text-right text-[11px] tabular-nums f-mono">
-              {fmt(p.amountBase)}
+              {fmtMoney(p.amountBase, cur)}
             </td>
             <td className="px-4 py-2.5 text-right text-[11px] font-semibold tabular-nums f-mono">
-              {p.status === "IN_USE" ? fmt(p.dailyCost) : "—"}
+              {p.status === "IN_USE" ? fmtMoney(p.dailyCost, cur) : "—"}
             </td>
             <td className="px-4 py-2.5 text-right text-[11px] tabular-nums text-neutral-500 f-mono">
               {p.daysHeld}d
@@ -136,6 +137,7 @@ export default async function PurchasesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const user = (await getCurrentUser())!;
+  const cur = user.baseCurrency;
   const all = await buildRows(user.id);
   const archived = await listArchivedPurchases(user.id);
   const sp = await searchParams;
@@ -187,12 +189,12 @@ export default async function PurchasesPage({
           }
           card={
             <Panel index="01" title={`全部物品 / ${rows.length}`}>
-              <PurchaseCards rows={rows} />
+              <PurchaseCards rows={rows} cur={cur} />
             </Panel>
           }
           list={
             <Panel index="01" title={`全部物品 / ${rows.length}`}>
-              <PurchaseTable rows={rows} />
+              <PurchaseTable rows={rows} cur={cur} />
             </Panel>
           }
         />

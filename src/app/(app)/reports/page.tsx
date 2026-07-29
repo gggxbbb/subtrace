@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { isoDay, wallParts } from "@/lib/dates";
 import { redirect } from "next/navigation";
-import { Kpi, Panel, fmt, ORANGE } from "@/components/te";
+import { Kpi, Panel, ORANGE } from "@/components/te";
+import { fmtMoney } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getReportData, monthRange, yearRange } from "@/lib/reports";
 
@@ -27,6 +28,7 @@ export default async function ReportsPage({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const cur = user.baseCurrency;
   const { period } = await searchParams;
   const p = parsePeriod(period);
 
@@ -101,12 +103,12 @@ export default async function ReportsPage({
           <Kpi
             index="R1"
             label="摊销成本"
-            value={fmt(r.totalAmortized)}
+            value={fmtMoney(r.totalAmortized, cur)}
             sub={delta != null ? `较上期 ${delta >= 0 ? "+" : ""}${Math.round(delta * 100)}%` : "成本段按天切片"}
             led={delta != null ? (delta <= 0 ? "#22c55e" : "#ef4444") : undefined}
           />
-          <Kpi index="R2" label="实付" value={fmt(r.totalPaid)} sub="区间内实际流出" />
-          <Kpi index="R3" label="日均" value={fmt(r.dailyAvg)} sub="摊销口径" />
+          <Kpi index="R2" label="实付" value={fmtMoney(r.totalPaid, cur)} sub="区间内实际流出" />
+          <Kpi index="R3" label="日均" value={fmtMoney(r.dailyAvg, cur)} sub="摊销口径" />
           <Kpi index="R4" label="分类数" value={`${r.categories.length}`} sub={r.categories[0] ? `最大：${r.categories[0].name}` : "—"} />
         </div>
 
@@ -115,7 +117,7 @@ export default async function ReportsPage({
             <div className="px-4 py-4">
               <div className="flex h-36 items-end gap-px">
                 {bars.map((b, i) => (
-                  <div key={i} className="group relative h-full flex-1" title={`${b.label} · ${fmt(b.cost)}`}>
+                  <div key={i} className="group relative h-full flex-1" title={`${b.label} · ${fmtMoney(b.cost, cur)}`}>
                     <div
                       className="w-full"
                       style={{
@@ -128,7 +130,7 @@ export default async function ReportsPage({
               </div>
               <div className="mt-1 flex justify-between text-[9px] uppercase text-neutral-400 f-mono">
                 <span>{bars[0]?.label}</span>
-                <span>峰值 {fmt(maxCost)}</span>
+                <span>峰值 {fmtMoney(maxCost, cur)}</span>
                 <span>{bars[bars.length - 1]?.label}</span>
               </div>
             </div>
@@ -144,7 +146,7 @@ export default async function ReportsPage({
                   <div className="mb-1 flex justify-between text-[11px]">
                     <span>{c.name}</span>
                     <span className="tabular-nums f-mono">
-                      {fmt(c.cost)} · {Math.round(c.share * 100)}%
+                      {fmtMoney(c.cost, cur)} · {Math.round(c.share * 100)}%
                     </span>
                   </div>
                   <div className="h-2 w-full bg-[#E4E3E0]">
@@ -193,9 +195,9 @@ export default async function ReportsPage({
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-2 text-right text-[11px] font-semibold tabular-nums f-mono">{fmt(it.cost)}</td>
+                  <td className="px-4 py-2 text-right text-[11px] font-semibold tabular-nums f-mono">{fmtMoney(it.cost, cur)}</td>
                   <td className="px-4 py-2 text-right text-[11px] tabular-nums text-neutral-500 f-mono">
-                    {fmt(it.cost / r.days.length)}
+                    {fmtMoney(it.cost / r.days.length, cur)}
                   </td>
                 </tr>
               ))}

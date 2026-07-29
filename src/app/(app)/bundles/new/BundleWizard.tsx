@@ -4,14 +4,13 @@ import { useState } from "react";
 import { isoDay } from "@/lib/dates";
 import { useSearchParams } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
+import { fmtMoney } from "@/lib/format";
 import { createBundleAction } from "@/lib/bundles/actions";
 
 const inputCls =
   "w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white";
 const labelCls =
   "mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
-
-const fmtMoney = (n: number) => `¥${n.toFixed(2)}`;
 
 export interface Item {
   mode: "existing" | "new";
@@ -52,6 +51,7 @@ export function BundleWizard({
   initial,
   action,
   submitLabel = "创建联合会员 →",
+  currency,
 }: {
   existingSubs: { id: string; name: string; expiry: string | null }[];
   /** 编辑模式：预填数据（子会员全部按「关联已有」呈现） */
@@ -59,6 +59,7 @@ export function BundleWizard({
   /** 自定义提交 action（编辑模式用 replaceBundleAction） */
   action?: (formData: FormData) => Promise<void>;
   submitLabel?: string;
+  currency: string;
 }) {
   const error = useSearchParams().get("error");
   const today = isoDay(new Date());
@@ -263,7 +264,7 @@ export function BundleWizard({
                 <div>
                   <label className={labelCls}>按比例 ≈</label>
                   <div className="border border-dashed border-neutral-400 px-2 py-1.5 text-sm f-mono">
-                    {fmtMoney(autoAlloc(it))}
+                    {fmtMoney(autoAlloc(it), currency)}
                   </div>
                 </div>
                 <div>

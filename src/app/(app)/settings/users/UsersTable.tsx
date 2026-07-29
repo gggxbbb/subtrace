@@ -4,7 +4,8 @@
 
 import { useState, useTransition } from "react";
 import { deleteUserAction, resetUserPasswordAction, setCanUseScriptsAction, setUserRoleAction } from "@/lib/auth/actions";
-import { Panel, fmtDate } from "@/components/te";
+import { Panel } from "@/components/te";
+import { isoDay } from "@/lib/dates";
 
 export interface UserRow {
   id: string;
@@ -78,7 +79,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
                 </button>
               </td>
               <td className="px-4 py-2.5 text-right text-[11px] tabular-nums f-mono">{u.subscriptionCount}</td>
-              <td className="px-4 py-2.5 text-[11px] text-neutral-500 f-mono">{fmtDate(new Date(`${u.createdAt}T00:00:00+08:00`))}</td>
+              <td className="px-4 py-2.5 text-[11px] text-neutral-500 f-mono">{isoDay(new Date(`${u.createdAt}T00:00:00+08:00`))}</td>
               <td className="px-4 py-2.5 text-right">
                 {!u.isMe && (
                   <span className="invisible flex justify-end gap-1.5 group-hover:visible">

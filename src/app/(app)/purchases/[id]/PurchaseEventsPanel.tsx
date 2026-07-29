@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { isoDay } from "@/lib/dates";
+import { fmtMoney } from "@/lib/format";
 import { EVENT_KIND_LABEL } from "@/lib/purchases/kinds";
 import {
   addPurchaseEventAction,
@@ -13,11 +14,6 @@ const inputCls =
   "w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white";
 const labelCls =
   "mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
-
-const fmtMoney = (n: number) =>
-  n.toLocaleString("zh-CN", { style: "currency", currency: "CNY" });
-
-
 
 export interface EventRow {
   id: string;
@@ -77,9 +73,11 @@ function EventFields({ row }: { row?: EventRow }) {
 export function PurchaseEventsPanel({
   purchaseId,
   events,
+  currency,
 }: {
   purchaseId: string;
   events: EventRow[];
+  currency: string;
 }) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -133,7 +131,7 @@ export function PurchaseEventsPanel({
               )}
             </span>
             <span className="flex items-center gap-2">
-              <span className="tabular-nums f-mono">{fmtMoney(e.amountBase)}</span>
+              <span className="tabular-nums f-mono">{fmtMoney(e.amountBase, currency)}</span>
               <button
                 onClick={() => setEditingId(e.id)}
                 className="invisible border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono group-hover:visible hover:bg-black hover:text-white"

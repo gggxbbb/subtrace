@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { isoDay } from "@/lib/dates";
+import { fmtMoney } from "@/lib/format";
 import {
   addPurchaseIncomeAction,
   deletePurchaseIncomeAction,
@@ -12,9 +13,6 @@ const inputCls =
   "w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white";
 const labelCls =
   "mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
-
-const fmtMoney = (n: number) =>
-  n.toLocaleString("zh-CN", { style: "currency", currency: "CNY" });
 
 export interface IncomeRow {
   id: string;
@@ -33,12 +31,14 @@ export function IncomesManager({
   total,
   filters,
   back,
+  currency,
 }: {
   purchaseId: string;
   rows: IncomeRow[];
   total: number;
   filters: { q: string; from: string; to: string };
   back: string;
+  currency: string;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -93,7 +93,7 @@ export function IncomesManager({
 
       <div className="text-[10px] uppercase text-neutral-400 f-mono">
         {rows.length} / {total} 条 · 合计{" "}
-        <span className="text-teal-700">{fmtMoney(rows.reduce((s, r) => s + r.amountBase, 0))}</span>
+        <span className="text-teal-700">{fmtMoney(rows.reduce((s, r) => s + r.amountBase, 0), currency)}</span>
       </div>
 
       <div className="border border-black bg-white">
@@ -129,7 +129,7 @@ export function IncomesManager({
             <div key={r.id} className="group flex items-center justify-between border-b border-neutral-200 px-4 py-2 last:border-0">
               <div className="text-[12px] f-mono">
                 <span className="text-neutral-500">{r.date}</span>
-                <span className="ml-2 text-teal-700 tabular-nums">+{fmtMoney(r.amountBase)}</span>
+                <span className="ml-2 text-teal-700 tabular-nums">+{fmtMoney(r.amountBase, currency)}</span>
                 {r.note && <span className="ml-2 text-neutral-400">{r.note}</span>}
               </div>
               <span className="flex items-center gap-2">

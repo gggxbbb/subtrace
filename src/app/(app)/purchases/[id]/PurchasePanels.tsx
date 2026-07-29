@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { isoDay } from "@/lib/dates";
+import { fmtMoney } from "@/lib/format";
 import {
   addPurchaseIncomeAction,
   deletePurchaseAction,
@@ -15,9 +16,6 @@ const labelCls =
   "mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
 const btnCls =
   "border border-black bg-white px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-black hover:text-white";
-
-const fmtMoney = (n: number) =>
-  n.toLocaleString("zh-CN", { style: "currency", currency: "CNY" });
 
 /** 顶栏操作：编辑（独立页）、归档、删除（二次确认） */
 export function PurchaseHeaderActions({
@@ -72,9 +70,11 @@ export interface IncomeRow {
 export function PurchaseIncomePanel({
   purchaseId,
   incomes,
+  currency,
 }: {
   purchaseId: string;
   incomes: IncomeRow[];
+  currency: string;
 }) {
   const today = isoDay(new Date());
   return (
@@ -104,7 +104,7 @@ export function PurchaseIncomePanel({
             <div key={i.id} className="group flex items-center justify-between border-b border-dashed border-neutral-200 py-1.5 text-[12px] last:border-0">
               <span className="text-neutral-500 f-mono">{i.date}</span>
               <span className="flex items-center gap-2">
-                <span className="text-teal-700 tabular-nums f-mono">+{fmtMoney(i.amountBase)}</span>
+                <span className="text-teal-700 tabular-nums f-mono">+{fmtMoney(i.amountBase, currency)}</span>
                 {i.note && <span className="text-[10px] text-neutral-400">{i.note}</span>}
                 <button
                   onClick={async () => deletePurchaseIncomeAction(purchaseId, i.id)}

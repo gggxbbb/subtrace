@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { isoDay } from "@/lib/dates";
 import { Plus } from "lucide-react";
-import { Led, ORANGE, Panel, fmt, fmtDate } from "@/components/te";
+import { Led, ORANGE, Panel } from "@/components/te";
+import { fmtMoney } from "@/lib/format";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
 import { ListToolbar } from "@/components/ListToolbar";
 import { matchesKeyword, parseListQuery, sortBy, subStatusOf } from "@/lib/list-query";
@@ -44,7 +45,7 @@ function StatusPill({ s }: { s: Row }) {
   );
 }
 
-function SubscriptionTable({ rows }: { rows: Row[] }) {
+function SubscriptionTable({ rows, cur }: { rows: Row[]; cur: string }) {
   return (
     <div className="overflow-x-auto">
     <table className="w-full min-w-[640px] text-[13px]">
@@ -70,17 +71,17 @@ function SubscriptionTable({ rows }: { rows: Row[] }) {
             <td className="px-4 py-2.5 text-neutral-500">{s.category ?? "—"}</td>
             <td className="px-4 py-2.5 text-[11px] text-neutral-500 f-mono">{s.cycleLabel}</td>
             <td className="px-4 py-2.5 text-[11px] tabular-nums text-neutral-500 f-mono">
-              {s.expiry ? fmtDate(s.expiry) : "—"}
+              {s.expiry ? isoDay(s.expiry) : "—"}
             </td>
             <td className="px-4 py-2.5 text-right text-[11px] font-semibold tabular-nums f-mono">
               {s.costUnknown && s.dailyCost === 0 ? (
                 <span className="text-neutral-400">未知</span>
               ) : (
-                fmt(s.dailyCost)
+                fmtMoney(s.dailyCost, cur)
               )}
             </td>
             <td className="px-4 py-2.5 text-right text-[11px] tabular-nums text-neutral-500 f-mono">
-              {s.costUnknown && s.dailyCost === 0 ? "—" : fmt(s.monthlyCost)}
+              {s.costUnknown && s.dailyCost === 0 ? "—" : fmtMoney(s.monthlyCost, cur)}
             </td>
             <td className="px-4 py-2.5">
               <StatusPill s={s} />
@@ -100,7 +101,7 @@ function SubscriptionTable({ rows }: { rows: Row[] }) {
   );
 }
 
-function SubscriptionCards({ rows }: { rows: Row[] }) {
+function SubscriptionCards({ rows, cur }: { rows: Row[]; cur: string }) {
   if (rows.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
@@ -122,14 +123,14 @@ function SubscriptionCards({ rows }: { rows: Row[] }) {
             <span className="min-w-0 truncate">
               {s.category ?? "—"} · {s.cycleLabel}
             </span>
-            <span className="shrink-0 tabular-nums">{s.expiry ? fmtDate(s.expiry) : "—"}</span>
+            <span className="shrink-0 tabular-nums">{s.expiry ? isoDay(s.expiry) : "—"}</span>
           </div>
           <div className="mt-1.5 flex items-baseline justify-between text-[11px] tabular-nums f-mono">
             <span className="font-semibold">
-              {s.costUnknown && s.dailyCost === 0 ? "未知" : `${fmt(s.dailyCost)}/day`}
+              {s.costUnknown && s.dailyCost === 0 ? "未知" : `${fmtMoney(s.dailyCost, cur)}/day`}
             </span>
             <span className="text-neutral-500">
-              {s.costUnknown && s.dailyCost === 0 ? "—" : `${fmt(s.monthlyCost)}/mo`}
+              {s.costUnknown && s.dailyCost === 0 ? "—" : `${fmtMoney(s.monthlyCost, cur)}/mo`}
             </span>
           </div>
         </Link>
@@ -152,6 +153,7 @@ export default async function SubscriptionsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const user = (await getCurrentUser())!;
+  const cur = user.baseCurrency;
   const d = await getDashboardData(user.id);
   const archived = await listArchivedSubscriptions(user.id);
   const sp = await searchParams;
@@ -204,12 +206,12 @@ export default async function SubscriptionsPage({
           }
           list={
             <Panel index="01" title={`全部订阅 / ${rows.length}`}>
-              <SubscriptionTable rows={rows} />
+              <SubscriptionTable rows={rows} cur={cur} />
             </Panel>
           }
           card={
             <Panel index="01" title={`全部订阅 / ${rows.length}`}>
-              <SubscriptionCards rows={rows} />
+              <SubscriptionCards rows={rows} cur={cur} />
             </Panel>
           }
         />

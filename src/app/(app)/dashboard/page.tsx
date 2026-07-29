@@ -1,6 +1,8 @@
 import { AlertTriangle, Plus } from "lucide-react";
 import Link from "next/link";
-import { Kpi, Led, LedMatrix, ORANGE, Panel, fmt, fmtDate } from "@/components/te";
+import { Kpi, Led, LedMatrix, ORANGE, Panel } from "@/components/te";
+import { isoDay } from "@/lib/dates";
+import { fmtMoney } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getDashboardData } from "@/lib/dashboard";
 import { logoutAction } from "@/lib/auth/actions";
@@ -39,6 +41,7 @@ function LedTrendChart({ data }: { data: number[] }) {
 
 export default async function DashboardPage() {
   const user = (await getCurrentUser())!;
+  const cur = user.baseCurrency;
   const d = await getDashboardData(user.id);
   const avg = d.trend.reduce((s, v) => s + v, 0) / d.trend.length;
 
@@ -89,10 +92,10 @@ export default async function DashboardPage() {
         )}
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Kpi index="A1" label="当日总日均" value={fmt(d.totalDailyCost)} sub={`≈ 每月 ${fmt(d.totalMonthlyCost)}`} led={ORANGE} />
-          <Kpi index="A2" label="本月支出" value={fmt(d.monthSpent)} sub={`年度累计 ${fmt(d.yearSpent)}`} />
-          <Kpi index="A3" label="活跃订阅" value={`${d.activeCount}`} sub={`物品 ${d.purchases.length} 件 · 日均 ${fmt(d.itemDailyCost)}`} />
-          <Kpi index="A4" label="30 天日均" value={fmt(avg)} sub="近 30 天摊销均值" />
+          <Kpi index="A1" label="当日总日均" value={fmtMoney(d.totalDailyCost, cur)} sub={`≈ 每月 ${fmtMoney(d.totalMonthlyCost, cur)}`} led={ORANGE} />
+          <Kpi index="A2" label="本月支出" value={fmtMoney(d.monthSpent, cur)} sub={`年度累计 ${fmtMoney(d.yearSpent, cur)}`} />
+          <Kpi index="A3" label="活跃订阅" value={`${d.activeCount}`} sub={`物品 ${d.purchases.length} 件 · 日均 ${fmtMoney(d.itemDailyCost, cur)}`} />
+          <Kpi index="A4" label="30 天日均" value={fmtMoney(avg, cur)} sub="近 30 天摊销均值" />
         </div>
 
         <Panel index="02" title="每日支出 / 30D">
@@ -100,7 +103,7 @@ export default async function DashboardPage() {
             <LedTrendChart data={d.trend} />
             <div className="mx-4 mb-3 mt-3 flex justify-between border-t border-dashed border-neutral-300 py-1.5 text-[9px] uppercase text-neutral-400 f-mono">
               <span>30 days ago</span>
-              <span style={{ color: ORANGE }}>avg {fmt(avg)}/day</span>
+              <span style={{ color: ORANGE }}>avg {fmtMoney(avg, cur)}/day</span>
               <span>today</span>
             </div>
           </div>
@@ -131,13 +134,13 @@ export default async function DashboardPage() {
                   <div className="min-w-0">
                     <div className="truncate text-[13px] font-medium" title={u.name}>{u.name}</div>
                     <div className="text-[9px] uppercase tracking-wider text-neutral-400 f-mono">
-                      {fmtDate(u.date)} · {u.auto ? "auto" : "manual"}
+                      {isoDay(u.date)} · {u.auto ? "auto" : "manual"}
                     </div>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <span className="text-sm font-bold tabular-nums">
-                    {u.amount != null ? fmt(u.amount) : "—"}
+                    {u.amount != null ? fmtMoney(u.amount, cur) : "—"}
                   </span>
                   <span
                     className={`flex w-16 items-center justify-center gap-1 border px-1.5 py-0.5 text-[9px] uppercase f-mono ${u.daysLeft <= 7 ? "text-white" : "border-black bg-white"}`}
@@ -167,7 +170,7 @@ export default async function DashboardPage() {
                   <span className="shrink-0 text-sm font-bold text-neutral-400 f-mono">成本未知</span>
                 ) : (
                   <span className="flex shrink-0 items-center gap-1.5 text-sm font-bold tabular-nums f-mono">
-                    {u.verdictAmount >= 0 ? "+" : "−"}{fmt(Math.abs(u.verdictAmount))}
+                    {u.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(u.verdictAmount), cur)}
                     <Led color={u.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
                   </span>
                 )}
@@ -201,8 +204,8 @@ export default async function DashboardPage() {
                   />
                 </div>
                 <div className="mt-1.5 flex justify-between text-[9px] text-neutral-500 f-mono">
-                  <span>{p.status === "IN_USE" ? `${fmt(p.dailyCost)}/day` : "—"}</span>
-                  <span>{fmt(p.amountBase)}</span>
+                  <span>{p.status === "IN_USE" ? `${fmtMoney(p.dailyCost, cur)}/day` : "—"}</span>
+                  <span>{fmtMoney(p.amountBase, cur)}</span>
                 </div>
               </a>
             ))}
@@ -244,17 +247,17 @@ export default async function DashboardPage() {
                   <td className="px-4 py-2.5 text-neutral-500">{s.category ?? "—"}</td>
                   <td className="px-4 py-2.5 text-[11px] text-neutral-500 f-mono">{s.cycleLabel}</td>
                   <td className="px-4 py-2.5 text-[11px] tabular-nums text-neutral-500 f-mono">
-                    {s.expiry ? fmtDate(s.expiry) : "—"}
+                    {s.expiry ? isoDay(s.expiry) : "—"}
                   </td>
                   <td className="px-4 py-2.5 text-right text-[11px] font-semibold tabular-nums f-mono">
                     {s.costUnknown && s.dailyCost === 0 ? (
                       <span className="text-neutral-400">未知</span>
                     ) : (
-                      fmt(s.dailyCost)
+                      fmtMoney(s.dailyCost, cur)
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-right text-[11px] tabular-nums text-neutral-500 f-mono">
-                    {s.costUnknown && s.dailyCost === 0 ? "—" : fmt(s.monthlyCost)}
+                    {s.costUnknown && s.dailyCost === 0 ? "—" : fmtMoney(s.monthlyCost, cur)}
                   </td>
                   <td className="px-4 py-2.5">
                     {s.status === "CANCELLED" ? (
