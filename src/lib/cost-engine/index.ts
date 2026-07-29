@@ -218,17 +218,6 @@ export function breakevenProgress(p: PurchaseDef, today: Date): number | undefin
   return Math.min(1, dayDiff(p.purchaseDate, today) / (p.expectedDays + (p.extraDays ?? 0)));
 }
 
-/** 受益人份额 = 总额 × 我的权重 / Σ权重（改权重全局重算，ADR-0003） */
-export function shareOf(
-  total: number,
-  weights: { userId: string; weight: number }[],
-  userId: string,
-): number {
-  const sum = weights.reduce((s, w) => s + w.weight, 0);
-  const mine = weights.find((w) => w.userId === userId)?.weight ?? 0;
-  return sum > 0 ? (total * mine) / sum : 0;
-}
-
 /** 盈亏 = 用量 × 替代单价 − 已摊成本（正=赚，负=亏） */
 export function verdict(costShare: number, usageQty: number, altUnitPrice: number): number {
   return usageQty * altUnitPrice - costShare;

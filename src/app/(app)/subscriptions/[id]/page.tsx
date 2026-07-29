@@ -3,13 +3,12 @@ import { isoDay } from "@/lib/dates";
 import { Kpi, Panel } from "@/components/te";
 import { fmtMoney } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth/session";
-import { costSegments, currentDailyRate, currentExpiry, dayDiff } from "@/lib/cost-engine";
+import { dayDiff } from "@/lib/cost-engine";
+import { costView, paidNet } from "@/lib/subscriptions/cost-view";
 import {
   getSubscription,
   paymentPrefill,
   planRechain,
-  toEnginePayments,
-  toEngineSub,
 } from "@/lib/subscriptions/service";
 import { setStatusAction } from "@/lib/subscriptions/actions";
 import { RechainBanner } from "./RechainBanner";
@@ -44,29 +43,20 @@ export default async function SubscriptionDetailPage({
   if (!sub) notFound();
 
   const today = new Date();
-  const engineSub = toEngineSub(sub);
-  const payments = toEnginePayments(sub.payments);
-  const expiry = currentExpiry(engineSub, payments, today);
-  const daily = currentDailyRate(engineSub, payments, today);
-  const covering = costSegments(engineSub, payments, today).filter(
-    (s) => s.start <= today && today < s.end,
-  );
-  const coveringUnknown = covering.some((s) => s.amountUnknown === true);
+  const view = costView(sub, user.id, today);
+  const expiry = view.expiry;
+  const daily = view.dailyRate;
+  const covering = view.covering;
+  const coveringUnknown = view.costUnknown;
   // 覆盖今天的只有推算段（记录止期已过）→ 费率是标准价估计，不是实付
   const coveringEstimated = covering.length > 0 && covering.every((s) => s.estimated);
   const daysToExpiry = expiry ? dayDiff(today, expiry) : null;
-  // 推算段（未记账）：最后记录止期之后的 estimated 段，在付费历史底部强区分展示
-  const lastRecordedEnd = sub.payments.length > 0
-    ? sub.payments.reduce((max, p) => (p.periodEnd > max ? p.periodEnd : max), sub.payments[0].periodEnd)
-    : null;
-  const estimatedRows = costSegments(engineSub, payments, today)
-    .filter((seg) => seg.estimated && (lastRecordedEnd === null || seg.start >= lastRecordedEnd))
-    .map((seg) => ({
-      start: isoDay(seg.start),
-      end: isoDay(seg.end),
-      net: seg.net,
-    }));
-  const totalPaid = sub.payments.reduce((s, p) => s + (p.amountBase ?? 0) - p.refundedBase, 0);
+  const estimatedRows = view.estimatedRows.map((seg) => ({
+    start: isoDay(seg.start),
+    end: isoDay(seg.end),
+    net: seg.net,
+  }));
+  const totalPaid = sub.payments.reduce((s, p) => s + paidNet(p), 0);
   const unknownPayments = sub.payments.filter((p) => p.amountBase === null).length;
   const prefillRaw = paymentPrefill(sub, sub.payments);
   const iso = (d: Date) => isoDay(d);
@@ -81,7 +71,7 @@ export default async function SubscriptionDetailPage({
   const usageRecords = sub.usageKind ? await listUsage(sub.id) : [];
   // 分摊（ADR-0003）：我的份额与按人盈亏
   const isOwner = sub.ownerId === user.id;
-  const myShare = shareForViewer(sub.beneficiaries, sub.ownerId, user.id);
+  const myShare = view.share;
   const beneficiaryRows = serviceBeneficiaryRows(sub);
   const { users: candidateUsers, items: candidateItems } = isOwner
     ? await listBeneficiaryCandidates(user.id, sub.id)

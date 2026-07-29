@@ -14,8 +14,10 @@ import { shareForViewer } from "../beneficiaries/service";
 import {
   toEnginePayments,
   toEngineSub,
+  type SubscriptionWithPayments,
   type SubscriptionWithRefs,
 } from "./service";
+import type { Beneficiary } from "@/generated/prisma/client";
 import { toEnginePurchase, type PurchaseWithEvents } from "../purchases/service";
 
 export interface CostView {
@@ -39,7 +41,7 @@ export interface CostView {
 
 /** 某订阅在今日的全量成本视图 */
 export function costView(
-  sub: SubscriptionWithRefs,
+  sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[] },
   viewerId: string,
   today: Date,
 ): CostView {
@@ -48,7 +50,7 @@ export function costView(
   const segments = costSegments(engineSub, payments, today);
   const covering = segments.filter((s) => coversDate(s, today));
   const dailyRate = covering.reduce((sum, s) => sum + segmentDailyRate(s), 0);
-  const share = shareForViewer(sub.beneficiaries, sub.ownerId, viewerId);
+  const share = shareForViewer(sub.beneficiaries ?? [], sub.ownerId, viewerId);
   const lastRecordedEnd =
     sub.payments.length > 0
       ? sub.payments.reduce((max, p) => (p.periodEnd > max ? p.periodEnd : max), sub.payments[0].periodEnd)

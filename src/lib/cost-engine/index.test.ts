@@ -13,7 +13,6 @@ import {
   purchaseCurrentDailyRate,
   purchaseDailyRate,
   segmentDailyRate,
-  shareOf,
   usageInPeriod,
   usageValue,
   verdict,
@@ -181,34 +180,6 @@ describe("物品回本模型", () => {
     expect(breakevenProgress(laptop(), d("2027-01-01"))).toBeCloseTo(365 / 730);
     expect(breakevenProgress(laptop(), d("2028-01-01"))).toBe(1);
     expect(breakevenProgress(laptop({ expectedDays: undefined }), d("2027-01-01"))).toBeUndefined();
-  });
-});
-
-describe("受益人分摊（ADR-0003：单一实体，查询时按权重切片）", () => {
-  const weights = [
-    { userId: "me", weight: 1 },
-    { userId: "spouse", weight: 1 },
-  ];
-
-  it("默认均分：相等权重各分一半", () => {
-    expect(shareOf(248, weights, "me")).toBeCloseTo(124);
-  });
-
-  it("自定义权重按比例分", () => {
-    const w = [
-      { userId: "me", weight: 2 },
-      { userId: "spouse", weight: 1 },
-      { userId: "kid", weight: 1 },
-    ];
-    expect(shareOf(248, w, "me")).toBeCloseTo(124);
-    expect(shareOf(248, w, "kid")).toBeCloseTo(62);
-  });
-
-  it("改权重全局重算：同一段成本按新权重立即生效", () => {
-    const before = shareOf(248, weights, "me");
-    const after = shareOf(248, [{ userId: "me", weight: 1 }, { userId: "spouse", weight: 3 }], "me");
-    expect(after).toBeCloseTo(62);
-    expect(after).not.toBeCloseTo(before);
   });
 });
 

@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import {
   actualCostPerUse,
   costSegments,
+  coversDate,
   usageInPeriod,
   usageValue,
   verdict,
@@ -151,8 +152,8 @@ export function getUsageVerdict(
   forUserId?: string,
 ): UsageVerdict | null {
   if (!sub.usageKind) return null;
-  const covering = costSegments(toEngineSub(sub), toEnginePayments(sub.payments), today).find(
-    (s) => s.start <= today && today < s.end,
+  const covering = costSegments(toEngineSub(sub), toEnginePayments(sub.payments), today).find((s) =>
+    coversDate(s, today),
   );
   if (!covering) return null;
   const share = forUserId ? shareForViewer(sub.beneficiaries ?? [], sub.ownerId, forUserId) : 1;

@@ -1,24 +1,14 @@
-// Dashboard 数据装配：从仓储取数 → 成本引擎计算 → 页面视图模型。
+// Dashboard 数据装配：从仓储取数 → 成本视图（cost-view）→ 页面视图模型。
 
-import {
-  costSegments,
-  currentDailyRate,
-  currentExpiry,
-  dayDiff,
-  purchaseCurrentDailyRate,
-  segmentDailyRate,
-  breakevenProgress,
-} from "./cost-engine";
+import { breakevenProgress, dayDiff, purchaseCurrentDailyRate } from "./cost-engine";
 import {
   listSubscriptions,
-  toEnginePayments,
-  toEngineSub,
   type SubscriptionWithPayments,
 } from "./subscriptions/service";
-import { dayStart, fromWall, wallParts } from "./dates";
+import { costOverPeriod, costView, paidInPeriod } from "./subscriptions/cost-view";
+import { DAY_MS, dayStart, fromWall, wallParts } from "./dates";
 import { listPurchases, toEnginePurchase } from "./purchases/service";
 import { getUsageVerdict, listUsage } from "./usage/service";
-import { shareForViewer } from "./beneficiaries/service";
 
 export interface DashboardRow {
   id: string;
@@ -94,41 +84,28 @@ function cycleLabel(sub: SubscriptionWithPayments): string {
   return sub.cycleCount && sub.cycleCount > 1 ? `每 ${sub.cycleCount} ${unit.replace("付", "")}` : unit;
 }
 
-/** 某订阅在 date 当天的摊销费率（覆盖段求和，无覆盖为 0） */
-function rateOn(sub: SubscriptionWithPayments, date: Date): number {
-  return costSegments(toEngineSub(sub), toEnginePayments(sub.payments), date)
-    .filter((s) => dayDiff(s.start, date) >= 0 && dayDiff(date, s.end) > 0)
-    .reduce((sum, s) => sum + segmentDailyRate(s), 0);
-}
-
 export async function getDashboardData(userId: string): Promise<DashboardData> {
   const subs = await listSubscriptions(userId);
   const purchasesRaw = await listPurchases(userId);
   const today = dayStart(new Date());
+  // 每订阅一次点视图（成本段只算一遍，行/到期/趋势共用）
+  const views = new Map(subs.map((s) => [s.id, costView(s, userId, today)]));
 
   const rows: DashboardRow[] = subs.map((sub) => {
-    const engineSub = toEngineSub(sub);
-    const payments = toEnginePayments(sub.payments);
-    const expiry = currentExpiry(engineSub, payments, today);
-    // 份额切片（ADR-0003）：共享订阅只计我的份额
-    const share = shareForViewer(sub.beneficiaries, sub.ownerId, userId);
-    const covering = costSegments(engineSub, payments, today).filter(
-      (s) => s.start <= today && today < s.end,
-    );
-    const daily = covering.reduce((sum, s) => sum + segmentDailyRate(s), 0) * share;
+    const v = views.get(sub.id)!;
     return {
       id: sub.id,
       name: sub.name,
       category: sub.category,
-      costUnknown: covering.some((s) => s.amountUnknown === true),
+      costUnknown: v.costUnknown,
       cycleLabel: cycleLabel(sub),
-      expiry,
-      daysUntilExpiry: expiry ? dayDiff(today, expiry) : null,
-      dailyCost: daily,
-      monthlyCost: daily * 30.4,
+      expiry: v.expiry,
+      daysUntilExpiry: v.expiry ? dayDiff(today, v.expiry) : null,
+      dailyCost: v.myDailyRate,
+      monthlyCost: v.myDailyRate * 30.4,
       status: sub.status,
       sharedFrom: sub.ownerId === userId ? null : sub.owner.username,
-      sharePct: share,
+      sharePct: v.share,
     };
   });
 
@@ -169,7 +146,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   const upcoming: UpcomingItem[] = subs
     .filter((s) => s.status === "ACTIVE")
     .map((sub): UpcomingItem | null => {
-      const expiry = currentExpiry(toEngineSub(sub), toEnginePayments(sub.payments), today);
+      const expiry = views.get(sub.id)!.expiry;
       if (!expiry) return null;
       const daysLeft = dayDiff(today, expiry);
       if (daysLeft < 0 || daysLeft > 30) return null;
@@ -186,29 +163,23 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     .filter((u) => u !== null)
     .sort((a, b) => a.daysLeft - b.daysLeft);
 
-  const trend: number[] = [];
-  for (let i = 29; i >= 0; i--) {
-    const day = new Date(today.getTime() - i * 86_400_000);
-    const subCost = subs
-      .filter((s) => s.status === "ACTIVE" && dayDiff(s.startDate, day) >= 0)
-      .reduce((sum, s) => sum + rateOn(s, day) * shareForViewer(s.beneficiaries, s.ownerId, userId), 0);
-    const itemCost = purchasesRaw
-      .filter((p) => dayDiff(p.purchaseDate, day) >= 0)
-      .reduce((sum, p) => sum + purchaseCurrentDailyRate(toEnginePurchase(p), day), 0);
-    trend.push(subCost + itemCost);
-  }
+  // 近 30 天每日摊销：区间视图段算一次按天切片（30×N → N 次分段）
+  const trend = costOverPeriod({
+    subs: subs.filter((s) => s.status === "ACTIVE"),
+    purchases: purchasesRaw,
+    viewerId: userId,
+    startMs: today.getTime() - 29 * DAY_MS,
+    endMs: today.getTime() + DAY_MS,
+  }).days.map((day) => day.cost);
 
   const tp = wallParts(today);
   const monthStart = fromWall(tp.year, tp.month, 1);
   const yearStart = fromWall(tp.year, 0, 1);
   // 实付只计自己拥有的订阅（共享订阅的钱是所有者出的）
   const spent = subs.filter((s) => s.ownerId === userId).flatMap((s) => s.payments);
-  const monthSpent = spent
-    .filter((p) => p.paidAt >= monthStart)
-    .reduce((s, p) => s + (p.amountBase ?? 0) - p.refundedBase, 0);
-  const yearSpent = spent
-    .filter((p) => p.paidAt >= yearStart)
-    .reduce((s, p) => s + (p.amountBase ?? 0) - p.refundedBase, 0);
+  const tomorrowMs = today.getTime() + DAY_MS;
+  const monthSpent = paidInPeriod(spent, monthStart.getTime(), tomorrowMs);
+  const yearSpent = paidInPeriod(spent, yearStart.getTime(), tomorrowMs);
 
   return {
     totalDailyCost,
