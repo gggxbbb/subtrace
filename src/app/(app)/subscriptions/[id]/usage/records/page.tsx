@@ -52,7 +52,7 @@ export default async function UsageRecordsPage({
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-4 md:px-6">
+      <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             subscriptions / {sub.name} / usage records
@@ -61,7 +61,7 @@ export default async function UsageRecordsPage({
         </div>
         <a
           href={`/subscriptions/${sub.id}`}
-          className="border border-black bg-white px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-black hover:text-white"
+          className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface"
         >
           ← 返回订阅
         </a>

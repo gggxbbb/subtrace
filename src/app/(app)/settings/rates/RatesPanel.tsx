@@ -13,7 +13,7 @@ import {
 } from "@/lib/exchange/actions";
 
 const inputCls =
-  "w-full border border-black bg-[#E4E3E0] px-3 py-2 text-sm outline-none focus:bg-white";
+  "w-full border border-ink bg-base px-3 py-2 text-sm outline-none focus:bg-surface";
 const labelCls = "mb-1 block text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
 
 export interface RateRow {
@@ -41,21 +41,21 @@ export function RatesPanel({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <form action={(fd) => start(() => setBaseCurrencyAction(fd))} className="border border-black bg-white p-4">
+        <form action={(fd) => start(() => setBaseCurrencyAction(fd))} className="border border-ink bg-surface p-4">
           <label className={labelCls}>主币种（所有成本的计价单位）</label>
           <div className="flex gap-2">
             <input name="baseCurrency" defaultValue={baseCurrency} maxLength={3} className={`${inputCls} f-mono uppercase`} />
-            <button disabled={pending} className="shrink-0 border border-black bg-black px-3 text-[10px] uppercase text-white f-mono hover:bg-[#FF6B00] disabled:opacity-40">
+            <button disabled={pending} className="shrink-0 border border-ink bg-ink px-3 text-[10px] uppercase text-surface f-mono hover:bg-accent-hover disabled:opacity-40">
               保存
             </button>
           </div>
           <p className="mt-1.5 text-[9px] uppercase text-neutral-400 f-mono">改动只影响之后的录入预填，已保存的记录不变</p>
         </form>
-        <form action={(fd) => start(() => setRatesApiUrlAction(fd))} className="border border-black bg-white p-4">
+        <form action={(fd) => start(() => setRatesApiUrlAction(fd))} className="border border-ink bg-surface p-4">
           <label className={labelCls}>汇率 API 模板（{"{base}"} 占位）</label>
           <div className="flex gap-2">
             <input name="ratesApiUrl" defaultValue={ratesApiUrl} placeholder="https://open.er-api.com/v6/latest/{base}" className={`${inputCls} f-mono`} />
-            <button disabled={pending} className="shrink-0 border border-black bg-black px-3 text-[10px] uppercase text-white f-mono hover:bg-[#FF6B00] disabled:opacity-40">
+            <button disabled={pending} className="shrink-0 border border-ink bg-ink px-3 text-[10px] uppercase text-surface f-mono hover:bg-accent-hover disabled:opacity-40">
               保存
             </button>
           </div>
@@ -63,8 +63,8 @@ export function RatesPanel({
         </form>
       </div>
 
-      <div className="border border-black bg-white">
-        <div className="flex items-center justify-between border-b border-black px-4 py-2">
+      <div className="border border-ink bg-surface">
+        <div className="flex items-center justify-between border-b border-ink px-4 py-2">
           <span className="text-[10px] font-semibold uppercase tracking-[0.15em] f-mono">
             <span className="text-neutral-400">03</span> — 币对 / {rates.length}
           </span>
@@ -81,13 +81,13 @@ export function RatesPanel({
                 );
               })
             }
-            className="border border-black bg-white px-2.5 py-1 text-[9px] uppercase tracking-wider f-mono hover:bg-black hover:text-white disabled:opacity-40"
+            className="border border-ink bg-surface px-2.5 py-1 text-[9px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface disabled:opacity-40"
           >
             立即刷新 AUTO
           </button>
         </div>
         {refreshMsg && (
-          <div className="border-b border-black bg-[#E4E3E0] px-4 py-1.5 text-[10px] f-mono">{refreshMsg}</div>
+          <div className="border-b border-ink bg-base px-4 py-1.5 text-[10px] f-mono">{refreshMsg}</div>
         )}
         {rates.length === 0 && (
           <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
@@ -110,7 +110,7 @@ export function RatesPanel({
             <button
               disabled={pending}
               onClick={() => start(() => deleteRateAction(r.id))}
-              className="border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono text-[#ef4444] hover:bg-[#ef4444] hover:text-white disabled:opacity-40"
+              className="border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase f-mono text-[#ef4444] hover:bg-[#ef4444] hover:text-white disabled:opacity-40"
             >
               删除
             </button>
@@ -118,8 +118,8 @@ export function RatesPanel({
         ))}
       </div>
 
-      <div className="border border-black bg-white">
-        <div className="border-b border-black px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] f-mono">
+      <div className="border border-ink bg-surface">
+        <div className="border-b border-ink px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] f-mono">
           <span className="text-neutral-400">04</span> — 添加币对
         </div>
         <form action={(fd) => start(() => upsertRateAction(fd))} className="flex items-end gap-3 p-4">
@@ -133,14 +133,14 @@ export function RatesPanel({
           </div>
           <div className="flex flex-col self-stretch">
             <label className={labelCls}>模式</label>
-            <div className="flex flex-1 border border-black">
+            <div className="flex flex-1 border border-ink">
               {(["MANUAL", "AUTO"] as const).map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => setMode(m)}
                   className={`flex flex-1 items-center justify-center px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${
-                    mode === m ? "bg-black text-white" : "bg-white hover:bg-black/5"
+                    mode === m ? "bg-ink text-surface" : "bg-surface hover:bg-black/5"
                   }`}
                 >
                   {m === "MANUAL" ? "手动钉住" : "自动更新"}
@@ -149,7 +149,7 @@ export function RatesPanel({
             </div>
             <input type="hidden" name="mode" value={mode} />
           </div>
-          <button disabled={pending} className="h-[38px] shrink-0 border border-black bg-black px-4 text-[10px] uppercase tracking-wider text-white f-mono hover:bg-[#FF6B00] hover:border-[#FF6B00] disabled:opacity-40">
+          <button disabled={pending} className="h-[38px] shrink-0 border border-ink bg-ink px-4 text-[10px] uppercase tracking-wider text-surface f-mono hover:bg-accent-hover hover:border-accent-hover disabled:opacity-40">
             添加
           </button>
         </form>

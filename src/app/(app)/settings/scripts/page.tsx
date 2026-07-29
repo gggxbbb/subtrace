@@ -38,7 +38,7 @@ export default async function ScriptsPage({
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-black bg-[#E4E3E0] px-4 md:px-6">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             settings / scripts
@@ -49,7 +49,7 @@ export default async function ScriptsPage({
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-3xl space-y-4">
           {error && (
-            <div className="border border-black bg-[#FF5A00] px-3 py-1.5 text-[10px] uppercase text-white f-mono">
+            <div className="border border-ink bg-accent px-3 py-1.5 text-[10px] uppercase text-white f-mono">
               保存失败：{error}
             </div>
           )}

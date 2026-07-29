@@ -82,7 +82,7 @@ function NavGroups({
               const active = pathname.startsWith(it.href);
               const cls = `flex items-center gap-2.5 px-2 py-1.5 text-[13px] font-medium ${
                 active
-                  ? "bg-black text-white"
+                  ? "bg-ink text-surface"
                   : it.soon
                     ? "cursor-not-allowed text-neutral-400"
                     : "text-neutral-700 hover:bg-black/5"
@@ -113,9 +113,9 @@ import { versionLine } from "@/lib/version";
 
 function UserFooter({ username, role }: { username: string; role: string }) {
   return (
-    <div className="border-t border-black px-4 py-3">
+    <div className="border-t border-ink px-4 py-3">
       <div className="flex items-center gap-2.5">
-        <div className="flex h-7 w-7 items-center justify-center border border-black bg-white text-[10px] font-bold">
+        <div className="flex h-7 w-7 items-center justify-center border border-ink bg-surface text-[10px] font-bold">
           {username.slice(0, 1).toUpperCase()}
         </div>
         <div className="f-mono">
@@ -132,9 +132,9 @@ function UserFooter({ username, role }: { username: string; role: string }) {
 
 export function Sidebar({ username, role, canUseScripts }: { username: string; role: string; canUseScripts: boolean }) {
   return (
-    <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-black bg-[#E4E3E0] md:flex">
-      <div className="flex h-16 items-center gap-3 border-b border-black px-4">
-        <div className="flex h-9 w-9 items-center justify-center bg-black text-base font-bold text-white">
+    <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-ink bg-base md:flex">
+      <div className="flex h-16 items-center gap-3 border-b border-ink px-4">
+        <div className="flex h-9 w-9 items-center justify-center bg-ink text-base font-bold text-surface">
           S.
         </div>
         <div>
@@ -167,17 +167,17 @@ export function MobileNav({ username, role, canUseScripts }: { username: string;
   return (
     <>
       {/* 顶栏 */}
-      <div className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-black bg-[#E4E3E0] px-4 md:hidden">
+      <div className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-ink bg-base px-4 md:hidden">
         <button
           type="button"
           aria-label="打开菜单"
           onClick={() => setOpen(true)}
-          className="flex h-11 w-11 items-center justify-center border border-black bg-white"
+          className="flex h-11 w-11 items-center justify-center border border-ink bg-surface"
         >
           <Menu className="h-4 w-4" strokeWidth={2.2} />
         </button>
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center bg-black text-xs font-bold text-white">
+          <div className="flex h-7 w-7 items-center justify-center bg-ink text-xs font-bold text-surface">
             S.
           </div>
           <span className="text-sm font-bold uppercase tracking-wider">Subtrace</span>
@@ -189,14 +189,14 @@ export function MobileNav({ username, role, canUseScripts }: { username: string;
       {open && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-0 flex h-full w-64 flex-col border-r border-black bg-[#E4E3E0]">
-            <div className="flex h-14 items-center justify-between border-b border-black px-4">
+          <div className="absolute left-0 top-0 flex h-full w-64 flex-col border-r border-ink bg-base">
+            <div className="flex h-14 items-center justify-between border-b border-ink px-4">
               <span className="text-sm font-bold uppercase tracking-wider">Subtrace</span>
               <button
                 type="button"
                 aria-label="关闭菜单"
                 onClick={() => setOpen(false)}
-                className="flex h-11 w-11 items-center justify-center border border-black bg-white"
+                className="flex h-11 w-11 items-center justify-center border border-ink bg-surface"
               >
                 <X className="h-4 w-4" strokeWidth={2.2} />
               </button>
@@ -210,7 +210,7 @@ export function MobileNav({ username, role, canUseScripts }: { username: string;
       )}
 
       {/* 底部 tab：工作台 5 项 */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-black bg-[#E4E3E0] md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-ink bg-base md:hidden">
         {WORKBENCH.map((it) => {
           const active = pathname.startsWith(it.href);
           return (
@@ -218,7 +218,7 @@ export function MobileNav({ username, role, canUseScripts }: { username: string;
               key={it.label}
               href={it.href}
               className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 text-[9px] uppercase tracking-wider f-mono ${
-                active ? "bg-black text-white" : "text-neutral-600"
+                active ? "bg-ink text-surface" : "text-neutral-600"
               }`}
             >
               <it.icon className="h-4 w-4" strokeWidth={2.2} />

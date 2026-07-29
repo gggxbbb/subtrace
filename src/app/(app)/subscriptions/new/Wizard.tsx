@@ -79,7 +79,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
       <h1 className="mb-5 text-xl font-bold uppercase tracking-tight">新建订阅</h1>
       <ErrorBanner error={error} defaultMessage="创建失败：请检查必填项（周期模式需要完整周期与标准价）" className="mb-4" />
 
-      <div className="border border-black bg-white">
+      <div className="border border-ink bg-surface">
         <StepBar steps={steps} step={step} />
 
         <form ref={formRef} action={createSubscriptionAction}>
@@ -106,7 +106,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
           <div className={`space-y-4 p-5 ${step === 1 ? "" : "hidden"}`}>
             <div>
               <label className={labelCls}>跟踪模式</label>
-              <div className="grid grid-cols-2 gap-px border border-black bg-black">
+              <div className="grid grid-cols-2 gap-px border border-ink bg-ink">
                 {(
                   [
                     ["CYCLE", "周期模式 · 推算到期"],
@@ -117,7 +117,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
                     type="button"
                     key={m}
                     onClick={() => setMode(m)}
-                    className={`px-3 py-2 text-[11px] uppercase tracking-wider f-mono ${mode === m ? "bg-black text-white" : "bg-white hover:bg-[#E4E3E0]"}`}
+                    className={`px-3 py-2 text-[11px] uppercase tracking-wider f-mono ${mode === m ? "bg-ink text-surface" : "bg-surface hover:bg-base"}`}
                   >
                     {label}
                   </button>
@@ -129,7 +129,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
               <>
                 <div>
                   <label className={labelCls}>计费周期</label>
-                  <div className="grid grid-cols-2 gap-px border border-black bg-black">
+                  <div className="grid grid-cols-2 gap-px border border-ink bg-ink">
                     {(
                       [
                         ["CALENDAR", "日历周期"],
@@ -140,7 +140,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
                         type="button"
                         key={k}
                         onClick={() => setCycleKind(k)}
-                        className={`px-3 py-2 text-[11px] uppercase tracking-wider f-mono ${cycleKind === k ? "bg-black text-white" : "bg-white hover:bg-[#E4E3E0]"}`}
+                        className={`px-3 py-2 text-[11px] uppercase tracking-wider f-mono ${cycleKind === k ? "bg-ink text-surface" : "bg-surface hover:bg-base"}`}
                       >
                         {label}
                       </button>
@@ -175,7 +175,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
                   labels={{ amount: "标准价", amountBase: "折算主币种" }}
                 />
                 <label className="flex items-center gap-2 text-[12px]">
-                  <input type="checkbox" name="autoRenew" defaultChecked className="h-4 w-4 accent-black" />
+                  <input type="checkbox" name="autoRenew" defaultChecked className="h-4 w-4 accent-ink" />
                   自动续费（到期自动扣款）
                 </label>
               </>
@@ -190,9 +190,9 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
           {/* 步骤 3：首笔与提醒 */}
           <div className={`space-y-4 p-5 ${step === 2 ? "" : "hidden"}`}>
             {mode === "CYCLE" && (
-              <div className="border border-black">
-                <label className="flex items-center gap-2 border-b border-black bg-[#E4E3E0] px-3 py-2 text-[12px]">
-                  <input type="checkbox" name="firstPayment" defaultChecked className="h-4 w-4 accent-black" />
+              <div className="border border-ink">
+                <label className="flex items-center gap-2 border-b border-ink bg-base px-3 py-2 text-[12px]">
+                  <input type="checkbox" name="firstPayment" defaultChecked className="h-4 w-4 accent-ink" />
                   <span>
                     <strong>同时记一笔付费</strong>
                     <span className="ml-1 text-[10px] text-neutral-500">推荐：到期日与成本立刻以实付为准，不再靠推算</span>
@@ -243,9 +243,9 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
 
           {/* 步骤 4：确认 */}
           <div className={`space-y-4 p-5 ${step === 3 ? "" : "hidden"}`}>
-            <div className="border border-black">
+            <div className="border border-ink">
               {summary.map(([k, v]) => (
-                <div key={k} className="flex justify-between gap-4 border-b border-black px-3 py-2 text-[12px] last:border-b-0">
+                <div key={k} className="flex justify-between gap-4 border-b border-ink px-3 py-2 text-[12px] last:border-b-0">
                   <span className="shrink-0 text-neutral-500">{k}</span>
                   <span className="min-w-0 truncate font-semibold" title={v}>{v}</span>
                 </div>
@@ -254,12 +254,12 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
           </div>
 
           {/* 底部导航 */}
-          <div className="flex items-center justify-between border-t border-black px-5 py-3">
+          <div className="flex items-center justify-between border-t border-ink px-5 py-3">
             {step > 0 ? (
               <button
                 type="button"
                 onClick={back}
-                className="border border-black bg-white px-4 py-1.5 text-[11px] uppercase tracking-wider hover:bg-black hover:text-white"
+                className="border border-ink bg-surface px-4 py-1.5 text-[11px] uppercase tracking-wider hover:bg-ink hover:text-surface"
               >
                 ← 上一步
               </button>
@@ -271,7 +271,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
               <button
                 type="button"
                 onClick={next}
-                className="bg-black px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800"
+                className="bg-ink px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover"
               >
                 下一步 →
               </button>
@@ -279,7 +279,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
               <button
                 type="submit"
                 formNoValidate
-                className="bg-black px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800"
+                className="bg-ink px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover"
               >
                 创建 →
               </button>

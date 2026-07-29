@@ -8,12 +8,12 @@ import { useState } from "react";
 /** 步骤条：编号 + 当前（黑底）/已完成（灰底）/未到达（灰字） */
 export function StepBar({ steps, step }: { steps: string[]; step: number }) {
   return (
-    <div className="flex border-b border-black">
+    <div className="flex border-b border-ink">
       {steps.map((s, i) => (
         <div
           key={s}
           className={`flex flex-1 items-center justify-center gap-1.5 px-2 py-2 text-[10px] uppercase tracking-wider f-mono ${
-            i === step ? "bg-black text-white" : i < step ? "bg-[#E4E3E0]" : "bg-white text-neutral-400"
+            i === step ? "bg-ink text-surface" : i < step ? "bg-base" : "bg-surface text-neutral-400"
           }`}
         >
           <span>{i + 1}</span> {s}

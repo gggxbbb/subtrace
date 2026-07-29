@@ -16,10 +16,10 @@ import { Panel } from "@/components/te";
 import type { ChannelView } from "@/lib/notifications/service";
 
 const inputCls =
-  "w-full border border-black bg-[#E4E3E0] px-3 py-2 text-sm outline-none focus:bg-white";
+  "w-full border border-ink bg-base px-3 py-2 text-sm outline-none focus:bg-surface";
 const labelCls = "mb-1 block text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
 const btnCls =
-  "shrink-0 border border-black bg-white px-2.5 py-1.5 text-[9px] uppercase tracking-wider f-mono hover:bg-black hover:text-white disabled:opacity-40";
+  "shrink-0 border border-ink bg-surface px-2.5 py-1.5 text-[9px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface disabled:opacity-40";
 
 /** headers 对象 ↔ 每行 "Key: Value" 文本 */
 function headersToText(headers: unknown): string {
@@ -124,7 +124,7 @@ function EmailFields({ config, edit }: { config: Record<string, unknown>; edit: 
         </div>
       </div>
       <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="secure" defaultChecked={config.secure !== false} className="h-4 w-4 accent-black" />
+        <input type="checkbox" name="secure" defaultChecked={config.secure !== false} className="h-4 w-4 accent-ink" />
         SSL/TLS（465 端口勾选；587 STARTTLS 不勾）
       </label>
     </div>
@@ -144,7 +144,7 @@ function ChannelRow({ channel }: { channel: ChannelView }) {
     <div className="border-b border-neutral-200 last:border-0">
       <div className="flex items-center gap-3 px-4 py-3">
         <span
-          className={`inline-block h-2 w-2 shrink-0 rounded-full ${channel.enabled ? "bg-[#FF6B00]" : "bg-neutral-300"}`}
+          className={`inline-block h-2 w-2 shrink-0 rounded-full ${channel.enabled ? "bg-accent-hover" : "bg-neutral-300"}`}
         />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium" title={channel.name}>
@@ -184,7 +184,7 @@ function ChannelRow({ channel }: { channel: ChannelView }) {
         <button
           disabled={pending}
           onClick={() => start(() => deleteChannelAction(channel.id))}
-          className="shrink-0 border border-black bg-white px-2.5 py-1.5 text-[9px] uppercase tracking-wider text-[#ef4444] f-mono hover:bg-[#ef4444] hover:text-white disabled:opacity-40"
+          className="shrink-0 border border-ink bg-surface px-2.5 py-1.5 text-[9px] uppercase tracking-wider text-[#ef4444] f-mono hover:bg-[#ef4444] hover:text-white disabled:opacity-40"
         >
           删除
         </button>
@@ -198,7 +198,7 @@ function ChannelRow({ channel }: { channel: ChannelView }) {
               setEditing(false);
             })
           }
-          className="space-y-4 border-t border-neutral-200 bg-[#E4E3E0]/40 p-4"
+          className="space-y-4 border-t border-neutral-200 bg-base/40 p-4"
         >
           <input type="hidden" name="kind" value={channel.kind} />
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -221,7 +221,7 @@ function ChannelRow({ channel }: { channel: ChannelView }) {
           <div className="flex gap-2">
             <button
               disabled={pending}
-              className="border border-black bg-black px-4 py-2 text-[10px] uppercase tracking-wider text-white f-mono hover:bg-[#FF6B00] hover:border-[#FF6B00] disabled:opacity-40"
+              className="border border-ink bg-ink px-4 py-2 text-[10px] uppercase tracking-wider text-surface f-mono hover:bg-accent-hover hover:border-accent-hover disabled:opacity-40"
             >
               保存修改
             </button>
@@ -229,7 +229,7 @@ function ChannelRow({ channel }: { channel: ChannelView }) {
               type="button"
               disabled={pending}
               onClick={() => setEditing(false)}
-              className="border border-black bg-white px-4 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-black hover:text-white disabled:opacity-40"
+              className="border border-ink bg-surface px-4 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface disabled:opacity-40"
             >
               取消
             </button>
@@ -269,14 +269,14 @@ export function ChannelsPanel({ channels }: { channels: ChannelView[] }) {
             </div>
             <div className="flex flex-col">
               <label className={labelCls}>类型</label>
-              <div className="flex flex-1 border border-black">
+              <div className="flex flex-1 border border-ink">
                 {(["WEBHOOK", "EMAIL"] as const).map((k) => (
                   <button
                     key={k}
                     type="button"
                     onClick={() => setKind(k)}
                     className={`flex flex-1 items-center justify-center px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${
-                      kind === k ? "bg-black text-white" : "bg-white hover:bg-black/5"
+                      kind === k ? "bg-ink text-surface" : "bg-surface hover:bg-black/5"
                     }`}
                   >
                     {k === "WEBHOOK" ? "Webhook" : "SMTP 邮件"}
@@ -291,7 +291,7 @@ export function ChannelsPanel({ channels }: { channels: ChannelView[] }) {
 
           <button
             disabled={pending}
-            className="border border-black bg-black px-4 py-2 text-[10px] uppercase tracking-wider text-white f-mono hover:bg-[#FF6B00] hover:border-[#FF6B00] disabled:opacity-40"
+            className="border border-ink bg-ink px-4 py-2 text-[10px] uppercase tracking-wider text-surface f-mono hover:bg-accent-hover hover:border-accent-hover disabled:opacity-40"
           >
             添加渠道
           </button>

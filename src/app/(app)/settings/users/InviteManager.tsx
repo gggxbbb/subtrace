@@ -15,7 +15,7 @@ export type InviteRow = Omit<InviteView, "expiresAt" | "createdAt"> & {
 function statusOf(inv: InviteRow): { label: string; cls: string } {
   if (inv.usedBy) return { label: `已使用 · ${inv.usedBy}`, cls: "text-neutral-400" };
   if (new Date(inv.expiresAt) < new Date()) return { label: "已过期", cls: "text-neutral-400" };
-  return { label: "待使用", cls: "text-[#FF6B00]" };
+  return { label: "待使用", cls: "text-accent-hover" };
 }
 
 export function InviteManager({ invites }: { invites: InviteRow[] }) {
@@ -35,18 +35,18 @@ export function InviteManager({ invites }: { invites: InviteRow[] }) {
               setLink(`${location.origin}/register?invite=${token}`);
             })
           }
-          className="border border-black bg-white px-2.5 py-1 text-[9px] uppercase tracking-wider f-mono hover:bg-black hover:text-white disabled:opacity-40"
+          className="border border-ink bg-surface px-2.5 py-1 text-[9px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface disabled:opacity-40"
         >
           生成邀请链接
         </button>
       }
     >
       {link && (
-        <div className="flex items-center gap-2 border-b border-black bg-[#E4E3E0] px-4 py-2">
+        <div className="flex items-center gap-2 border-b border-ink bg-base px-4 py-2">
           <span className="flex-1 break-all text-[10px] f-mono">{link}</span>
           <button
             onClick={() => navigator.clipboard.writeText(link)}
-            className="border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono hover:bg-black hover:text-white"
+            className="border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase f-mono hover:bg-ink hover:text-surface"
           >
             复制
           </button>
@@ -71,7 +71,7 @@ export function InviteManager({ invites }: { invites: InviteRow[] }) {
               <button
                 disabled={pending}
                 onClick={() => start(() => revokeInviteAction(inv.token))}
-                className="border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono text-[#ef4444] hover:bg-[#ef4444] hover:text-white disabled:opacity-40"
+                className="border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase f-mono text-[#ef4444] hover:bg-[#ef4444] hover:text-white disabled:opacity-40"
               >
                 吊销
               </button>

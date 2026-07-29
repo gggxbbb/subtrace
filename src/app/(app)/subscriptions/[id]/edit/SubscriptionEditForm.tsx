@@ -32,7 +32,7 @@ export function SubscriptionEditForm({
 }) {
   const [cycleKind, setCycleKind] = useState(initial.cycleKind);
   return (
-    <form action={action} className="space-y-4 border border-black bg-white p-5">
+    <form action={action} className="space-y-4 border border-ink bg-surface p-5">
       <input type="hidden" name="cycleKind" value={cycleKind} />
       <div>
         <label className={labelCls}>名称</label>
@@ -47,7 +47,7 @@ export function SubscriptionEditForm({
         <>
           <div>
             <label className={labelCls}>计费周期</label>
-            <div className="grid grid-cols-2 gap-px border border-black bg-black">
+            <div className="grid grid-cols-2 gap-px border border-ink bg-ink">
               {(
                 [
                   ["CALENDAR", "日历周期"],
@@ -58,7 +58,7 @@ export function SubscriptionEditForm({
                   type="button"
                   key={k}
                   onClick={() => setCycleKind(k)}
-                  className={`px-3 py-2 text-[11px] uppercase tracking-wider f-mono ${cycleKind === k ? "bg-black text-white" : "bg-white hover:bg-[#E4E3E0]"}`}
+                  className={`px-3 py-2 text-[11px] uppercase tracking-wider f-mono ${cycleKind === k ? "bg-ink text-surface" : "bg-surface hover:bg-base"}`}
                 >
                   {label}
                 </button>
@@ -97,7 +97,7 @@ export function SubscriptionEditForm({
             labels={{ amount: "标准价", amountBase: "折算主币种" }}
           />
           <label className="flex items-center gap-2 text-[12px]">
-            <input type="checkbox" name="autoRenew" defaultChecked={initial.autoRenew} className="h-4 w-4 accent-black" />
+            <input type="checkbox" name="autoRenew" defaultChecked={initial.autoRenew} className="h-4 w-4 accent-ink" />
             自动续费（到期自动扣款）
           </label>
         </>
@@ -116,12 +116,12 @@ export function SubscriptionEditForm({
         </p>
       </div>
 
-      <button className="w-full bg-black py-2.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800">
+      <button className="w-full bg-ink py-2.5 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover">
         保存 →
       </button>
       <a
         href={`/subscriptions/${subscriptionId}`}
-        className="block border border-black bg-white py-2.5 text-center text-[11px] uppercase tracking-wider hover:bg-black hover:text-white"
+        className="block border border-ink bg-surface py-2.5 text-center text-[11px] uppercase tracking-wider hover:bg-ink hover:text-surface"
       >
         取消
       </a>

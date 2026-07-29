@@ -49,17 +49,17 @@ export function PaymentHistory({
             action={async (formData) => {
               await updatePaymentAction(subscriptionId, p.id, formData);
             }}
-            className="space-y-3 border-b border-black bg-[#E4E3E0] px-4 py-3"
+            className="space-y-3 border-b border-ink bg-base px-4 py-3"
           >
             <PaymentEditFields row={p} defaultCurrency={p.currency ?? currency} variant="panel" />
             <div className="flex gap-2">
-              <button className="bg-black px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800">
+              <button className="bg-ink px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover">
                 保存 →
               </button>
               <button
                 type="button"
                 onClick={() => setEditingId(null)}
-                className="border border-black bg-white px-4 py-1.5 text-[11px] uppercase tracking-wider hover:bg-black hover:text-white"
+                className="border border-ink bg-surface px-4 py-1.5 text-[11px] uppercase tracking-wider hover:bg-ink hover:text-surface"
               >
                 取消
               </button>

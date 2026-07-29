@@ -13,7 +13,7 @@ export function ConfirmButton({
   disabled = false,
   className = "",
   confirmClassName = "bg-red-700 px-2 py-0.5 text-[9px] uppercase text-white f-mono hover:bg-red-800",
-  cancelClassName = "border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono hover:bg-black hover:text-white",
+  cancelClassName = "border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase f-mono hover:bg-ink hover:text-surface",
 }: {
   onConfirm: () => void | Promise<void>;
   label?: string;

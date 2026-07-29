@@ -15,7 +15,7 @@ export interface ToolbarQuery {
   q?: string;
 }
 
-const selCls = "border border-black bg-white px-2 py-1 text-[10px] uppercase tracking-wider f-mono outline-none";
+const selCls = "border border-ink bg-surface px-2 py-1 text-[10px] uppercase tracking-wider f-mono outline-none";
 
 export function ListToolbar({
   sortOptions,
@@ -76,7 +76,7 @@ export function ListToolbar({
         <button
           type="button"
           onClick={() => update({ dir: dir === "asc" ? "desc" : "asc" })}
-          className={`${selCls} flex items-center gap-1 hover:bg-black hover:text-white`}
+          className={`${selCls} flex items-center gap-1 hover:bg-ink hover:text-surface`}
           title={dir === "asc" ? "升序（点击切换降序）" : "降序（点击切换升序）"}
         >
           {dir === "asc" ? (
@@ -117,7 +117,7 @@ export function ListToolbar({
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="关键字"
-        className="w-28 border border-black bg-[#E4E3E0] px-2 py-1 text-[11px] outline-none focus:bg-white"
+        className="w-28 border border-ink bg-base px-2 py-1 text-[11px] outline-none focus:bg-surface"
       />
     </div>
   );

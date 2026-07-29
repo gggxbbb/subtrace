@@ -43,15 +43,15 @@ export function UsageWizard({
 
   if (!acknowledged) {
     return (
-      <div className="border border-black bg-white">
-        <div className="border-b border-black bg-[#E4E3E0] px-4 py-2 text-[10px] uppercase tracking-wider f-mono">
+      <div className="border border-ink bg-surface">
+        <div className="border-b border-ink bg-base px-4 py-2 text-[10px] uppercase tracking-wider f-mono">
           已启用 · 重新设置
         </div>
         <div className="space-y-4 p-5">
           <div className="flex items-center gap-2 text-sm font-bold">
             <Led color="#ef4444" /> 这个订阅已经在跟踪用量
           </div>
-          <div className="border border-black">
+          <div className="border border-ink">
             {(
               [
                 ["当前类型", initialKind === "COUNT" ? "计数型" : "额度型"],
@@ -62,7 +62,7 @@ export function UsageWizard({
                 ["已有记录", `${recordCount} 条`],
               ] as const
             ).map(([k, v]) => (
-              <div key={k} className="flex justify-between border-b border-black px-3 py-2 text-[12px] last:border-b-0">
+              <div key={k} className="flex justify-between border-b border-ink px-3 py-2 text-[12px] last:border-b-0">
                 <span className="text-neutral-500">{k}</span>
                 <span className="font-semibold">{v}</span>
               </div>
@@ -75,7 +75,7 @@ export function UsageWizard({
           <div className="flex items-center justify-between">
             <div className="flex gap-2">
               <form action={disableUsageAction.bind(null, subscriptionId)}>
-                <button className="border border-red-700 bg-white px-3 py-1.5 text-[10px] uppercase tracking-wider text-red-700 hover:bg-red-700 hover:text-white">
+                <button className="border border-red-700 bg-surface px-3 py-1.5 text-[10px] uppercase tracking-wider text-red-700 hover:bg-red-700 hover:text-white">
                   停用跟踪（记录保留）
                 </button>
               </form>
@@ -87,7 +87,7 @@ export function UsageWizard({
                   <button
                     type="button"
                     onClick={() => setConfirmPurge(false)}
-                    className="border border-black bg-white px-2 py-1.5 text-[10px] uppercase hover:bg-black hover:text-white"
+                    className="border border-ink bg-surface px-2 py-1.5 text-[10px] uppercase hover:bg-ink hover:text-surface"
                   >
                     算了
                   </button>
@@ -106,14 +106,14 @@ export function UsageWizard({
               <button
                 type="button"
                 onClick={() => router.push(`/subscriptions/${subscriptionId}`)}
-                className="border border-black bg-white px-4 py-1.5 text-[11px] uppercase tracking-wider hover:bg-black hover:text-white"
+                className="border border-ink bg-surface px-4 py-1.5 text-[11px] uppercase tracking-wider hover:bg-ink hover:text-surface"
               >
                 返回
               </button>
               <button
                 type="button"
                 onClick={() => setAcknowledged(true)}
-                className="bg-black px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800"
+                className="bg-ink px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover"
               >
                 我已了解，继续修改 →
               </button>
@@ -125,7 +125,7 @@ export function UsageWizard({
   }
 
   return (
-    <div className="border border-black bg-white">
+    <div className="border border-ink bg-surface">
       <StepBar steps={steps} step={step} />
 
       <div className="p-5">
@@ -137,9 +137,9 @@ export function UsageWizard({
               两相对比得出盈亏。按订阅的性质，有两种追踪方式：
             </p>
             <div className="grid grid-cols-2 gap-4">
-              <div className="border border-black p-3">
+              <div className="border border-ink p-3">
                 <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase f-mono">
-                  <Led color="#FF5A00" /> 计数型
+                  <Led color="var(--accent)" /> 计数型
                 </div>
                 <p className="text-[11px] leading-relaxed text-neutral-600">
                   适合<strong>按次消费、单次有明确市场价</strong>的订阅：健身房（单次卡 ¥30）、按摩、洗车、私教课。
@@ -148,7 +148,7 @@ export function UsageWizard({
                   每用一次记一笔，系统拿「次数 × 市场价」对比已摊成本，回答<strong>“再去几次回本”</strong>。
                 </p>
               </div>
-              <div className="border border-black p-3">
+              <div className="border border-ink p-3">
                 <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase f-mono">
                   <Led color="#0ea5e9" /> 额度型
                 </div>
@@ -173,7 +173,7 @@ export function UsageWizard({
             <div className="grid grid-cols-2 gap-4">
               {(
                 [
-                  ["COUNT", "计数型", "按次使用，单次有市场价", "健身房 · 按摩 · 洗车 · 私教课", "#FF5A00"],
+                  ["COUNT", "计数型", "按次使用，单次有市场价", "健身房 · 按摩 · 洗车 · 私教课", "var(--accent)"],
                   ["QUOTA", "额度型", "每月固定额度，看使用率", "流量机场 · iCloud · API 点数", "#0ea5e9"],
                 ] as const
               ).map(([k, title, desc, examples, color]) => (
@@ -182,7 +182,7 @@ export function UsageWizard({
                   type="button"
                   onClick={() => setKind(k)}
                   className={`border p-4 text-left transition-colors ${
-                    kind === k ? "border-black bg-[#E4E3E0]" : "border-neutral-300 bg-white hover:border-black"
+                    kind === k ? "border-ink bg-base" : "border-neutral-300 bg-surface hover:border-ink"
                   }`}
                 >
                   <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase f-mono">
@@ -254,7 +254,7 @@ export function UsageWizard({
         {step === 3 && (
           <div className="space-y-4">
             <h2 className="text-sm font-bold">确认</h2>
-            <div className="border border-black">
+            <div className="border border-ink">
               {(
                 [
                   ["类型", kind === "COUNT" ? "计数型（按次算回本）" : "额度型（看使用率）"],
@@ -264,7 +264,7 @@ export function UsageWizard({
                     : [["每月总额度", quotaTotal ? `${quotaTotal} ${unit || ""}` : "（未填）"]]),
                 ] as const
               ).map(([k, v]) => (
-                <div key={k} className="flex justify-between border-b border-black px-3 py-2 text-[12px] last:border-b-0">
+                <div key={k} className="flex justify-between border-b border-ink px-3 py-2 text-[12px] last:border-b-0">
                   <span className="text-neutral-500">{k}</span>
                   <span className="font-semibold">{v}</span>
                 </div>
@@ -278,7 +278,7 @@ export function UsageWizard({
               <input type="hidden" name="usageUnit" value={unit} />
               {kind === "COUNT" && <input type="hidden" name="altUnitPrice" value={altUnitPrice} />}
               {kind === "QUOTA" && <input type="hidden" name="quotaTotal" value={quotaTotal} />}
-              <button className="w-full bg-black py-2.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800">
+              <button className="w-full bg-ink py-2.5 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover">
                 启用用量跟踪 →
               </button>
             </form>
@@ -290,7 +290,7 @@ export function UsageWizard({
           <button
             type="button"
             onClick={() => (step === 0 ? router.push(`/subscriptions/${subscriptionId}`) : setStep(step - 1))}
-            className="border border-black bg-white px-4 py-1.5 text-[11px] uppercase tracking-wider hover:bg-black hover:text-white"
+            className="border border-ink bg-surface px-4 py-1.5 text-[11px] uppercase tracking-wider hover:bg-ink hover:text-surface"
           >
             ← {step === 0 ? "返回" : "上一步"}
           </button>
@@ -299,7 +299,7 @@ export function UsageWizard({
               type="button"
               onClick={() => setStep(step + 1)}
               disabled={step === 2 && kind === "QUOTA" && !quotaTotal}
-              className="bg-black px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800 disabled:opacity-40"
+              className="bg-ink px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover disabled:opacity-40"
             >
               下一步 →
             </button>

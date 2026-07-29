@@ -36,14 +36,14 @@ export function UsersTable({ users }: { users: UserRow[] }) {
   return (
     <Panel index="01" title={`用户 / ${users.length}`}>
       {error && (
-        <div className="border-b border-black bg-[#ef4444] px-4 py-1.5 text-[10px] uppercase text-white f-mono">
+        <div className="border-b border-ink bg-[#ef4444] px-4 py-1.5 text-[10px] uppercase text-white f-mono">
           {error}
         </div>
       )}
       <div className="overflow-x-auto">
       <table className="w-full min-w-[520px] text-[13px]">
         <thead>
-          <tr className="border-b border-black text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+          <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
             <th className="px-4 py-2 font-medium">用户名</th>
             <th className="px-4 py-2 font-medium">角色</th>
             <th className="px-4 py-2 font-medium">主币种</th>
@@ -63,7 +63,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
               <td className="px-4 py-2.5">
                 <span
                   className={`px-1.5 py-0.5 text-[9px] uppercase f-mono ${
-                    u.role === "ADMIN" ? "bg-black text-white" : "text-neutral-500"
+                    u.role === "ADMIN" ? "bg-ink text-surface" : "text-neutral-500"
                   }`}
                 >
                   {u.role}
@@ -74,7 +74,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
                 <button
                   disabled={pending}
                   onClick={() => run(() => setCanUseScriptsAction(u.id, !u.canUseScripts))}
-                  className={`px-1.5 py-0.5 text-[9px] uppercase f-mono ${u.canUseScripts ? "bg-black text-white" : "border border-black bg-white text-neutral-400 hover:bg-black/5"} disabled:opacity-40`}
+                  className={`px-1.5 py-0.5 text-[9px] uppercase f-mono ${u.canUseScripts ? "bg-ink text-surface" : "border border-ink bg-surface text-neutral-400 hover:bg-black/5"} disabled:opacity-40`}
                 >
                   {u.canUseScripts ? "信任" : "关闭"}
                 </button>
@@ -87,7 +87,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
                     <button
                       disabled={pending}
                       onClick={() => run(() => setUserRoleAction(u.id, u.role === "ADMIN" ? "USER" : "ADMIN"))}
-                      className="border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono hover:bg-black hover:text-white disabled:opacity-40"
+                      className="border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase f-mono hover:bg-ink hover:text-surface disabled:opacity-40"
                     >
                       {u.role === "ADMIN" ? "降为 USER" : "升为 ADMIN"}
                     </button>
@@ -97,7 +97,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
                         const pwd = prompt(`为 ${u.username} 设置新密码（至少 8 位）：`);
                         if (pwd) run(() => resetUserPasswordAction(u.id, pwd));
                       }}
-                      className="border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono hover:bg-black hover:text-white disabled:opacity-40"
+                      className="border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase f-mono hover:bg-ink hover:text-surface disabled:opacity-40"
                     >
                       重置密码
                     </button>
@@ -105,7 +105,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
                       onConfirm={() => run(() => deleteUserAction(u.id))}
                       confirmLabel="确认删除（不可恢复）"
                       disabled={pending}
-                      className="border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono text-[#ef4444] hover:bg-[#ef4444] hover:text-white disabled:opacity-40"
+                      className="border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase f-mono text-[#ef4444] hover:bg-[#ef4444] hover:text-white disabled:opacity-40"
                       confirmClassName="bg-red-700 px-2 py-0.5 text-[9px] uppercase text-white f-mono hover:bg-red-800"
                     />
                   </span>

@@ -25,7 +25,7 @@ export default async function EditPurchasePage({
 
   return (
     <>
-      <header className="flex h-16 items-center border-b border-black bg-[#E4E3E0] px-4 md:px-6">
+      <header className="flex h-16 items-center border-b border-ink bg-base px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             purchases / {purchase.name} / edit
@@ -35,7 +35,7 @@ export default async function EditPurchasePage({
       </header>
       <main className="mx-auto max-w-xl px-4 py-8 md:px-6">
         <ErrorBanner error={error ?? null} defaultMessage="保存失败：请检查必填项" className="mb-4" />
-        <form action={updatePurchaseAction.bind(null, purchase.id)} className="space-y-4 border border-black bg-white p-5">
+        <form action={updatePurchaseAction.bind(null, purchase.id)} className="space-y-4 border border-ink bg-surface p-5">
         <MoneyFields
           defaults={{
             amount: purchase.amount,
@@ -62,12 +62,12 @@ export default async function EditPurchasePage({
             <input name="expectedDays" type="number" min="1" defaultValue={purchase.expectedDays ?? ""} className={inputCls} />
           </div>
         </div>
-          <button className="w-full bg-black py-2.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800">
+          <button className="w-full bg-ink py-2.5 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover">
             保存 →
           </button>
           <a
             href={`/purchases/${purchase.id}`}
-            className="block border border-black bg-white py-2.5 text-center text-[11px] uppercase tracking-wider hover:bg-black hover:text-white"
+            className="block border border-ink bg-surface py-2.5 text-center text-[11px] uppercase tracking-wider hover:bg-ink hover:text-surface"
           >
             取消
           </a>

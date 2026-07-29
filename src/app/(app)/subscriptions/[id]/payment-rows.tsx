@@ -186,17 +186,17 @@ export function PaymentRowDisplay({
           <>
             <button
               onClick={onEdit}
-              className="invisible border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono group-hover:visible hover:bg-black hover:text-white"
+              className="invisible border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase f-mono group-hover:visible hover:bg-ink hover:text-surface"
             >
               编辑
             </button>
             <ConfirmButton
               onConfirm={onDelete}
-              className="invisible border border-black bg-white px-2 py-0.5 text-[9px] uppercase text-red-700 f-mono group-hover:visible hover:bg-red-700 hover:text-white"
+              className="invisible border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase text-red-700 f-mono group-hover:visible hover:bg-red-700 hover:text-white"
             />
           </>
         )}
-        <Led color={p.source === "PROMO" ? "#FF5A00" : "#22c55e"} />
+        <Led color={p.source === "PROMO" ? "var(--accent)" : "#22c55e"} />
       </div>
     </div>
   );

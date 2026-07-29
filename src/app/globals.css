@@ -27,6 +27,7 @@
   --band: #f5f5f5; /* 浅底带（neutral-100，推算段行） */
   --destructive: #b91c1c; /* red-700 */
   --income: #0f766e; /* teal-700 */
+  --ink-hover: #262626; /* neutral-800：实底按钮 hover */
 }
 
 .dark {
@@ -40,6 +41,7 @@
   --band: #302e2b;
   --destructive: #ef4444;
   --income: #2dd4bf;
+  --ink-hover: #cbc9c4;
 }
 
 @theme inline {
@@ -53,6 +55,7 @@
   --color-band: var(--band);
   --color-destructive: var(--destructive);
   --color-income: var(--income);
+  --color-ink-hover: var(--ink-hover);
   --font-sans: "JetBrains Mono", system-ui, -apple-system, "Segoe UI", "PingFang SC",
     "HarmonyOS Sans SC", "MiSans VF", "MiSans", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;

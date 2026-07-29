@@ -31,16 +31,16 @@ export function ArchivedPurchaseList({
           <span className="flex shrink-0 items-center gap-1.5">
             <button
               onClick={async () => setPurchaseArchivedAction(r.id, false)}
-              className="border border-black bg-white px-2.5 py-1 text-[10px] uppercase hover:bg-black hover:text-white"
+              className="border border-ink bg-surface px-2.5 py-1 text-[10px] uppercase hover:bg-ink hover:text-surface"
             >
               取消归档
             </button>
             <ConfirmButton
               onConfirm={async () => deletePurchaseAction(r.id)}
               confirmLabel="确认删除（不可恢复）"
-              className="border border-red-700 bg-white px-2.5 py-1 text-[10px] uppercase text-red-700 hover:bg-red-700 hover:text-white"
+              className="border border-red-700 bg-surface px-2.5 py-1 text-[10px] uppercase text-red-700 hover:bg-red-700 hover:text-white"
               confirmClassName="bg-red-700 px-2.5 py-1 text-[10px] uppercase text-white hover:bg-red-800"
-              cancelClassName="border border-black bg-white px-2.5 py-1 text-[10px] uppercase hover:bg-black hover:text-white"
+              cancelClassName="border border-ink bg-surface px-2.5 py-1 text-[10px] uppercase hover:bg-ink hover:text-surface"
             />
           </span>
         </div>

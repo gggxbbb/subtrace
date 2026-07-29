@@ -54,7 +54,7 @@ export function UsageRecordsManager({
 
   return (
     <>
-      <form method="GET" className="flex items-end gap-2 border border-black bg-white p-3">
+      <form method="GET" className="flex items-end gap-2 border border-ink bg-surface p-3">
         <div>
           <label className={labelCls}>受益人</label>
           <select name="userId" defaultValue={filters.userId} className={inputCls}>
@@ -80,13 +80,13 @@ export function UsageRecordsManager({
           <label className={labelCls}>到</label>
           <input name="to" type="date" defaultValue={filters.to} className={`${inputCls} f-mono`} />
         </div>
-        <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
+        <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
           筛选
         </button>
-        <a href={`/subscriptions/${subscriptionId}/usage/records`} className="border border-black bg-white px-3 py-1.5 text-[11px] uppercase hover:bg-black hover:text-white">
+        <a href={`/subscriptions/${subscriptionId}/usage/records`} className="border border-ink bg-surface px-3 py-1.5 text-[11px] uppercase hover:bg-ink hover:text-surface">
           重置
         </a>
-        <button type="button" onClick={() => setAdding(!adding)} className="border border-black bg-white px-3 py-1.5 text-[11px] uppercase hover:bg-black hover:text-white">
+        <button type="button" onClick={() => setAdding(!adding)} className="border border-ink bg-surface px-3 py-1.5 text-[11px] uppercase hover:bg-ink hover:text-surface">
           {adding ? "收起" : "+ 记一笔"}
         </button>
       </form>
@@ -94,7 +94,7 @@ export function UsageRecordsManager({
       {adding && (
         <form
           action={(usageKind === "QUOTA" ? addQuotaSnapshotAction : addUsageAction).bind(null, subscriptionId)}
-          className="flex items-end gap-2 border border-black bg-white p-3"
+          className="flex items-end gap-2 border border-ink bg-surface p-3"
         >
           {backInput}
           <div>
@@ -117,7 +117,7 @@ export function UsageRecordsManager({
               <input name="quotaTotal" type="number" step="1" min="1" placeholder="继承默认" className={inputCls} />
             </div>
           )}
-          <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
+          <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
             保存 →
           </button>
         </form>
@@ -127,7 +127,7 @@ export function UsageRecordsManager({
         {rows.length} / {total} 条
       </div>
 
-      <div className="border border-black bg-white">
+      <div className="border border-ink bg-surface">
         {rows.length === 0 && (
           <div className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
             没有匹配的用量记录
@@ -135,7 +135,7 @@ export function UsageRecordsManager({
         )}
         {rows.map((r) =>
           editingId === r.id ? (
-            <form key={r.id} action={updateUsageAction.bind(null, subscriptionId, r.id)} className="flex items-end gap-2 border-b border-black bg-[#E4E3E0] px-4 py-3">
+            <form key={r.id} action={updateUsageAction.bind(null, subscriptionId, r.id)} className="flex items-end gap-2 border-b border-ink bg-base px-4 py-3">
               {backInput}
               <div>
                 <label className={labelCls}>日期</label>
@@ -153,10 +153,10 @@ export function UsageRecordsManager({
                 <label className={labelCls}>总额度</label>
                 <input name="quotaTotal" type="number" step="1" min="1" defaultValue={r.quotaTotal ?? ""} className={inputCls} />
               </div>
-              <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
+              <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
                 保存
               </button>
-              <button type="button" onClick={() => setEditingId(null)} className="border border-black bg-white px-3 py-1.5 text-[11px] uppercase hover:bg-black hover:text-white">
+              <button type="button" onClick={() => setEditingId(null)} className="border border-ink bg-surface px-3 py-1.5 text-[11px] uppercase hover:bg-ink hover:text-surface">
                 取消
               </button>
             </form>
@@ -175,13 +175,13 @@ export function UsageRecordsManager({
                 <span className="flex items-center gap-2">
                   <button
                     onClick={() => setEditingId(r.id)}
-                    className="invisible border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono group-hover:visible hover:bg-black hover:text-white"
+                    className="invisible border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase f-mono group-hover:visible hover:bg-ink hover:text-surface"
                   >
                     编辑
                   </button>
                   <button
                     onClick={async () => deleteUsageAction(subscriptionId, r.id, back)}
-                    className="invisible border border-black bg-white px-2 py-0.5 text-[9px] uppercase text-red-700 f-mono group-hover:visible hover:bg-red-700 hover:text-white"
+                    className="invisible border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase text-red-700 f-mono group-hover:visible hover:bg-red-700 hover:text-white"
                   >
                     删除
                   </button>

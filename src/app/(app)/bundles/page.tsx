@@ -14,7 +14,7 @@ export default async function BundlesPage() {
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-4 md:px-6">
+      <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             04 / bundles
@@ -23,7 +23,7 @@ export default async function BundlesPage() {
         </div>
         <Link
           href="/bundles/new"
-          className="flex items-center gap-1.5 bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800"
+          className="flex items-center gap-1.5 bg-ink px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover"
         >
           <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> 新建联合会员
         </Link>
@@ -47,7 +47,7 @@ export default async function BundlesPage() {
             <div className="overflow-x-auto">
             <table className="w-full min-w-[480px] text-[13px]">
               <thead>
-                <tr className="border-b border-black text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+                <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
                   <th className="px-4 py-2 font-medium">子会员</th>
                   <th className="px-4 py-2 text-right font-medium">分摊金额</th>
                   <th className="px-4 py-2 font-medium">服务区间</th>

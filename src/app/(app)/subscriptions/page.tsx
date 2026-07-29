@@ -33,7 +33,7 @@ function StatusPill({ s }: { s: Row }) {
   }
   if (st === "soon") {
     return (
-      <span className="flex w-fit shrink-0 items-center gap-1.5 px-1.5 py-0.5 text-[9px] uppercase text-white f-mono" style={{ background: ORANGE }}>
+      <span className="flex w-fit shrink-0 items-center gap-1.5 px-1.5 py-0.5 text-[9px] uppercase text-surface f-mono" style={{ background: ORANGE }}>
         <Led color="#fff" /> {s.daysUntilExpiry!}d
       </span>
     );
@@ -50,7 +50,7 @@ function SubscriptionTable({ rows, cur }: { rows: Row[]; cur: string }) {
     <div className="overflow-x-auto">
     <table className="w-full min-w-[640px] text-[13px]">
       <thead>
-        <tr className="border-b border-black text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+        <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
           <th className="px-4 py-2 font-medium">名称</th>
           <th className="px-4 py-2 font-medium">分类</th>
           <th className="px-4 py-2 font-medium">周期</th>
@@ -110,9 +110,9 @@ function SubscriptionCards({ rows, cur }: { rows: Row[]; cur: string }) {
     );
   }
   return (
-    <div className="grid grid-cols-1 gap-px bg-white sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-px bg-surface sm:grid-cols-2 lg:grid-cols-3">
       {rows.map((s) => (
-        <Link key={s.id} href={`/subscriptions/${s.id}`} className="block border border-neutral-200 bg-white px-4 py-3 hover:bg-black/[0.03]">
+        <Link key={s.id} href={`/subscriptions/${s.id}`} className="block border border-neutral-200 bg-surface px-4 py-3 hover:bg-black/[0.03]">
           <div className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-[13px] font-medium" title={s.name}>
               {s.name}
@@ -172,7 +172,7 @@ export default async function SubscriptionsPage({
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-4 md:px-6">
+      <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             02 / subscriptions
@@ -181,7 +181,7 @@ export default async function SubscriptionsPage({
         </div>
         <Link
           href="/subscriptions/new"
-          className="flex items-center gap-1.5 bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800"
+          className="flex items-center gap-1.5 bg-ink px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover"
         >
           <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> 新建订阅
         </Link>

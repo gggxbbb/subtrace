@@ -18,7 +18,7 @@ export default async function UsageWizardPage({ params }: { params: Promise<{ id
 
   return (
     <>
-      <header className="flex h-16 items-center border-b border-black bg-[#E4E3E0] px-4 md:px-6">
+      <header className="flex h-16 items-center border-b border-ink bg-base px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             subscriptions / {sub.name} / usage

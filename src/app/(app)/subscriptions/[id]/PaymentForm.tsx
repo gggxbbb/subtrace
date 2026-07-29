@@ -65,7 +65,7 @@ export function PaymentForm({
       </div>
       <div>
         <label className={labelCls}>服务止（到期日）</label>
-        <div className="flex border border-black bg-[#E4E3E0] focus-within:bg-white">
+        <div className="flex border border-ink bg-base focus-within:bg-surface">
           <input
             name="periodEnd"
             type="date"
@@ -77,7 +77,7 @@ export function PaymentForm({
             required
             className="w-full bg-transparent px-2 py-1.5 text-sm outline-none f-mono"
           />
-          <span className="flex items-center border-l border-black px-2 text-sm text-neutral-500 f-mono">
+          <span className="flex items-center border-l border-ink px-2 text-sm text-neutral-500 f-mono">
             +
           </span>
           <input
@@ -112,7 +112,7 @@ export function PaymentForm({
         <label className={labelCls}>备注（可选）</label>
         <input name="note" placeholder="双十一活动价 108 元" className={inputCls} />
       </div>
-      <button className="w-full bg-black py-2.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800">
+      <button className="w-full bg-ink py-2.5 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover">
         记一笔 →
       </button>
     </form>

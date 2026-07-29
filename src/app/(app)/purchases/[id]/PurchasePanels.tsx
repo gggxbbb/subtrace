@@ -11,7 +11,7 @@ import {
 } from "@/lib/purchases/actions";
 
 const btnCls =
-  "border border-black bg-white px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-black hover:text-white";
+  "border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface";
 
 /** 顶栏操作：编辑（独立页）、归档、删除（二次确认） */
 export function PurchaseHeaderActions({
@@ -32,7 +32,7 @@ export function PurchaseHeaderActions({
       <ConfirmButton
         onConfirm={async () => deletePurchaseAction(purchaseId)}
         confirmLabel="确认删除（不可恢复）"
-        className="border border-red-700 bg-white px-3 py-2 text-[10px] uppercase tracking-wider text-red-700 f-mono hover:bg-red-700 hover:text-white"
+        className="border border-red-700 bg-surface px-3 py-2 text-[10px] uppercase tracking-wider text-red-700 f-mono hover:bg-red-700 hover:text-white"
         confirmClassName="bg-red-700 px-3 py-2 text-[10px] uppercase tracking-wider text-white f-mono hover:bg-red-800"
         cancelClassName={btnCls}
       />
@@ -62,7 +62,7 @@ export function PurchaseIncomePanel({
     <div className="px-4 py-4">
       <form action={addPurchaseIncomeAction.bind(null, purchaseId)} className="mb-3 flex items-end gap-2">
         <IncomeFormFields currency={currency} dateFlex noteOptional />
-        <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
+        <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
           记一笔 →
         </button>
       </form>

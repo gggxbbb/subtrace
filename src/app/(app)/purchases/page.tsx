@@ -37,16 +37,16 @@ function PurchaseCards({ rows, cur }: { rows: Row[]; cur: string }) {
     );
   }
   return (
-    <div className="grid grid-cols-1 gap-px bg-white sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-px bg-surface sm:grid-cols-2 lg:grid-cols-3">
       {rows.map((p) => (
-        <Link key={p.id} href={`/purchases/${p.id}`} className="block border border-neutral-200 bg-white px-4 py-3 hover:bg-black/[0.03]">
+        <Link key={p.id} href={`/purchases/${p.id}`} className="block border border-neutral-200 bg-surface px-4 py-3 hover:bg-black/[0.03]">
           <div className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-[13px] font-medium" title={p.name}>{p.name}</span>
             <span className="shrink-0 text-[9px] uppercase text-neutral-400 f-mono">
               {p.status === "IN_USE" ? `${p.daysHeld}d held` : p.status === "SOLD" ? "已卖出" : "已报废"}
             </span>
           </div>
-          <div className="mt-2.5 h-1.5 w-full bg-[#E4E3E0]">
+          <div className="mt-2.5 h-1.5 w-full bg-base">
             <div
               className="h-full"
               style={{
@@ -70,7 +70,7 @@ function PurchaseTable({ rows, cur }: { rows: Row[]; cur: string }) {
     <div className="overflow-x-auto">
     <table className="w-full min-w-[680px] text-[13px]">
       <thead>
-        <tr className="border-b border-black text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+        <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
           <th className="px-4 py-2 font-medium">名称</th>
           <th className="px-4 py-2 font-medium">分类</th>
           <th className="px-4 py-2 font-medium">购入日期</th>
@@ -156,7 +156,7 @@ export default async function PurchasesPage({
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-4 md:px-6">
+      <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             03 / purchases
@@ -165,7 +165,7 @@ export default async function PurchasesPage({
         </div>
         <Link
           href="/purchases/new"
-          className="flex items-center gap-1.5 bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800"
+          className="flex items-center gap-1.5 bg-ink px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover"
         >
           <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> 登记物品
         </Link>

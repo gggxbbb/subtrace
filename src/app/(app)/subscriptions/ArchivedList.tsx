@@ -32,9 +32,9 @@ export function ArchivedList({
             <ConfirmButton
               onConfirm={async () => deleteSubscriptionAction(r.id)}
               confirmLabel="确认删除（不可恢复）"
-              className="shrink-0 border border-red-700 bg-white px-2.5 py-1 text-[10px] uppercase text-red-700 hover:bg-red-700 hover:text-white"
+              className="shrink-0 border border-red-700 bg-surface px-2.5 py-1 text-[10px] uppercase text-red-700 hover:bg-red-700 hover:text-white"
               confirmClassName="bg-red-700 px-2.5 py-1 text-[10px] uppercase text-white hover:bg-red-800"
-              cancelClassName="border border-black bg-white px-2.5 py-1 text-[10px] uppercase hover:bg-black hover:text-white"
+              cancelClassName="border border-ink bg-surface px-2.5 py-1 text-[10px] uppercase hover:bg-ink hover:text-surface"
             />
           </span>
         </div>

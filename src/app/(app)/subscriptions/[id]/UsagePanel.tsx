@@ -151,7 +151,7 @@ export function UsageEntryPanel({
                 className={inputCls}
               />
             </div>
-            <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
+            <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
               记一次 →
             </button>
           </div>
@@ -165,7 +165,7 @@ export function UsageEntryPanel({
                     setQuantity(t.quantity.toString());
                     setUnitPrice(t.unitPrice?.toString() ?? "");
                   }}
-                  className="border border-black bg-white px-2 py-1 text-[10px] f-mono hover:bg-black hover:text-white"
+                  className="border border-ink bg-surface px-2 py-1 text-[10px] f-mono hover:bg-ink hover:text-surface"
                 >
                   {t.quantity} {usageUnit ?? "次"}{t.unitPrice != null ? ` @ ${t.unitPrice}` : ""}
                 </button>
@@ -239,7 +239,7 @@ export function UsageEntryPanel({
                 className={`${inputCls} w-20`}
               />
             </div>
-            <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
+            <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
               更新 →
             </button>
           </div>
@@ -253,7 +253,7 @@ export function UsageEntryPanel({
         <div className="mt-3 border-t border-dashed border-neutral-300 pt-3">
           {needed !== null && (
             <div className="mb-2 flex items-center gap-2 text-[11px]">
-              <Led color={needed === 0 ? "#22c55e" : "#FF5A00"} />
+              <Led color={needed === 0 ? "#22c55e" : "var(--accent)"} />
               {needed === 0 ? (
                 <span>已回本，多用都是赚</span>
               ) : (
@@ -266,7 +266,7 @@ export function UsageEntryPanel({
           )}
           {quotaHint && (
             <div className="mb-2 flex items-center gap-2 text-[11px]">
-              <Led color={quotaHint.done ? "#22c55e" : "#FF5A00"} />
+              <Led color={quotaHint.done ? "#22c55e" : "var(--accent)"} />
               {quotaHint.done ? (
                 <span>本区间已用满 100%</span>
               ) : (
@@ -286,13 +286,13 @@ export function UsageEntryPanel({
               <div
                 key={i}
                 className={`flex flex-col items-center py-1 text-[10px] f-mono ${
-                  d.today ? "border border-black bg-[#E4E3E0] font-bold" : "border border-transparent"
+                  d.today ? "border border-ink bg-base font-bold" : "border border-transparent"
                 } ${d.inPeriod ? "" : "text-neutral-300"}`}
               >
                 <span>{d.day}</span>
                 <span
                   className="mt-0.5 inline-block h-1.5 w-1.5 rounded-full"
-                  style={{ background: d.used ? "#FF5A00" : "transparent" }}
+                  style={{ background: d.used ? "var(--accent)" : "transparent" }}
                 />
               </div>
             ))}

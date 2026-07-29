@@ -21,7 +21,7 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
     <div className="overflow-x-auto">
     <table className="w-full min-w-[560px] text-[13px]">
       <thead>
-        <tr className="border-b border-black text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+        <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
           <th className="px-4 py-2 font-medium">任务</th>
           <th className="px-4 py-2 font-medium">cron（北京时间）</th>
           <th className="px-4 py-2 font-medium">下次运行</th>
@@ -60,7 +60,7 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
               <button
                 disabled={pending}
                 onClick={() => start(() => runJobNowAction(j.key))}
-                className="border border-black bg-white px-2.5 py-1 text-[9px] uppercase tracking-wider f-mono hover:bg-black hover:text-white disabled:opacity-40"
+                className="border border-ink bg-surface px-2.5 py-1 text-[9px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface disabled:opacity-40"
               >
                 立即运行
               </button>

@@ -9,7 +9,7 @@ import { runScriptNowAction, saveScriptAction } from "@/lib/scripts/actions";
 import type { ScriptSubView } from "@/lib/scripts/service";
 
 const inputCls =
-  "w-full border border-black bg-[#E4E3E0] px-3 py-2 text-sm outline-none focus:bg-white";
+  "w-full border border-ink bg-base px-3 py-2 text-sm outline-none focus:bg-surface";
 const labelCls = "mb-1 block text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
 
 const PRESETS: { label: string; cron: string }[] = [
@@ -96,7 +96,7 @@ export function ScriptEditor({
                   key={p.cron}
                   type="button"
                   onClick={() => setCron(p.cron)}
-                  className="border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono hover:bg-black hover:text-white"
+                  className="border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase f-mono hover:bg-ink hover:text-surface"
                 >
                   {p.label}
                 </button>
@@ -117,7 +117,7 @@ export function ScriptEditor({
           </div>
         </div>
         <div className="flex items-center gap-2.5">
-          <button disabled={pending} className="border border-black bg-black px-4 py-2 text-[10px] uppercase tracking-wider text-white f-mono hover:bg-[#FF6B00] hover:border-[#FF6B00] disabled:opacity-40">
+          <button disabled={pending} className="border border-ink bg-ink px-4 py-2 text-[10px] uppercase tracking-wider text-surface f-mono hover:bg-accent-hover hover:border-accent-hover disabled:opacity-40">
             保存
           </button>
           <button
@@ -133,7 +133,7 @@ export function ScriptEditor({
                 router.refresh();
               })
             }
-            className="border border-black bg-white px-4 py-2 text-[10px] uppercase tracking-wider text-[#ef4444] f-mono hover:bg-[#ef4444] hover:text-white disabled:opacity-40"
+            className="border border-ink bg-surface px-4 py-2 text-[10px] uppercase tracking-wider text-[#ef4444] f-mono hover:bg-[#ef4444] hover:text-white disabled:opacity-40"
           >
             清除脚本
           </button>
@@ -148,7 +148,7 @@ export function ScriptEditor({
                   setResult(`${r.ok ? "✓" : "✗"} ${r.message}`);
                 })
               }
-              className="border border-black bg-white px-4 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-black hover:text-white disabled:opacity-40"
+              className="border border-ink bg-surface px-4 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface disabled:opacity-40"
             >
               立即运行
             </button>
@@ -160,7 +160,7 @@ export function ScriptEditor({
             </span>
           )}
         </div>
-        {result && <div className="whitespace-pre-wrap border border-black bg-[#E4E3E0] px-3 py-2 text-[11px] f-mono">{result}</div>}
+        {result && <div className="whitespace-pre-wrap border border-ink bg-base px-3 py-2 text-[11px] f-mono">{result}</div>}
       </form>
     </div>
   );

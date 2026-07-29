@@ -52,7 +52,7 @@ export function ViewSwitcher({
       aria-pressed={view === v}
       title={label}
       className={`flex items-center gap-1 px-2.5 py-1 text-[10px] uppercase tracking-wider f-mono ${
-        view === v ? "bg-black text-white" : "bg-white hover:bg-[#E4E3E0]"
+        view === v ? "bg-ink text-surface" : "bg-surface hover:bg-base"
       }`}
     >
       <Icon className="h-3 w-3" strokeWidth={2.5} /> {label}
@@ -63,7 +63,7 @@ export function ViewSwitcher({
     <div>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         {toolbar ?? <span />}
-        <div className="flex shrink-0 gap-px border border-black bg-black">
+        <div className="flex shrink-0 gap-px border border-ink bg-ink">
           {btn("card", LayoutGrid, "卡片")}
           {btn("list", List, "列表")}
         </div>

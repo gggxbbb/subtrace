@@ -55,7 +55,7 @@ export function BeneficiariesPanel({
           {rows.map((r) => (
             <div key={r.id} className="group grid grid-cols-[1fr_5rem_5rem_4rem] items-center gap-2 border-b border-dashed border-neutral-200 py-1.5 text-[12px]">
               <span className="flex items-center gap-1.5">
-                <Led color={r.kind === "USER" ? "#FF5A00" : "#0ea5e9"} />
+                <Led color={r.kind === "USER" ? "var(--accent)" : "#0ea5e9"} />
                 {r.name}
                 <span className="text-[9px] uppercase text-neutral-400 f-mono">
                   {r.kind === "USER" ? "用户" : "物品"}
@@ -99,13 +99,13 @@ export function BeneficiariesPanel({
         <form action={addBeneficiaryAction.bind(null, subscriptionId)} className="flex items-end gap-2">
           <div>
             <div className="mb-1 text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">类型</div>
-            <div className="grid grid-cols-2 gap-px border border-black bg-black">
+            <div className="grid grid-cols-2 gap-px border border-ink bg-ink">
               {(["USER", "ITEM"] as const).map((k) => (
                 <button
                   key={k}
                   type="button"
                   onClick={() => setKind(k)}
-                  className={`px-2 py-1.5 text-[10px] uppercase f-mono ${kind === k ? "bg-black text-white" : "bg-white hover:bg-[#E4E3E0]"}`}
+                  className={`px-2 py-1.5 text-[10px] uppercase f-mono ${kind === k ? "bg-ink text-surface" : "bg-surface hover:bg-base"}`}
                 >
                   {k === "USER" ? "用户" : "物品"}
                 </button>
@@ -130,7 +130,7 @@ export function BeneficiariesPanel({
             <div className="mb-1 text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">权重</div>
             <input name="weight" type="number" step="any" min="0.01" defaultValue="1" className={inputCls} />
           </div>
-          <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
+          <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
             添加 →
           </button>
         </form>

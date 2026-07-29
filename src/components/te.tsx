@@ -4,7 +4,7 @@
 
 import { ArrowRight } from "lucide-react";
 
-export const ORANGE = "#FF5A00";
+export const ORANGE = "var(--accent)";
 
 /** 错误横幅：fx = 币种无汇率（ADR-0010），其余错误码显示 defaultMessage；error 为空不渲染 */
 export function ErrorBanner({
@@ -19,7 +19,7 @@ export function ErrorBanner({
   if (!error) return null;
   return (
     <div
-      className={`border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono ${className}`}
+      className={`border border-ink bg-accent px-3 py-2 text-[11px] uppercase text-white f-mono ${className}`}
     >
       {error === "fx"
         ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
@@ -30,7 +30,7 @@ export function ErrorBanner({
 
 /** 表单控件样式（多数派定义；设置区密集变体保留在各面板本地） */
 export const inputCls =
-  "w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white";
+  "w-full border border-ink bg-base px-2 py-1.5 text-sm outline-none focus:bg-surface";
 export const labelCls =
   "mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
 
@@ -119,8 +119,8 @@ export function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col border border-black bg-white">
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-black px-4 py-2.5">
+    <section className="flex flex-col border border-ink bg-surface">
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-ink px-4 py-2.5">
         <span
           className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.15em] f-mono"
           title={`${index} — ${title}`}
@@ -132,7 +132,7 @@ export function Panel({
             (action && (
             <a
               href={href}
-              className="flex shrink-0 items-center gap-1 text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-black"
+              className="flex shrink-0 items-center gap-1 text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-ink"
             >
               {action} <ArrowRight className="h-3 w-3" />
             </a>
@@ -158,7 +158,7 @@ export function Kpi({
   led?: string;
 }) {
   return (
-    <div className="border border-black bg-white p-4">
+    <div className="border border-ink bg-surface p-4">
       <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
         <span className="min-w-0 truncate" title={label}>{label}</span>
         <span className="flex shrink-0 items-center gap-1.5 text-neutral-400">

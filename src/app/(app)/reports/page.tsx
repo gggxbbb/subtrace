@@ -70,7 +70,7 @@ export default async function ReportsPage({
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-4 md:px-6">
+      <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             05 / reports
@@ -78,23 +78,23 @@ export default async function ReportsPage({
           <h1 className="text-xl font-bold uppercase tracking-tight">报表</h1>
         </div>
         <div className="flex items-center gap-2.5">
-          <div className="grid grid-cols-2 gap-px border border-black bg-black">
+          <div className="grid grid-cols-2 gap-px border border-ink bg-ink">
             <Link
               href={`/reports?period=${currentPeriod.length > 4 ? currentPeriod : `${p.year}-${String(wallParts(new Date()).month + 1).padStart(2, "0")}`}`}
-              className={`px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${p.kind === "month" ? "bg-black text-white" : "bg-white hover:bg-[#E4E3E0]"}`}
+              className={`px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${p.kind === "month" ? "bg-ink text-surface" : "bg-surface hover:bg-base"}`}
             >
               月
             </Link>
             <Link
               href={`/reports?period=${p.year}`}
-              className={`px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${p.kind === "year" ? "bg-black text-white" : "bg-white hover:bg-[#E4E3E0]"}`}
+              className={`px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${p.kind === "year" ? "bg-ink text-surface" : "bg-surface hover:bg-base"}`}
             >
               年
             </Link>
           </div>
-          <Link href={prevHref} className="border border-black bg-white px-3 py-2 text-[10px] f-mono hover:bg-black hover:text-white">←</Link>
+          <Link href={prevHref} className="border border-ink bg-surface px-3 py-2 text-[10px] f-mono hover:bg-ink hover:text-surface">←</Link>
           <span className="min-w-28 text-center text-[12px] font-semibold">{label}</span>
-          <Link href={nextHref} className="border border-black bg-white px-3 py-2 text-[10px] f-mono hover:bg-black hover:text-white">→</Link>
+          <Link href={nextHref} className="border border-ink bg-surface px-3 py-2 text-[10px] f-mono hover:bg-ink hover:text-surface">→</Link>
         </div>
       </header>
 
@@ -149,8 +149,8 @@ export default async function ReportsPage({
                       {fmtMoney(c.cost, cur)} · {Math.round(c.share * 100)}%
                     </span>
                   </div>
-                  <div className="h-2 w-full bg-[#E4E3E0]">
-                    <div className="h-full bg-black" style={{ width: `${Math.round(c.share * 100)}%` }} />
+                  <div className="h-2 w-full bg-base">
+                    <div className="h-full bg-ink" style={{ width: `${Math.round(c.share * 100)}%` }} />
                   </div>
                 </div>
               ))}
@@ -162,7 +162,7 @@ export default async function ReportsPage({
           <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-[13px]">
             <thead>
-              <tr className="border-b border-black text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+              <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
                 <th className="px-4 py-2 font-medium">名称</th>
                 <th className="px-4 py-2 font-medium">分类</th>
                 <th className="px-4 py-2 w-2/5 font-medium">占比</th>
@@ -187,8 +187,8 @@ export default async function ReportsPage({
                   <td className="px-4 py-2 text-neutral-500">{it.category}</td>
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 flex-1 bg-[#E4E3E0]">
-                        <div className="h-full bg-black" style={{ width: `${Math.max(1, Math.round(it.share * 100))}%` }} />
+                      <div className="h-2 flex-1 bg-base">
+                        <div className="h-full bg-ink" style={{ width: `${Math.max(1, Math.round(it.share * 100))}%` }} />
                       </div>
                       <span className="w-10 text-right text-[10px] tabular-nums text-neutral-500 f-mono">
                         {Math.round(it.share * 100)}%

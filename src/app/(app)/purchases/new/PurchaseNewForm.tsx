@@ -16,7 +16,7 @@ export function PurchaseNewForm({ baseCurrency, error }: { baseCurrency: string;
       </div>
       <h1 className="mb-5 text-xl font-bold uppercase tracking-tight">登记物品</h1>
       <ErrorBanner error={error} defaultMessage="登记失败：请检查必填项" className="mb-4" />
-      <form action={createPurchaseAction} className="space-y-4 border border-black bg-white p-5">
+      <form action={createPurchaseAction} className="space-y-4 border border-ink bg-surface p-5">
         <div>
           <label className={labelCls}>名称</label>
           <input name="name" required placeholder="索尼 WH-1000XM5" className={inputCls} />
@@ -36,7 +36,7 @@ export function PurchaseNewForm({ baseCurrency, error }: { baseCurrency: string;
             <input name="expectedDays" type="number" min="1" placeholder="730" className={inputCls} />
           </div>
         </div>
-        <button className="w-full bg-black py-2.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800">
+        <button className="w-full bg-ink py-2.5 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover">
           登记 →
         </button>
       </form>

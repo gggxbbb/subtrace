@@ -4,7 +4,7 @@ import { deleteBundleAction, setBundleArchivedAction } from "@/lib/bundles/actio
 import { ConfirmButton } from "@/components/ConfirmButton";
 
 const btnCls =
-  "border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono hover:bg-black hover:text-white";
+  "border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase f-mono hover:bg-ink hover:text-surface";
 
 /** 联合会员标题行操作：编辑 / 归档 / 删除（二次确认） */
 export function BundleRowActions({ bundleId, archived }: { bundleId: string; archived: boolean }) {
@@ -18,7 +18,7 @@ export function BundleRowActions({ bundleId, archived }: { bundleId: string; arc
       </button>
       <ConfirmButton
         onConfirm={async () => deleteBundleAction(bundleId)}
-        className="border border-red-700 bg-white px-2 py-0.5 text-[9px] uppercase text-red-700 f-mono hover:bg-red-700 hover:text-white"
+        className="border border-red-700 bg-surface px-2 py-0.5 text-[9px] uppercase text-red-700 f-mono hover:bg-red-700 hover:text-white"
         cancelClassName={btnCls}
       />
     </span>

@@ -47,7 +47,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-black bg-[#E4E3E0] px-4 md:px-6">
+      <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
             01 / overview
@@ -57,12 +57,12 @@ export default async function DashboardPage() {
         <div className="flex items-center gap-2.5">
           <Link
             href="/subscriptions/new"
-            className="flex items-center gap-1.5 bg-black px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800"
+            className="flex items-center gap-1.5 bg-ink px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover"
           >
             <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> 新建订阅
           </Link>
           <form action={logoutAction}>
-            <button className="border border-black bg-white px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-black hover:text-white">
+            <button className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface">
               登出
             </button>
           </form>
@@ -71,11 +71,11 @@ export default async function DashboardPage() {
 
       <div className="space-y-4 px-4 py-5 md:px-6">
         {d.upcoming.length > 0 && (
-          <div className="flex items-center justify-between border border-black bg-white px-4 py-2.5">
+          <div className="flex items-center justify-between border border-ink bg-surface px-4 py-2.5">
             <div className="flex min-w-0 items-center gap-3">
               <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: ORANGE }} />
               <span className="truncate text-[13px]">
-                <span className="mr-2 border border-black bg-[#E4E3E0] px-1.5 py-0.5 text-[9px] uppercase tracking-wider f-mono">
+                <span className="mr-2 border border-ink bg-base px-1.5 py-0.5 text-[9px] uppercase tracking-wider f-mono">
                   待续费
                 </span>
                 {d.upcoming.length} 个订阅将在 30 天内到期，
@@ -143,7 +143,7 @@ export default async function DashboardPage() {
                     {u.amount != null ? fmtMoney(u.amount, cur) : "—"}
                   </span>
                   <span
-                    className={`flex w-16 items-center justify-center gap-1 border px-1.5 py-0.5 text-[9px] uppercase f-mono ${u.daysLeft <= 7 ? "text-white" : "border-black bg-white"}`}
+                    className={`flex w-16 items-center justify-center gap-1 border px-1.5 py-0.5 text-[9px] uppercase f-mono ${u.daysLeft <= 7 ? "text-surface" : "border-ink bg-surface"}`}
                     style={u.daysLeft <= 7 ? { background: ORANGE, borderColor: ORANGE } : {}}
                   >
                     {u.daysLeft <= 7 && <Led color="#fff" />}
@@ -185,16 +185,16 @@ export default async function DashboardPage() {
               还没有登记物品
             </div>
           )}
-          <div className="grid grid-cols-1 gap-px bg-white sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-px bg-surface sm:grid-cols-2 lg:grid-cols-3">
             {d.purchases.map((p) => (
-              <a key={p.id} href={`/purchases/${p.id}`} className="block border border-neutral-200 bg-white px-4 py-3 hover:bg-black/[0.03]">
+              <a key={p.id} href={`/purchases/${p.id}`} className="block border border-neutral-200 bg-surface px-4 py-3 hover:bg-black/[0.03]">
                 <div className="flex items-center justify-between gap-2">
                   <span className="min-w-0 truncate text-[13px] font-medium" title={p.name}>{p.name}</span>
                   <span className="shrink-0 text-[9px] uppercase text-neutral-400 f-mono">
                     {p.status === "IN_USE" ? `${p.daysHeld}d held` : p.status === "SOLD" ? "已卖出" : "已报废"}
                   </span>
                 </div>
-                <div className="mt-2.5 h-1.5 w-full bg-[#E4E3E0]">
+                <div className="mt-2.5 h-1.5 w-full bg-base">
                   <div
                     className="h-full"
                     style={{
@@ -216,7 +216,7 @@ export default async function DashboardPage() {
           <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-[13px]">
             <thead>
-              <tr className="border-b border-black text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+              <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
                 <th className="px-4 py-2 font-medium">名称</th>
                 <th className="px-4 py-2 font-medium">分类</th>
                 <th className="px-4 py-2 font-medium">周期</th>
@@ -269,7 +269,7 @@ export default async function DashboardPage() {
                         <Led color="#fff" /> 过期 {-s.daysUntilExpiry}d
                       </span>
                     ) : s.daysUntilExpiry !== null && s.daysUntilExpiry <= 14 ? (
-                      <span className="flex w-fit items-center gap-1.5 px-1.5 py-0.5 text-[9px] uppercase text-white f-mono" style={{ background: ORANGE }}>
+                      <span className="flex w-fit items-center gap-1.5 px-1.5 py-0.5 text-[9px] uppercase text-surface f-mono" style={{ background: ORANGE }}>
                         <Led color="#fff" /> {s.daysUntilExpiry}d
                       </span>
                     ) : (

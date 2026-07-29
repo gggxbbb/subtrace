@@ -113,7 +113,7 @@ export function BundleWizard({
   };
 
   return (
-    <form action={action ?? createBundleAction} className="space-y-4 border border-black bg-white p-5">
+    <form action={action ?? createBundleAction} className="space-y-4 border border-ink bg-surface p-5">
       <ErrorBanner error={error} defaultMessage="创建失败：请检查打包信息与子会员" />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
@@ -136,7 +136,7 @@ export function BundleWizard({
         </div>
         <div>
           <label className={labelCls}>权益止</label>
-          <div className="flex border border-black bg-[#E4E3E0] focus-within:bg-white">
+          <div className="flex border border-ink bg-base focus-within:bg-surface">
             <input
               name="periodEnd"
               type="date"
@@ -148,7 +148,7 @@ export function BundleWizard({
               required
               className="w-full bg-transparent px-2 py-1.5 text-sm outline-none f-mono"
             />
-            <span className="flex items-center border-l border-black px-2 text-sm text-neutral-500 f-mono">
+            <span className="flex items-center border-l border-ink px-2 text-sm text-neutral-500 f-mono">
               +
             </span>
             <input
@@ -170,14 +170,14 @@ export function BundleWizard({
           <button
             type="button"
             onClick={() => setItems([...items, newItem(bundleStart, bundleEnd)])}
-            className="flex items-center gap-1 border border-black bg-white px-2 py-1 text-[10px] uppercase f-mono hover:bg-black hover:text-white"
+            className="flex items-center gap-1 border border-ink bg-surface px-2 py-1 text-[10px] uppercase f-mono hover:bg-ink hover:text-surface"
           >
             <Plus className="h-3 w-3" /> 添加
           </button>
         </div>
-        <div className="space-y-px border border-black bg-black">
+        <div className="space-y-px border border-ink bg-ink">
           {items.map((it, i) => (
-            <div key={i} className="space-y-3 bg-white px-3 py-3">
+            <div key={i} className="space-y-3 bg-surface px-3 py-3">
               <div className="flex items-end gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex gap-2 text-[9px] uppercase f-mono">
@@ -281,14 +281,14 @@ export function BundleWizard({
                 </div>
                 <div>
                   <label className={labelCls}>服务止</label>
-                  <div className="flex border border-black bg-[#E4E3E0] focus-within:bg-white">
+                  <div className="flex border border-ink bg-base focus-within:bg-surface">
                     <input
                       type="date"
                       value={it.periodEnd}
                       onChange={(e) => update(i, { periodEnd: e.target.value, plusDays: "", periodTouched: true })}
                       className="w-full bg-transparent px-2 py-1.5 text-sm outline-none f-mono"
                     />
-                    <span className="flex items-center border-l border-black px-2 text-sm text-neutral-500 f-mono">
+                    <span className="flex items-center border-l border-ink px-2 text-sm text-neutral-500 f-mono">
                       +
                     </span>
                     <input
@@ -324,7 +324,7 @@ export function BundleWizard({
           })),
         )}
       />
-      <button className="w-full bg-black py-2.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800">
+      <button className="w-full bg-ink py-2.5 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover">
         {submitLabel}
       </button>
     </form>

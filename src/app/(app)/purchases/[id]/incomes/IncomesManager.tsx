@@ -45,7 +45,7 @@ export function IncomesManager({
   return (
     <>
       <ErrorBanner error={error} defaultMessage="保存失败：请检查日期与金额" className="mb-3" />
-      <form method="GET" className="flex items-end gap-2 border border-black bg-white p-3">
+      <form method="GET" className="flex items-end gap-2 border border-ink bg-surface p-3">
         <div className="flex-1">
           <label className={labelCls}>来源包含</label>
           <input name="q" defaultValue={filters.q} placeholder="搜索来源/备注…" className={inputCls} />
@@ -58,22 +58,22 @@ export function IncomesManager({
           <label className={labelCls}>到</label>
           <input name="to" type="date" defaultValue={filters.to} className={`${inputCls} f-mono`} />
         </div>
-        <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
+        <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
           筛选
         </button>
-        <a href={`/purchases/${purchaseId}/incomes`} className="border border-black bg-white px-3 py-1.5 text-[11px] uppercase hover:bg-black hover:text-white">
+        <a href={`/purchases/${purchaseId}/incomes`} className="border border-ink bg-surface px-3 py-1.5 text-[11px] uppercase hover:bg-ink hover:text-surface">
           重置
         </a>
-        <button type="button" onClick={() => setAdding(!adding)} className="border border-black bg-white px-3 py-1.5 text-[11px] uppercase hover:bg-black hover:text-white">
+        <button type="button" onClick={() => setAdding(!adding)} className="border border-ink bg-surface px-3 py-1.5 text-[11px] uppercase hover:bg-ink hover:text-surface">
           {adding ? "收起" : "+ 记一笔"}
         </button>
       </form>
 
       {adding && (
-        <form action={addPurchaseIncomeAction.bind(null, purchaseId)} className="flex items-end gap-2 border border-black bg-white p-3">
+        <form action={addPurchaseIncomeAction.bind(null, purchaseId)} className="flex items-end gap-2 border border-ink bg-surface p-3">
           {backInput}
           <IncomeFormFields currency={currency} noteOptional />
-          <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
+          <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
             保存 →
           </button>
         </form>
@@ -84,7 +84,7 @@ export function IncomesManager({
         <span className="text-teal-700">{fmtMoney(rows.reduce((s, r) => s + r.amountBase, 0), currency)}</span>
       </div>
 
-      <div className="border border-black bg-white">
+      <div className="border border-ink bg-surface">
         {rows.length === 0 && (
           <div className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
             没有匹配的收益记录
@@ -92,16 +92,16 @@ export function IncomesManager({
         )}
         {rows.map((r) =>
           editingId === r.id ? (
-            <form key={r.id} action={updatePurchaseIncomeAction.bind(null, purchaseId, r.id)} className="flex items-end gap-2 border-b border-black bg-[#E4E3E0] px-4 py-3">
+            <form key={r.id} action={updatePurchaseIncomeAction.bind(null, purchaseId, r.id)} className="flex items-end gap-2 border-b border-ink bg-base px-4 py-3">
               {backInput}
               <IncomeFormFields
                 currency={currency}
                 defaults={{ amount: r.amount, currency: r.currency, amountBase: r.amountBase, date: r.date, note: r.note }}
               />
-              <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
+              <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
                 保存
               </button>
-              <button type="button" onClick={() => setEditingId(null)} className="border border-black bg-white px-3 py-1.5 text-[11px] uppercase hover:bg-black hover:text-white">
+              <button type="button" onClick={() => setEditingId(null)} className="border border-ink bg-surface px-3 py-1.5 text-[11px] uppercase hover:bg-ink hover:text-surface">
                 取消
               </button>
             </form>
@@ -115,13 +115,13 @@ export function IncomesManager({
               <span className="flex items-center gap-2">
                 <button
                   onClick={() => setEditingId(r.id)}
-                  className="invisible border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono group-hover:visible hover:bg-black hover:text-white"
+                  className="invisible border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase f-mono group-hover:visible hover:bg-ink hover:text-surface"
                 >
                   编辑
                 </button>
                 <button
                   onClick={async () => deletePurchaseIncomeAction(purchaseId, r.id, back)}
-                  className="invisible border border-black bg-white px-2 py-0.5 text-[9px] uppercase text-red-700 f-mono group-hover:visible hover:bg-red-700 hover:text-white"
+                  className="invisible border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase text-red-700 f-mono group-hover:visible hover:bg-red-700 hover:text-white"
                 >
                   删除
                 </button>

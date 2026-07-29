@@ -44,7 +44,7 @@ export function PaymentsManager({
     <>
       <ErrorBanner error={error} defaultMessage="保存失败：请检查日期与金额" className="mb-3" />
       {/* 筛选：GET 表单，query 可分享 */}
-      <form method="GET" className="flex items-end gap-2 border border-black bg-white p-3">
+      <form method="GET" className="flex items-end gap-2 border border-ink bg-surface p-3">
         <div className="flex-1">
           <label className={labelCls}>备注包含</label>
           <input name="q" defaultValue={filters.q} placeholder="搜索备注…" className={inputCls} />
@@ -67,17 +67,17 @@ export function PaymentsManager({
           <label className={labelCls}>到</label>
           <input name="to" type="date" defaultValue={filters.to} className={`${inputCls} f-mono`} />
         </div>
-        <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
+        <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
           筛选
         </button>
-        <a href={`/subscriptions/${subscriptionId}/payments`} className="border border-black bg-white px-3 py-1.5 text-[11px] uppercase hover:bg-black hover:text-white">
+        <a href={`/subscriptions/${subscriptionId}/payments`} className="border border-ink bg-surface px-3 py-1.5 text-[11px] uppercase hover:bg-ink hover:text-surface">
           重置
         </a>
         {canEdit && (
           <button
             type="button"
             onClick={() => setAdding(!adding)}
-            className="border border-black bg-white px-3 py-1.5 text-[11px] uppercase hover:bg-black hover:text-white"
+            className="border border-ink bg-surface px-3 py-1.5 text-[11px] uppercase hover:bg-ink hover:text-surface"
           >
             {adding ? "收起" : "+ 记一笔"}
           </button>
@@ -85,11 +85,11 @@ export function PaymentsManager({
       </form>
 
       {adding && (
-        <form action={recordPaymentAction.bind(null, subscriptionId)} className="space-y-3 border border-black bg-white p-4">
+        <form action={recordPaymentAction.bind(null, subscriptionId)} className="space-y-3 border border-ink bg-surface p-4">
           {backInput}
           <div className="text-[10px] uppercase tracking-wider text-neutral-500 f-mono">新增付费记录</div>
           <PaymentEditFields defaultCurrency={defaultCurrency} variant="manager" />
-          <button className="bg-black px-4 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
+          <button className="bg-ink px-4 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
             保存 →
           </button>
         </form>
@@ -99,7 +99,7 @@ export function PaymentsManager({
         {rows.length} / {total} 条
       </div>
 
-      <div className="border border-black bg-white">
+      <div className="border border-ink bg-surface">
         {rows.length === 0 && (
           <div className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
             没有匹配的付费记录
@@ -107,14 +107,14 @@ export function PaymentsManager({
         )}
         {rows.map((p) =>
           editingId === p.id ? (
-            <form key={p.id} action={updatePaymentAction.bind(null, subscriptionId, p.id)} className="space-y-3 border-b border-black bg-[#E4E3E0] px-4 py-3">
+            <form key={p.id} action={updatePaymentAction.bind(null, subscriptionId, p.id)} className="space-y-3 border-b border-ink bg-base px-4 py-3">
               {backInput}
               <PaymentEditFields row={p} defaultCurrency={defaultCurrency} variant="manager" />
               <div className="flex gap-2">
-                <button className="bg-black px-4 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
+                <button className="bg-ink px-4 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
                   保存 →
                 </button>
-                <button type="button" onClick={() => setEditingId(null)} className="border border-black bg-white px-4 py-1.5 text-[11px] uppercase hover:bg-black hover:text-white">
+                <button type="button" onClick={() => setEditingId(null)} className="border border-ink bg-surface px-4 py-1.5 text-[11px] uppercase hover:bg-ink hover:text-surface">
                   取消
                 </button>
               </div>

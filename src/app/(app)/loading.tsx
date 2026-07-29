@@ -6,7 +6,7 @@ import { Led } from "@/components/te";
 export default function Loading() {
   return (
     <div className="flex flex-1 items-center justify-center p-12">
-      <div className="flex items-center gap-2.5 border border-black bg-white px-4 py-3">
+      <div className="flex items-center gap-2.5 border border-ink bg-surface px-4 py-3">
         <span className="animate-pulse">
           <Led />
         </span>

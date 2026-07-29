@@ -34,13 +34,13 @@ function EventFields({ row, currency }: { row?: EventRow; currency: string }) {
       <input type="hidden" name="kind" value={kind} />
       <div>
         <label className={labelCls}>类型</label>
-        <div className="grid grid-cols-3 gap-px border border-black bg-black">
+        <div className="grid grid-cols-3 gap-px border border-ink bg-ink">
           {(["ACCESSORY", "REPAIR", "OTHER"] as const).map((k) => (
             <button
               key={k}
               type="button"
               onClick={() => setKind(k)}
-              className={`px-2 py-1.5 text-[10px] uppercase f-mono ${kind === k ? "bg-black text-white" : "bg-white hover:bg-[#E4E3E0]"}`}
+              className={`px-2 py-1.5 text-[10px] uppercase f-mono ${kind === k ? "bg-ink text-surface" : "bg-surface hover:bg-base"}`}
             >
               {EVENT_KIND_LABEL[k]}
             </button>
@@ -89,16 +89,16 @@ export function PurchaseEventsPanel({
         </span>
         <button
           onClick={() => setAdding(!adding)}
-          className="border border-black bg-white px-2 py-1 text-[10px] uppercase f-mono hover:bg-black hover:text-white"
+          className="border border-ink bg-surface px-2 py-1 text-[10px] uppercase f-mono hover:bg-ink hover:text-surface"
         >
           {adding ? "收起" : "+ 记一笔"}
         </button>
       </div>
 
       {adding && (
-        <form action={addPurchaseEventAction.bind(null, purchaseId)} className="mb-3 flex items-end gap-2 border border-black bg-[#E4E3E0] p-3">
+        <form action={addPurchaseEventAction.bind(null, purchaseId)} className="mb-3 flex items-end gap-2 border border-ink bg-base p-3">
           <EventFields currency={currency} />
-          <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
+          <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
             保存 →
           </button>
         </form>
@@ -110,12 +110,12 @@ export function PurchaseEventsPanel({
 
       {events.map((e) =>
         editingId === e.id ? (
-          <form key={e.id} action={updatePurchaseEventAction.bind(null, purchaseId, e.id)} className="mb-2 flex items-end gap-2 border border-black bg-[#E4E3E0] p-3">
+          <form key={e.id} action={updatePurchaseEventAction.bind(null, purchaseId, e.id)} className="mb-2 flex items-end gap-2 border border-ink bg-base p-3">
             <EventFields row={e} currency={currency} />
-            <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
+            <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
               保存
             </button>
-            <button type="button" onClick={() => setEditingId(null)} className="border border-black bg-white px-3 py-1.5 text-[11px] uppercase hover:bg-black hover:text-white">
+            <button type="button" onClick={() => setEditingId(null)} className="border border-ink bg-surface px-3 py-1.5 text-[11px] uppercase hover:bg-ink hover:text-surface">
               取消
             </button>
           </form>
@@ -123,7 +123,7 @@ export function PurchaseEventsPanel({
           <div key={e.id} className="group flex items-center justify-between border-b border-dashed border-neutral-200 py-1.5 text-[12px] last:border-0">
             <span className="f-mono">
               <span className="text-neutral-500">{e.date}</span>
-              <span className="ml-2 border border-black px-1 text-[9px] uppercase">{EVENT_KIND_LABEL[e.kind] ?? e.kind}</span>
+              <span className="ml-2 border border-ink px-1 text-[9px] uppercase">{EVENT_KIND_LABEL[e.kind] ?? e.kind}</span>
               {e.note && <span className="ml-2 text-neutral-500">{e.note}</span>}
               {e.extendDays != null && e.extendDays > 0 && (
                 <span className="ml-1 text-[10px] text-teal-700">寿命+{e.extendDays}d</span>
@@ -133,7 +133,7 @@ export function PurchaseEventsPanel({
               <span className="tabular-nums f-mono">{fmtMoney(e.amountBase, currency)}</span>
               <button
                 onClick={() => setEditingId(e.id)}
-                className="invisible border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono group-hover:visible hover:bg-black hover:text-white"
+                className="invisible border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase f-mono group-hover:visible hover:bg-ink hover:text-surface"
               >
                 编辑
               </button>
