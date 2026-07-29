@@ -24,6 +24,9 @@ COPY prisma.config.ts ./
 COPY src ./src
 COPY public ./public
 COPY next.config.ts tsconfig.json postcss.config.mjs ./
+# 版本戳：容器构建无 .git，git hash 由构建参数注入（docker build --build-arg GIT_HASH=$(git rev-parse --short HEAD) .）
+ARG GIT_HASH=unknown
+ENV GIT_HASH=$GIT_HASH
 # Prisma client 生成到 src/generated（自定义输出路径），需在构建期产出
 RUN pnpm prisma generate && pnpm build
 

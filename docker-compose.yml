@@ -5,7 +5,11 @@ services:
   subtrace:
     # 生产：直接用 CI 构建好的多架构镜像
     # image: ghcr.io/gggxbbb/subtrace:latest
-    build: .
+    build:
+      context: .
+      args:
+        # 版本戳 git hash：GIT_HASH=$(git rev-parse --short HEAD) docker compose build
+        GIT_HASH: ${GIT_HASH:-unknown}
     ports:
       - "3000:3000"
     environment:

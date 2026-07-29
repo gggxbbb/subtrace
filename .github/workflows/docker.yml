@@ -48,6 +48,9 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          # 版本戳：镜像构建上下文无 .git，hash 由 build-arg 注入（next.config 截短显示）
+          build-args: |
+            GIT_HASH=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.suffix }}
           cache-to: type=gha,mode=max,scope=${{ matrix.suffix }}
 

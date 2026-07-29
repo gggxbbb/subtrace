@@ -109,6 +109,8 @@ function NavGroups({
   );
 }
 
+import { versionLine } from "@/lib/version";
+
 function UserFooter({ username, role }: { username: string; role: string }) {
   return (
     <div className="border-t border-black px-4 py-3">
@@ -123,6 +125,7 @@ function UserFooter({ username, role }: { username: string; role: string }) {
           </div>
         </div>
       </div>
+      <div className="mt-2 text-[9px] text-neutral-400 f-mono">{versionLine}</div>
     </div>
   );
 }

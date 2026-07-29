@@ -1,4 +1,5 @@
 import { loginAction } from "@/lib/auth/actions";
+import { versionLine } from "@/lib/version";
 
 export default async function LoginPage({
   searchParams,
@@ -47,6 +48,7 @@ export default async function LoginPage({
           没有账号？凭邀请链接注册
         </div>
       </form>
+      <div className="fixed bottom-3 right-4 text-[9px] text-neutral-400 f-mono">{versionLine}</div>
     </div>
   );
 }
