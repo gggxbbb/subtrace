@@ -7,7 +7,7 @@ import { toEnginePayments, toEngineSub } from "../subscriptions/service";
 import type { Purchase, PurchaseEvent } from "@/generated/prisma/client";
 
 /** 含事件的物品 */
-type PurchaseWithEvents = Purchase & { events?: PurchaseEvent[] };
+export type PurchaseWithEvents = Purchase & { events?: PurchaseEvent[] };
 
 export interface PurchaseInput {
   name: string;

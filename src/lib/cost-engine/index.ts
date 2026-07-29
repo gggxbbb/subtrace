@@ -151,6 +151,11 @@ export function segmentDailyRate(seg: CostSegment): number {
   return seg.net / dayDiff(seg.start, seg.end);
 }
 
+/** 段是否覆盖某日（[start, end) 排他，按北京日历日归一）：覆盖谓词的唯一实现 */
+export function coversDate(seg: CostSegment, date: Date): boolean {
+  return dayDiff(seg.start, date) >= 0 && dayDiff(date, seg.end) > 0;
+}
+
 /** 订阅当日费率：today 所有覆盖段的费率之和（重叠段相加）；无覆盖为 0 */
 export function currentDailyRate(
   sub: SubscriptionDef,
@@ -158,7 +163,7 @@ export function currentDailyRate(
   today: Date,
 ): number {
   return costSegments(sub, payments, today)
-    .filter((s) => dayDiff(s.start, today) >= 0 && dayDiff(today, s.end) > 0)
+    .filter((s) => coversDate(s, today))
     .reduce((sum, s) => sum + segmentDailyRate(s), 0);
 }
 
