@@ -127,7 +127,7 @@ export default async function DashboardPage() {
                       c < Math.max(1, Math.min(8, 8 - Math.floor(u.daysLeft / 10)))
                         ? u.daysLeft <= 14
                           ? true
-                          : "#111"
+                          : "var(--ink)"
                         : false
                     }
                   />

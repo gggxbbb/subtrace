@@ -68,7 +68,7 @@ export function UsageWizard({
               </div>
             ))}
           </div>
-          <div className="border border-destructive bg-red-50 p-3 text-[11px] leading-relaxed text-red-800">
+          <div className="border border-destructive bg-destructive-band p-3 text-[11px] leading-relaxed text-destructive-strong">
             <strong>注意：</strong>修改字段（单位/单价/总额度）只影响后续计算口径，历史记录保持不变；
             但<strong>切换类型</strong>会让已有的 {recordCount} 条记录按新类型解读（增量 ↔ 快照），历史区间的盈亏可能失真。
           </div>

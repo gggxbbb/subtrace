@@ -276,7 +276,7 @@ export function ChannelsPanel({ channels }: { channels: ChannelView[] }) {
                     type="button"
                     onClick={() => setKind(k)}
                     className={`flex flex-1 items-center justify-center px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${
-                      kind === k ? "bg-ink text-surface" : "bg-surface hover:bg-black/5"
+                      kind === k ? "bg-ink text-surface" : "bg-surface hover:bg-ink/5"
                     }`}
                   >
                     {k === "WEBHOOK" ? "Webhook" : "SMTP 邮件"}

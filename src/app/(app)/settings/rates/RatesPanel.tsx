@@ -140,7 +140,7 @@ export function RatesPanel({
                   type="button"
                   onClick={() => setMode(m)}
                   className={`flex flex-1 items-center justify-center px-3 py-2 text-[10px] uppercase tracking-wider f-mono ${
-                    mode === m ? "bg-ink text-surface" : "bg-surface hover:bg-black/5"
+                    mode === m ? "bg-ink text-surface" : "bg-surface hover:bg-ink/5"
                   }`}
                 >
                   {m === "MANUAL" ? "手动钉住" : "自动更新"}

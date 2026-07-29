@@ -87,7 +87,7 @@ function NavGroups({
                   ? "bg-ink text-surface"
                   : it.soon
                     ? "cursor-not-allowed text-faint"
-                    : "text-muted-strong hover:bg-black/5"
+                    : "text-muted-strong hover:bg-ink/5"
               }`;
               const inner = (
                 <>

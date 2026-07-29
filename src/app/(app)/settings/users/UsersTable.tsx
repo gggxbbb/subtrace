@@ -74,7 +74,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
                 <button
                   disabled={pending}
                   onClick={() => run(() => setCanUseScriptsAction(u.id, !u.canUseScripts))}
-                  className={`px-1.5 py-0.5 text-[9px] uppercase f-mono ${u.canUseScripts ? "bg-ink text-surface" : "border border-ink bg-surface text-faint hover:bg-black/5"} disabled:opacity-40`}
+                  className={`px-1.5 py-0.5 text-[9px] uppercase f-mono ${u.canUseScripts ? "bg-ink text-surface" : "border border-ink bg-surface text-faint hover:bg-ink/5"} disabled:opacity-40`}
                 >
                   {u.canUseScripts ? "信任" : "关闭"}
                 </button>
