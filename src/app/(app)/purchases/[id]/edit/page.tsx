@@ -4,7 +4,7 @@ import { MoneyFields } from "@/components/MoneyFields";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getPurchase } from "@/lib/purchases/service";
 import { updatePurchaseAction } from "@/lib/purchases/actions";
-import { inputCls, labelCls } from "@/components/te";
+import { inputCls, labelCls, ErrorBanner } from "@/components/te";
 
 export const dynamic = "force-dynamic";
 
@@ -34,13 +34,7 @@ export default async function EditPurchasePage({
         </div>
       </header>
       <main className="mx-auto max-w-xl px-4 py-8 md:px-6">
-        {error && (
-          <div className="mb-4 border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
-            {error === "fx"
-              ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
-              : "保存失败：请检查必填项"}
-          </div>
-        )}
+        <ErrorBanner error={error ?? null} defaultMessage="保存失败：请检查必填项" className="mb-4" />
         <form action={updatePurchaseAction.bind(null, purchase.id)} className="space-y-4 border border-black bg-white p-5">
         <MoneyFields
           defaults={{

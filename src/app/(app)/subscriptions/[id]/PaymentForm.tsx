@@ -5,7 +5,7 @@ import { isoDay } from "@/lib/dates";
 import { MoneyFields } from "@/components/MoneyFields";
 import { useSearchParams } from "next/navigation";
 import { recordPaymentAction } from "@/lib/subscriptions/actions";
-import { inputCls, labelCls } from "@/components/te";
+import { inputCls, labelCls, ErrorBanner } from "@/components/te";
 
 
 const iso = (d: Date) => isoDay(d);
@@ -40,13 +40,7 @@ export function PaymentForm({
 
   return (
     <form action={action} className="space-y-4 px-4 py-4">
-      {error && (
-        <div className="border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
-          {error === "fx"
-            ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
-            : "记录失败：请检查日期与金额"}
-        </div>
-      )}
+      <ErrorBanner error={error} defaultMessage="记录失败：请检查日期与金额" />
       <MoneyFields
         allowUnknown
         defaults={{ amount: prefill.amount, currency: prefill.currency }}

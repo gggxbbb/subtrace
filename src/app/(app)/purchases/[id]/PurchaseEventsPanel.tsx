@@ -6,7 +6,7 @@ import { isoDay } from "@/lib/dates";
 import { fmtMoney } from "@/lib/format";
 import { MoneyFields } from "@/components/MoneyFields";
 import { EVENT_KIND_LABEL } from "@/lib/purchases/kinds";
-import { inputCls, labelCls } from "@/components/te";
+import { inputCls, labelCls, ErrorBanner } from "@/components/te";
 import {
   addPurchaseEventAction,
   deletePurchaseEventAction,
@@ -82,13 +82,7 @@ export function PurchaseEventsPanel({
 
   return (
     <div className="px-4 py-4">
-      {error && (
-        <div className="mb-3 border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
-          {error === "fx"
-            ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
-            : "保存失败：请检查日期与金额"}
-        </div>
-      )}
+      <ErrorBanner error={error} defaultMessage="保存失败：请检查日期与金额" className="mb-3" />
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[10px] uppercase text-neutral-400 f-mono">
           计入物品净额，与买入价共用同一摊销窗口

@@ -10,7 +10,7 @@ import { isoDay } from "@/lib/dates";
 import { useSearchParams } from "next/navigation";
 import { MoneyFields } from "@/components/MoneyFields";
 import { createSubscriptionAction } from "@/lib/subscriptions/actions";
-import { inputCls, labelCls } from "@/components/te";
+import { inputCls, labelCls, ErrorBanner } from "@/components/te";
 
 
 const CYCLE_UNIT_LABEL: Record<string, string> = { DAY: "日", WEEK: "周", MONTH: "月", YEAR: "年" };
@@ -88,13 +88,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
         subscriptions / new
       </div>
       <h1 className="mb-5 text-xl font-bold uppercase tracking-tight">新建订阅</h1>
-      {error && (
-        <div className="mb-4 border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
-          {error === "fx"
-            ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
-            : "创建失败：请检查必填项（周期模式需要完整周期与标准价）"}
-        </div>
-      )}
+      <ErrorBanner error={error} defaultMessage="创建失败：请检查必填项（周期模式需要完整周期与标准价）" className="mb-4" />
 
       <div className="border border-black bg-white">
         {/* 步骤条（同用量跟踪向导） */}

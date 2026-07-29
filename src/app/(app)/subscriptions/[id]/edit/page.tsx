@@ -5,6 +5,7 @@ import { getSubscription } from "@/lib/subscriptions/service";
 import { parseRemindDays } from "@/lib/reminders";
 import { updateSubscriptionAction } from "@/lib/subscriptions/actions";
 import { SubscriptionEditForm } from "./SubscriptionEditForm";
+import { ErrorBanner } from "@/components/te";
 
 export const dynamic = "force-dynamic";
 
@@ -34,13 +35,7 @@ export default async function EditSubscriptionPage({
         </div>
       </header>
       <main className="mx-auto max-w-xl px-4 py-8 md:px-6">
-        {error && (
-          <div className="mb-4 border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
-            {error === "fx"
-              ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
-              : "保存失败：请检查必填项"}
-          </div>
-        )}
+        <ErrorBanner error={error ?? null} defaultMessage="保存失败：请检查必填项" className="mb-4" />
         <SubscriptionEditForm
           subscriptionId={sub.id}
           action={updateSubscriptionAction.bind(null, sub.id)}

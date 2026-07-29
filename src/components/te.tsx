@@ -6,6 +6,28 @@ import { ArrowRight } from "lucide-react";
 
 export const ORANGE = "#FF5A00";
 
+/** 错误横幅：fx = 币种无汇率（ADR-0010），其余错误码显示 defaultMessage；error 为空不渲染 */
+export function ErrorBanner({
+  error,
+  defaultMessage,
+  className = "",
+}: {
+  error: string | null;
+  defaultMessage: string;
+  className?: string;
+}) {
+  if (!error) return null;
+  return (
+    <div
+      className={`border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono ${className}`}
+    >
+      {error === "fx"
+        ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
+        : defaultMessage}
+    </div>
+  );
+}
+
 /** 表单控件样式（多数派定义；设置区密集变体保留在各面板本地） */
 export const inputCls =
   "w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white";

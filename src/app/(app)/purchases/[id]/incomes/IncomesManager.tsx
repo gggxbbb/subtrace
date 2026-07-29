@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { isoDay } from "@/lib/dates";
 import { fmtMoney } from "@/lib/format";
 import { MoneyFields } from "@/components/MoneyFields";
-import { inputCls, labelCls } from "@/components/te";
+import { inputCls, labelCls, ErrorBanner } from "@/components/te";
 import {
   addPurchaseIncomeAction,
   deletePurchaseIncomeAction,
@@ -46,13 +46,7 @@ export function IncomesManager({
 
   return (
     <>
-      {error && (
-        <div className="mb-3 border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
-          {error === "fx"
-            ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
-            : "保存失败：请检查日期与金额"}
-        </div>
-      )}
+      <ErrorBanner error={error} defaultMessage="保存失败：请检查日期与金额" className="mb-3" />
       <form method="GET" className="flex items-end gap-2 border border-black bg-white p-3">
         <div className="flex-1">
           <label className={labelCls}>来源包含</label>

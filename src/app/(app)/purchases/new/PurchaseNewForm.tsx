@@ -3,7 +3,7 @@
 import { isoDay } from "@/lib/dates";
 import { MoneyFields } from "@/components/MoneyFields";
 import { createPurchaseAction } from "@/lib/purchases/actions";
-import { inputCls, labelCls } from "@/components/te";
+import { inputCls, labelCls, ErrorBanner } from "@/components/te";
 
 
 export function PurchaseNewForm({ baseCurrency, error }: { baseCurrency: string; error: string | null }) {
@@ -15,13 +15,7 @@ export function PurchaseNewForm({ baseCurrency, error }: { baseCurrency: string;
         purchases / new
       </div>
       <h1 className="mb-5 text-xl font-bold uppercase tracking-tight">登记物品</h1>
-      {error && (
-        <div className="mb-4 border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
-          {error === "fx"
-            ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
-            : "登记失败：请检查必填项"}
-        </div>
-      )}
+      <ErrorBanner error={error} defaultMessage="登记失败：请检查必填项" className="mb-4" />
       <form action={createPurchaseAction} className="space-y-4 border border-black bg-white p-5">
         <div>
           <label className={labelCls}>名称</label>
