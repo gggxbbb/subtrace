@@ -122,7 +122,7 @@ export default async function ReportsPage({
                       className="w-full"
                       style={{
                         height: `${Math.max(2, (b.cost / maxCost) * 100)}%`,
-                        background: b.isToday ? ORANGE : "#111",
+                        background: b.isToday ? ORANGE : "var(--ink)",
                       }}
                     />
                   </div>

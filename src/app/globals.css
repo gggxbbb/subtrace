@@ -39,7 +39,7 @@
   --ink: #e8e7e4;
   --accent: #ff5a00;
   --muted: #a3a09b;
-  --faint: #6e6b66;
+  --faint: #83807a; /* 深底装饰文字（对 surface ≈2.7:1，与浅色 neutral-400 相对层级一致） */
   --line: #3a3835;
   --band: #302e2b;
   --destructive: #ef4444;
