@@ -164,11 +164,11 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     .sort((a, b) => a.daysLeft - b.daysLeft);
 
   // 近 30 天每日摊销：区间视图段算一次按天切片（30×N → N 次分段）。
-  // 与迁移前一致：已卖出/报废物品不计趋势（旧逻辑 purchaseCurrentDailyRate 对非在用恒 0）；
-  // 注意：报表口径按持有期摊销（含已截止物品），两者语义不同属已知差异。
+  // 持有期口径（与报表/costOverPeriod 统一）：已卖出/报废物品在 [购买日, 截止日) 内照摊，
+  // 历史趋势不被卖出动作回溯改写（2026-07-29 评审后决策，cost-assembly US7 例外注记）。
   const trend = costOverPeriod({
     subs: subs.filter((s) => s.status === "ACTIVE"),
-    purchases: purchasesRaw.filter((p) => p.status === "IN_USE"),
+    purchases: purchasesRaw,
     viewerId: userId,
     startMs: today.getTime() - 29 * DAY_MS,
     endMs: today.getTime() + DAY_MS,
