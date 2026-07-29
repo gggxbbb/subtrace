@@ -10,6 +10,7 @@ export function ConfirmButton({
   label = "删除",
   confirmLabel = "确认删除",
   cancelLabel = "算了",
+  disabled = false,
   className = "",
   confirmClassName = "bg-red-700 px-2 py-0.5 text-[9px] uppercase text-white f-mono hover:bg-red-800",
   cancelClassName = "border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono hover:bg-black hover:text-white",
@@ -18,6 +19,8 @@ export function ConfirmButton({
   label?: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  /** 禁用第一击（如 action 过渡期间防重复触发） */
+  disabled?: boolean;
   /** 第一击按钮（红描边警示态） */
   className?: string;
   /** 确认态主按钮（实心红） */
@@ -40,7 +43,7 @@ export function ConfirmButton({
     );
   }
   return (
-    <button type="button" onClick={() => setConfirming(true)} className={className}>
+    <button type="button" disabled={disabled} onClick={() => setConfirming(true)} className={className}>
       {label}
     </button>
   );

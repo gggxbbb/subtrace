@@ -70,7 +70,9 @@ export function PaymentEditFields({
       allowUnknown
       defaults={{
         amount: row?.amount,
-        currency: row?.currency ?? defaultCurrency,
+        // panel（仅编辑）保持行原币原样（金额未知行 currency=null → 空框，与旧版一致）；
+        // manager 新增才回退默认币种
+        currency: variant === "panel" ? row?.currency : (row?.currency ?? defaultCurrency),
         amountBase: row?.amountBase,
       }}
       labels={{ amount: "实付" }}

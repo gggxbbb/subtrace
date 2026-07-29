@@ -25,14 +25,18 @@ export function ViewSwitcher({
 }) {
   const [view, setView] = useState<ViewKind>(desktopDefault);
 
-  // SSR/首帧渲染 desktopDefault 避免水合不匹配；挂载后同步本地存储与移动端默认。
+  // SSR/首帧渲染 desktopDefault 避免水合不匹配；挂载后必须读一次 localStorage/媒体查询，
+  // 这是「与外部系统同步」——effect 的正当职责，此处同步 setState 属规则的本意例外，
+  // 显式豁免而非绕开检测。
   useEffect(() => {
-    const apply = (v: ViewKind) => { if (v !== desktopDefault) setView(v); };
     const stored = localStorage.getItem(storageKey);
     if (stored === "list" || stored === "card") {
-      apply(stored);
+      if (stored !== desktopDefault) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- 挂载后同步本地存储，规则本意例外
+        setView(stored);
+      }
     } else if (window.matchMedia("(max-width: 767px)").matches && desktopDefault !== "card") {
-      apply("card");
+      setView("card");
     }
   }, [storageKey, desktopDefault]);
 

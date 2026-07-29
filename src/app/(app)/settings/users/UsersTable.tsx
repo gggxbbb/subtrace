@@ -103,7 +103,8 @@ export function UsersTable({ users }: { users: UserRow[] }) {
                     </button>
                     <ConfirmButton
                       onConfirm={() => run(() => deleteUserAction(u.id))}
-                      confirmLabel="确认删除"
+                      confirmLabel="确认删除（不可恢复）"
+                      disabled={pending}
                       className="border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono text-[#ef4444] hover:bg-[#ef4444] hover:text-white disabled:opacity-40"
                       confirmClassName="bg-red-700 px-2 py-0.5 text-[9px] uppercase text-white f-mono hover:bg-red-800"
                     />
