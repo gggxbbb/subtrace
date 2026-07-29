@@ -41,23 +41,23 @@ export function BeneficiariesPanel({
   return (
     <div className="px-4 py-4">
       {rows.length === 0 ? (
-        <p className="mb-3 text-[11px] text-neutral-400">
+        <p className="mb-3 text-[11px] text-faint">
           未配置分摊——所有者承担全部成本。添加受益人后按权重分摊（用户 = 家庭共享，物品 = iCloud 之于多设备）。
         </p>
       ) : (
         <div className="mb-3">
-          <div className="grid grid-cols-[1fr_5rem_5rem_4rem] gap-2 border-b border-dashed border-neutral-300 pb-1 text-[9px] uppercase text-neutral-400 f-mono">
+          <div className="grid grid-cols-[1fr_5rem_5rem_4rem] gap-2 border-b border-dashed border-line-strong pb-1 text-[9px] uppercase text-faint f-mono">
             <span>受益实体</span>
             <span className="text-right">权重</span>
             <span className="text-right">份额</span>
             <span />
           </div>
           {rows.map((r) => (
-            <div key={r.id} className="group grid grid-cols-[1fr_5rem_5rem_4rem] items-center gap-2 border-b border-dashed border-neutral-200 py-1.5 text-[12px]">
+            <div key={r.id} className="group grid grid-cols-[1fr_5rem_5rem_4rem] items-center gap-2 border-b border-dashed border-line py-1.5 text-[12px]">
               <span className="flex items-center gap-1.5">
                 <Led color={r.kind === "USER" ? "var(--accent)" : "#0ea5e9"} />
                 {r.name}
-                <span className="text-[9px] uppercase text-neutral-400 f-mono">
+                <span className="text-[9px] uppercase text-faint f-mono">
                   {r.kind === "USER" ? "用户" : "物品"}
                   {r.isOwnerRow ? " · 所有者" : ""}
                 </span>
@@ -81,7 +81,7 @@ export function BeneficiariesPanel({
                 {isOwner && (
                   <button
                     onClick={async () => removeBeneficiaryAction(subscriptionId, r.id)}
-                    className="invisible text-red-700 group-hover:visible"
+                    className="invisible text-destructive group-hover:visible"
                   >
                     移除
                   </button>
@@ -89,7 +89,7 @@ export function BeneficiariesPanel({
               </span>
             </div>
           ))}
-          <p className="mt-1.5 text-[9px] uppercase text-neutral-400 f-mono">
+          <p className="mt-1.5 text-[9px] uppercase text-faint f-mono">
             份额 = 权重 / Σ权重 · 改权重立即全局重算 · 权重行内编辑回车生效
           </p>
         </div>
@@ -98,7 +98,7 @@ export function BeneficiariesPanel({
       {isOwner && (
         <form action={addBeneficiaryAction.bind(null, subscriptionId)} className="flex items-end gap-2">
           <div>
-            <div className="mb-1 text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">类型</div>
+            <div className="mb-1 text-[10px] uppercase tracking-[0.15em] text-muted f-mono">类型</div>
             <div className="grid grid-cols-2 gap-px border border-ink bg-ink">
               {(["USER", "ITEM"] as const).map((k) => (
                 <button
@@ -114,7 +114,7 @@ export function BeneficiariesPanel({
           </div>
           <input type="hidden" name="kind" value={kind} />
           <div className="flex-1">
-            <div className="mb-1 text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+            <div className="mb-1 text-[10px] uppercase tracking-[0.15em] text-muted f-mono">
               {kind === "USER" ? "选择用户" : "选择我的物品"}
             </div>
             <select name="refId" required className={inputCls}>
@@ -127,7 +127,7 @@ export function BeneficiariesPanel({
             </select>
           </div>
           <div className="w-16">
-            <div className="mb-1 text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">权重</div>
+            <div className="mb-1 text-[10px] uppercase tracking-[0.15em] text-muted f-mono">权重</div>
             <input name="weight" type="number" step="any" min="0.01" defaultValue="1" className={inputCls} />
           </div>
           <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">

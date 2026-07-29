@@ -10,7 +10,7 @@ export default function Loading() {
         <span className="animate-pulse">
           <Led />
         </span>
-        <span className="text-[10px] uppercase tracking-[0.2em] text-neutral-500 f-mono">
+        <span className="text-[10px] uppercase tracking-[0.2em] text-muted f-mono">
           加载中
         </span>
       </div>

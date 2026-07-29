@@ -63,25 +63,25 @@ export function UsageWizard({
               ] as const
             ).map(([k, v]) => (
               <div key={k} className="flex justify-between border-b border-ink px-3 py-2 text-[12px] last:border-b-0">
-                <span className="text-neutral-500">{k}</span>
+                <span className="text-muted">{k}</span>
                 <span className="font-semibold">{v}</span>
               </div>
             ))}
           </div>
-          <div className="border border-red-700 bg-red-50 p-3 text-[11px] leading-relaxed text-red-800">
+          <div className="border border-destructive bg-red-50 p-3 text-[11px] leading-relaxed text-red-800">
             <strong>注意：</strong>修改字段（单位/单价/总额度）只影响后续计算口径，历史记录保持不变；
             但<strong>切换类型</strong>会让已有的 {recordCount} 条记录按新类型解读（增量 ↔ 快照），历史区间的盈亏可能失真。
           </div>
           <div className="flex items-center justify-between">
             <div className="flex gap-2">
               <form action={disableUsageAction.bind(null, subscriptionId)}>
-                <button className="border border-red-700 bg-surface px-3 py-1.5 text-[10px] uppercase tracking-wider text-red-700 hover:bg-red-700 hover:text-white">
+                <button className="border border-destructive bg-surface px-3 py-1.5 text-[10px] uppercase tracking-wider text-destructive hover:bg-destructive hover:text-white">
                   停用跟踪（记录保留）
                 </button>
               </form>
               {confirmPurge ? (
                 <form action={purgeUsageAction.bind(null, subscriptionId)} className="flex gap-1">
-                  <button className="bg-red-700 px-3 py-1.5 text-[10px] uppercase tracking-wider text-white hover:bg-red-800">
+                  <button className="bg-destructive px-3 py-1.5 text-[10px] uppercase tracking-wider text-white hover:bg-destructive-hover">
                     确认删除 {recordCount} 条记录？
                   </button>
                   <button
@@ -96,7 +96,7 @@ export function UsageWizard({
                 <button
                   type="button"
                   onClick={() => setConfirmPurge(true)}
-                  className="border border-red-700 bg-red-700 px-3 py-1.5 text-[10px] uppercase tracking-wider text-white hover:bg-red-800"
+                  className="border border-destructive bg-destructive px-3 py-1.5 text-[10px] uppercase tracking-wider text-white hover:bg-destructive-hover"
                 >
                   停用并清除记录
                 </button>
@@ -132,7 +132,7 @@ export function UsageWizard({
         {step === 0 && (
           <div className="space-y-4">
             <h2 className="text-sm font-bold">用量跟踪回答一个问题：这钱花得值不值？</h2>
-            <p className="text-[12px] leading-relaxed text-neutral-600">
+            <p className="text-[12px] leading-relaxed text-muted-strong">
               订阅的成本系统已经在算了（实付金额按服务天数摊销）。用量跟踪在此基础上记录你<strong>实际用了多少</strong>，
               两相对比得出盈亏。按订阅的性质，有两种追踪方式：
             </p>
@@ -141,10 +141,10 @@ export function UsageWizard({
                 <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase f-mono">
                   <Led color="var(--accent)" /> 计数型
                 </div>
-                <p className="text-[11px] leading-relaxed text-neutral-600">
+                <p className="text-[11px] leading-relaxed text-muted-strong">
                   适合<strong>按次消费、单次有明确市场价</strong>的订阅：健身房（单次卡 ¥30）、按摩、洗车、私教课。
                 </p>
-                <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-600">
+                <p className="mt-1.5 text-[11px] leading-relaxed text-muted-strong">
                   每用一次记一笔，系统拿「次数 × 市场价」对比已摊成本，回答<strong>“再去几次回本”</strong>。
                 </p>
               </div>
@@ -152,16 +152,16 @@ export function UsageWizard({
                 <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase f-mono">
                   <Led color="#0ea5e9" /> 额度型
                 </div>
-                <p className="text-[11px] leading-relaxed text-neutral-600">
+                <p className="text-[11px] leading-relaxed text-muted-strong">
                   适合<strong>每月给固定额度</strong>的订阅：流量机场（1000GB）、iCloud（2TB）、API 点数包。
                 </p>
-                <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-600">
+                <p className="mt-1.5 text-[11px] leading-relaxed text-muted-strong">
                   不定期同步一下“已用多少”，系统只看<strong>使用率</strong>：有没有用到 100%、什么时候用满；
                   没用完的部分按比例折算成浪费的钱。
                 </p>
               </div>
             </div>
-            <p className="text-[11px] text-neutral-400">
+            <p className="text-[11px] text-faint">
               不启用也可以——用量跟踪是可选项，纯看成本的订阅不用开。
             </p>
           </div>
@@ -182,15 +182,15 @@ export function UsageWizard({
                   type="button"
                   onClick={() => setKind(k)}
                   className={`border p-4 text-left transition-colors ${
-                    kind === k ? "border-ink bg-base" : "border-neutral-300 bg-surface hover:border-ink"
+                    kind === k ? "border-ink bg-base" : "border-line-strong bg-surface hover:border-ink"
                   }`}
                 >
                   <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase f-mono">
                     <Led color={color} /> {title}
                     {kind === k && <span className="ml-auto">✓</span>}
                   </div>
-                  <div className="text-[11px] text-neutral-600">{desc}</div>
-                  <div className="mt-1 text-[10px] text-neutral-400 f-mono">{examples}</div>
+                  <div className="text-[11px] text-muted-strong">{desc}</div>
+                  <div className="mt-1 text-[10px] text-faint f-mono">{examples}</div>
                 </button>
               ))}
             </div>
@@ -209,7 +209,7 @@ export function UsageWizard({
                   placeholder={kind === "COUNT" ? "次 / 小时 / 节" : "GB / 点数 / 条"}
                   className={inputCls}
                 />
-                <p className="mt-1 text-[10px] leading-relaxed text-neutral-400">
+                <p className="mt-1 text-[10px] leading-relaxed text-faint">
                   展示用，比如“9 次”“800 GB”。
                 </p>
               </div>
@@ -225,7 +225,7 @@ export function UsageWizard({
                     placeholder="30"
                     className={inputCls}
                   />
-                  <p className="mt-1 text-[10px] leading-relaxed text-neutral-400">
+                  <p className="mt-1 text-[10px] leading-relaxed text-faint">
                     不买这个订阅、按次单买要花多少钱一次（如健身房单次卡 ¥30）。
                     盈亏 = 次数 × 这个价 − 已摊成本。每次录入时还能临时改“本次单价”（涨价、不同项目）。
                   </p>
@@ -242,7 +242,7 @@ export function UsageWizard({
                     placeholder="1000"
                     className={inputCls}
                   />
-                  <p className="mt-1 text-[10px] leading-relaxed text-neutral-400">
+                  <p className="mt-1 text-[10px] leading-relaxed text-faint">
                     套餐每月给的总量（如 1000 GB）。录入时每次还能改（运营商偷偷加量减量都接得住）。
                   </p>
                 </div>
@@ -265,12 +265,12 @@ export function UsageWizard({
                 ] as const
               ).map(([k, v]) => (
                 <div key={k} className="flex justify-between border-b border-ink px-3 py-2 text-[12px] last:border-b-0">
-                  <span className="text-neutral-500">{k}</span>
+                  <span className="text-muted">{k}</span>
                   <span className="font-semibold">{v}</span>
                 </div>
               ))}
             </div>
-            <p className="text-[11px] text-neutral-400">
+            <p className="text-[11px] text-faint">
               保存后详情页会出现「用量录入」和「盈亏 · 当前区间」两张卡片。
             </p>
             <form action={setUsageConfigAction.bind(null, subscriptionId)}>
@@ -286,7 +286,7 @@ export function UsageWizard({
         )}
 
         {/* 底部导航 */}
-        <div className="mt-5 flex justify-between border-t border-dashed border-neutral-300 pt-3">
+        <div className="mt-5 flex justify-between border-t border-dashed border-line-strong pt-3">
           <button
             type="button"
             onClick={() => (step === 0 ? router.push(`/subscriptions/${subscriptionId}`) : setStep(step - 1))}

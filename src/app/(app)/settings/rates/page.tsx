@@ -24,7 +24,7 @@ export default async function RatesPage({
     <>
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
             settings / rates
           </div>
           <h1 className="text-xl font-bold uppercase tracking-tight">汇率</h1>
@@ -37,7 +37,7 @@ export default async function RatesPage({
               保存失败：请检查输入格式
             </div>
           )}
-          <p className="mb-4 text-[10px] uppercase leading-relaxed tracking-wider text-neutral-500 f-mono">
+          <p className="mb-4 text-[10px] uppercase leading-relaxed tracking-wider text-muted f-mono">
             汇率只用于录入外币记录时预填折算值；保存进记录的是当时折算好的主币种金额，之后改汇率不影响历史记录。
           </p>
           <RatesPanel

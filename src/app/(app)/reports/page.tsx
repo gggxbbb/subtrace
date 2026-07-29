@@ -72,7 +72,7 @@ export default async function ReportsPage({
     <>
       <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
             05 / reports
           </div>
           <h1 className="text-xl font-bold uppercase tracking-tight">报表</h1>
@@ -128,7 +128,7 @@ export default async function ReportsPage({
                   </div>
                 ))}
               </div>
-              <div className="mt-1 flex justify-between text-[9px] uppercase text-neutral-400 f-mono">
+              <div className="mt-1 flex justify-between text-[9px] uppercase text-faint f-mono">
                 <span>{bars[0]?.label}</span>
                 <span>峰值 {fmtMoney(maxCost, cur)}</span>
                 <span>{bars[bars.length - 1]?.label}</span>
@@ -139,7 +139,7 @@ export default async function ReportsPage({
           <Panel index="02" title="分类占比">
             <div className="space-y-2.5 px-4 py-4">
               {r.categories.length === 0 && (
-                <div className="py-4 text-center text-[11px] uppercase text-neutral-400 f-mono">区间内无成本</div>
+                <div className="py-4 text-center text-[11px] uppercase text-faint f-mono">区间内无成本</div>
               )}
               {r.categories.map((c) => (
                 <div key={c.name}>
@@ -162,7 +162,7 @@ export default async function ReportsPage({
           <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-[13px]">
             <thead>
-              <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+              <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-muted f-mono">
                 <th className="px-4 py-2 font-medium">名称</th>
                 <th className="px-4 py-2 font-medium">分类</th>
                 <th className="px-4 py-2 w-2/5 font-medium">占比</th>
@@ -172,7 +172,7 @@ export default async function ReportsPage({
             </thead>
             <tbody>
               {r.items.map((it) => (
-                <tr key={it.id} className="border-b border-neutral-200 last:border-0 hover:bg-black/[0.03]">
+                <tr key={it.id} className="border-b border-line last:border-0 hover:bg-black/[0.03]">
                   <td className="px-4 py-2">
                     <a
                       href={it.kind === "sub" ? `/subscriptions/${it.id}` : `/purchases/${it.id}`}
@@ -180,30 +180,30 @@ export default async function ReportsPage({
                     >
                       {it.name}
                     </a>
-                    <span className="ml-1.5 text-[9px] uppercase text-neutral-400 f-mono">
+                    <span className="ml-1.5 text-[9px] uppercase text-faint f-mono">
                       {it.kind === "sub" ? "订阅" : "物品"}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-neutral-500">{it.category}</td>
+                  <td className="px-4 py-2 text-muted">{it.category}</td>
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-2">
                       <div className="h-2 flex-1 bg-base">
                         <div className="h-full bg-ink" style={{ width: `${Math.max(1, Math.round(it.share * 100))}%` }} />
                       </div>
-                      <span className="w-10 text-right text-[10px] tabular-nums text-neutral-500 f-mono">
+                      <span className="w-10 text-right text-[10px] tabular-nums text-muted f-mono">
                         {Math.round(it.share * 100)}%
                       </span>
                     </div>
                   </td>
                   <td className="px-4 py-2 text-right text-[11px] font-semibold tabular-nums f-mono">{fmtMoney(it.cost, cur)}</td>
-                  <td className="px-4 py-2 text-right text-[11px] tabular-nums text-neutral-500 f-mono">
+                  <td className="px-4 py-2 text-right text-[11px] tabular-nums text-muted f-mono">
                     {fmtMoney(it.cost / r.days.length, cur)}
                   </td>
                 </tr>
               ))}
               {r.items.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
+                  <td colSpan={5} className="px-4 py-8 text-center text-[11px] uppercase text-faint f-mono">
                     区间内无成本
                   </td>
                 </tr>

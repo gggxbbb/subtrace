@@ -50,7 +50,7 @@ function SubscriptionTable({ rows, cur }: { rows: Row[]; cur: string }) {
     <div className="overflow-x-auto">
     <table className="w-full min-w-[640px] text-[13px]">
       <thead>
-        <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+        <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-muted f-mono">
           <th className="px-4 py-2 font-medium">名称</th>
           <th className="px-4 py-2 font-medium">分类</th>
           <th className="px-4 py-2 font-medium">周期</th>
@@ -62,25 +62,25 @@ function SubscriptionTable({ rows, cur }: { rows: Row[]; cur: string }) {
       </thead>
       <tbody>
         {rows.map((s) => (
-          <tr key={s.id} className="border-b border-neutral-200 last:border-0 hover:bg-black/[0.03]">
+          <tr key={s.id} className="border-b border-line last:border-0 hover:bg-black/[0.03]">
             <td className="px-4 py-2.5">
               <Link href={`/subscriptions/${s.id}`} className="font-medium hover:underline">
                 {s.name}
               </Link>
             </td>
-            <td className="px-4 py-2.5 text-neutral-500">{s.category ?? "—"}</td>
-            <td className="px-4 py-2.5 text-[11px] text-neutral-500 f-mono">{s.cycleLabel}</td>
-            <td className="px-4 py-2.5 text-[11px] tabular-nums text-neutral-500 f-mono">
+            <td className="px-4 py-2.5 text-muted">{s.category ?? "—"}</td>
+            <td className="px-4 py-2.5 text-[11px] text-muted f-mono">{s.cycleLabel}</td>
+            <td className="px-4 py-2.5 text-[11px] tabular-nums text-muted f-mono">
               {s.expiry ? isoDay(s.expiry) : "—"}
             </td>
             <td className="px-4 py-2.5 text-right text-[11px] font-semibold tabular-nums f-mono">
               {s.costUnknown && s.dailyCost === 0 ? (
-                <span className="text-neutral-400">未知</span>
+                <span className="text-faint">未知</span>
               ) : (
                 fmtMoney(s.dailyCost, cur)
               )}
             </td>
-            <td className="px-4 py-2.5 text-right text-[11px] tabular-nums text-neutral-500 f-mono">
+            <td className="px-4 py-2.5 text-right text-[11px] tabular-nums text-muted f-mono">
               {s.costUnknown && s.dailyCost === 0 ? "—" : fmtMoney(s.monthlyCost, cur)}
             </td>
             <td className="px-4 py-2.5">
@@ -90,7 +90,7 @@ function SubscriptionTable({ rows, cur }: { rows: Row[]; cur: string }) {
         ))}
         {rows.length === 0 && (
           <tr>
-            <td colSpan={7} className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
+            <td colSpan={7} className="px-4 py-8 text-center text-[11px] uppercase text-faint f-mono">
               还没有订阅，点右上角「新建订阅」开始
             </td>
           </tr>
@@ -104,7 +104,7 @@ function SubscriptionTable({ rows, cur }: { rows: Row[]; cur: string }) {
 function SubscriptionCards({ rows, cur }: { rows: Row[]; cur: string }) {
   if (rows.length === 0) {
     return (
-      <div className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
+      <div className="px-4 py-8 text-center text-[11px] uppercase text-faint f-mono">
         还没有订阅，点右上角「新建订阅」开始
       </div>
     );
@@ -112,14 +112,14 @@ function SubscriptionCards({ rows, cur }: { rows: Row[]; cur: string }) {
   return (
     <div className="grid grid-cols-1 gap-px bg-surface sm:grid-cols-2 lg:grid-cols-3">
       {rows.map((s) => (
-        <Link key={s.id} href={`/subscriptions/${s.id}`} className="block border border-neutral-200 bg-surface px-4 py-3 hover:bg-black/[0.03]">
+        <Link key={s.id} href={`/subscriptions/${s.id}`} className="block border border-line bg-surface px-4 py-3 hover:bg-black/[0.03]">
           <div className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-[13px] font-medium" title={s.name}>
               {s.name}
             </span>
             <StatusPill s={s} />
           </div>
-          <div className="mt-1.5 flex items-center justify-between gap-2 text-[9px] text-neutral-500 f-mono">
+          <div className="mt-1.5 flex items-center justify-between gap-2 text-[9px] text-muted f-mono">
             <span className="min-w-0 truncate">
               {s.category ?? "—"} · {s.cycleLabel}
             </span>
@@ -129,7 +129,7 @@ function SubscriptionCards({ rows, cur }: { rows: Row[]; cur: string }) {
             <span className="font-semibold">
               {s.costUnknown && s.dailyCost === 0 ? "未知" : `${fmtMoney(s.dailyCost, cur)}/day`}
             </span>
-            <span className="text-neutral-500">
+            <span className="text-muted">
               {s.costUnknown && s.dailyCost === 0 ? "—" : `${fmtMoney(s.monthlyCost, cur)}/mo`}
             </span>
           </div>
@@ -174,7 +174,7 @@ export default async function SubscriptionsPage({
     <>
       <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
             02 / subscriptions
           </div>
           <h1 className="text-xl font-bold uppercase tracking-tight">订阅</h1>

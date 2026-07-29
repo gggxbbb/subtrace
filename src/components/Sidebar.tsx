@@ -72,7 +72,7 @@ function NavGroups({
     <>
       {NAV.map((g) => (
         <div key={g.group} className="mb-5">
-          <div className="border-b border-dashed border-neutral-400 px-2 pb-1 text-[9px] uppercase tracking-[0.2em] text-neutral-500 f-mono">
+          <div className="border-b border-dashed border-faint px-2 pb-1 text-[9px] uppercase tracking-[0.2em] text-muted f-mono">
             {g.group}
           </div>
           <div className="mt-1.5 space-y-0.5">
@@ -84,8 +84,8 @@ function NavGroups({
                 active
                   ? "bg-ink text-surface"
                   : it.soon
-                    ? "cursor-not-allowed text-neutral-400"
-                    : "text-neutral-700 hover:bg-black/5"
+                    ? "cursor-not-allowed text-faint"
+                    : "text-muted-strong hover:bg-black/5"
               }`;
               const inner = (
                 <>
@@ -120,12 +120,12 @@ function UserFooter({ username, role }: { username: string; role: string }) {
         </div>
         <div className="f-mono">
           <div className="text-[11px] font-semibold">{username}</div>
-          <div className="flex items-center gap-1 text-[9px] uppercase text-neutral-500">
+          <div className="flex items-center gap-1 text-[9px] uppercase text-muted">
             <Led color="#22c55e" /> {role.toLowerCase()}
           </div>
         </div>
       </div>
-      <div className="mt-2 text-[9px] text-neutral-400 f-mono">{versionLine}</div>
+      <div className="mt-2 text-[9px] text-faint f-mono">{versionLine}</div>
     </div>
   );
 }
@@ -139,7 +139,7 @@ export function Sidebar({ username, role, canUseScripts }: { username: string; r
         </div>
         <div>
           <div className="text-sm font-bold uppercase tracking-wider">Subtrace</div>
-          <div className="text-[9px] uppercase tracking-widest text-neutral-500 f-mono">
+          <div className="text-[9px] uppercase tracking-widest text-muted f-mono">
             subscription field kit
           </div>
         </div>
@@ -218,7 +218,7 @@ export function MobileNav({ username, role, canUseScripts }: { username: string;
               key={it.label}
               href={it.href}
               className={`flex min-h-[56px] flex-1 flex-col items-center justify-center gap-1 text-[9px] uppercase tracking-wider f-mono ${
-                active ? "bg-ink text-surface" : "text-neutral-600"
+                active ? "bg-ink text-surface" : "text-muted-strong"
               }`}
             >
               <it.icon className="h-4 w-4" strokeWidth={2.2} />

@@ -73,7 +73,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
 
   return (
     <div className="mx-auto max-w-xl px-4 py-8 md:px-6">
-      <div className="mb-1 text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+      <div className="mb-1 text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
         subscriptions / new
       </div>
       <h1 className="mb-5 text-xl font-bold uppercase tracking-tight">新建订阅</h1>
@@ -181,7 +181,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
               </>
             )}
             {mode === "MANUAL" && (
-              <p className="text-[11px] leading-relaxed text-neutral-500">
+              <p className="text-[11px] leading-relaxed text-muted">
                 手动模式不维护周期与标准价：到期日完全由之后登记的每笔付费记录决定。
               </p>
             )}
@@ -195,7 +195,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
                   <input type="checkbox" name="firstPayment" defaultChecked className="h-4 w-4 accent-ink" />
                   <span>
                     <strong>同时记一笔付费</strong>
-                    <span className="ml-1 text-[10px] text-neutral-500">推荐：到期日与成本立刻以实付为准，不再靠推算</span>
+                    <span className="ml-1 text-[10px] text-muted">推荐：到期日与成本立刻以实付为准，不再靠推算</span>
                   </span>
                 </label>
                 <div className="space-y-3 p-3">
@@ -224,7 +224,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
                     <div>
                       <label className={labelCls}>服务止（到期日）</label>
                       <input name="firstPeriodEnd" type="date" className={`${inputCls} f-mono`} />
-                      <p className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
+                      <p className="mt-1 text-[9px] uppercase text-faint f-mono">
                         留空 = 服务起 + 一个周期
                       </p>
                     </div>
@@ -235,7 +235,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
             <div>
               <label className={labelCls}>提醒天数</label>
               <input name="remindDays" defaultValue="7,3,0" className={`${inputCls} f-mono`} />
-              <p className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
+              <p className="mt-1 text-[9px] uppercase text-faint f-mono">
                 逗号分隔；到期前 N 天经通知渠道提醒 · 留空 = 不提醒
               </p>
             </div>
@@ -246,7 +246,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
             <div className="border border-ink">
               {summary.map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-4 border-b border-ink px-3 py-2 text-[12px] last:border-b-0">
-                  <span className="shrink-0 text-neutral-500">{k}</span>
+                  <span className="shrink-0 text-muted">{k}</span>
                   <span className="min-w-0 truncate font-semibold" title={v}>{v}</span>
                 </div>
               ))}
@@ -266,7 +266,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
             ) : (
               <span />
             )}
-            {stepError && <span className="text-[11px] text-red-700 f-mono">{stepError}</span>}
+            {stepError && <span className="text-[11px] text-destructive f-mono">{stepError}</span>}
             {step < 3 ? (
               <button
                 type="button"

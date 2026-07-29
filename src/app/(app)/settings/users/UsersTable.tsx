@@ -43,7 +43,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
       <div className="overflow-x-auto">
       <table className="w-full min-w-[520px] text-[13px]">
         <thead>
-          <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+          <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-muted f-mono">
             <th className="px-4 py-2 font-medium">用户名</th>
             <th className="px-4 py-2 font-medium">角色</th>
             <th className="px-4 py-2 font-medium">主币种</th>
@@ -55,32 +55,32 @@ export function UsersTable({ users }: { users: UserRow[] }) {
         </thead>
         <tbody>
           {users.map((u) => (
-            <tr key={u.id} className="group border-b border-neutral-200 last:border-0 hover:bg-black/[0.03]">
+            <tr key={u.id} className="group border-b border-line last:border-0 hover:bg-black/[0.03]">
               <td className="px-4 py-2.5 font-medium">
                 {u.username}
-                {u.isMe && <span className="ml-2 text-[9px] uppercase text-neutral-400 f-mono">（我）</span>}
+                {u.isMe && <span className="ml-2 text-[9px] uppercase text-faint f-mono">（我）</span>}
               </td>
               <td className="px-4 py-2.5">
                 <span
                   className={`px-1.5 py-0.5 text-[9px] uppercase f-mono ${
-                    u.role === "ADMIN" ? "bg-ink text-surface" : "text-neutral-500"
+                    u.role === "ADMIN" ? "bg-ink text-surface" : "text-muted"
                   }`}
                 >
                   {u.role}
                 </span>
               </td>
-              <td className="px-4 py-2.5 text-[11px] text-neutral-500 f-mono">{u.baseCurrency}</td>
+              <td className="px-4 py-2.5 text-[11px] text-muted f-mono">{u.baseCurrency}</td>
               <td className="px-4 py-2.5">
                 <button
                   disabled={pending}
                   onClick={() => run(() => setCanUseScriptsAction(u.id, !u.canUseScripts))}
-                  className={`px-1.5 py-0.5 text-[9px] uppercase f-mono ${u.canUseScripts ? "bg-ink text-surface" : "border border-ink bg-surface text-neutral-400 hover:bg-black/5"} disabled:opacity-40`}
+                  className={`px-1.5 py-0.5 text-[9px] uppercase f-mono ${u.canUseScripts ? "bg-ink text-surface" : "border border-ink bg-surface text-faint hover:bg-black/5"} disabled:opacity-40`}
                 >
                   {u.canUseScripts ? "信任" : "关闭"}
                 </button>
               </td>
               <td className="px-4 py-2.5 text-right text-[11px] tabular-nums f-mono">{u.subscriptionCount}</td>
-              <td className="px-4 py-2.5 text-[11px] text-neutral-500 f-mono">{isoDay(new Date(`${u.createdAt}T00:00:00+08:00`))}</td>
+              <td className="px-4 py-2.5 text-[11px] text-muted f-mono">{isoDay(new Date(`${u.createdAt}T00:00:00+08:00`))}</td>
               <td className="px-4 py-2.5 text-right">
                 {!u.isMe && (
                   <span className="invisible flex justify-end gap-1.5 group-hover:visible">
@@ -106,7 +106,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
                       confirmLabel="确认删除（不可恢复）"
                       disabled={pending}
                       className="border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase f-mono text-[#ef4444] hover:bg-[#ef4444] hover:text-white disabled:opacity-40"
-                      confirmClassName="bg-red-700 px-2 py-0.5 text-[9px] uppercase text-white f-mono hover:bg-red-800"
+                      confirmClassName="bg-destructive px-2 py-0.5 text-[9px] uppercase text-white f-mono hover:bg-destructive-hover"
                     />
                   </span>
                 )}

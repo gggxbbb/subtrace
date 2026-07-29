@@ -10,7 +10,7 @@ import type { ScriptSubView } from "@/lib/scripts/service";
 
 const inputCls =
   "w-full border border-ink bg-base px-3 py-2 text-sm outline-none focus:bg-surface";
-const labelCls = "mb-1 block text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
+const labelCls = "mb-1 block text-[9px] uppercase tracking-[0.15em] text-muted f-mono";
 
 const PRESETS: { label: string; cron: string }[] = [
   { label: "每小时", cron: "0 * * * *" },
@@ -154,7 +154,7 @@ export function ScriptEditor({
             </button>
           )}
           {lastRun && (
-            <span className="ml-auto flex items-center gap-1.5 text-[10px] text-neutral-500 f-mono">
+            <span className="ml-auto flex items-center gap-1.5 text-[10px] text-muted f-mono">
               <Led color={lastRun.status === "OK" ? "#22c55e" : "#ef4444"} />
               上次 {lastRun.startedAt}{lastRun.message ? ` · ${lastRun.message.slice(0, 80)}` : ""}
             </span>

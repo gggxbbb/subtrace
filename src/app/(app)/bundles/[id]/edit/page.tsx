@@ -45,11 +45,11 @@ export default async function EditBundlePage({ params }: { params: Promise<{ id:
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 md:px-6">
-      <div className="mb-1 text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+      <div className="mb-1 text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
         bundles / {bundle.name} / edit
       </div>
       <h1 className="mb-5 text-xl font-bold uppercase tracking-tight">编辑联合会员</h1>
-      <div className="mb-4 border border-dashed border-neutral-400 bg-surface px-3 py-2 text-[11px] text-neutral-600">
+      <div className="mb-4 border border-dashed border-faint bg-surface px-3 py-2 text-[11px] text-muted-strong">
         保存将<strong>重建全部 {bundle.payments.length} 笔分摊付费记录</strong>（按新配置重新分摊）；
         对单笔分摊做过的手动修改会丢失。子会员可增删改。
       </div>

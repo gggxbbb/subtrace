@@ -12,7 +12,7 @@ export function ConfirmButton({
   cancelLabel = "算了",
   disabled = false,
   className = "",
-  confirmClassName = "bg-red-700 px-2 py-0.5 text-[9px] uppercase text-white f-mono hover:bg-red-800",
+  confirmClassName = "bg-destructive px-2 py-0.5 text-[9px] uppercase text-white f-mono hover:bg-destructive-hover",
   cancelClassName = "border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase f-mono hover:bg-ink hover:text-surface",
 }: {
   onConfirm: () => void | Promise<void>;

@@ -48,7 +48,7 @@ export default async function PurchaseDetailPage({
     <>
       <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
             purchases / {purchase.category ?? "uncategorized"}
           </div>
           <h1 className="text-xl font-bold uppercase tracking-tight">{purchase.name}</h1>
@@ -80,23 +80,23 @@ export default async function PurchaseDetailPage({
 
         <div className="border border-ink bg-surface">
           <div className="flex items-center justify-between border-b border-ink bg-base px-4 py-2">
-            <span className="text-[10px] uppercase tracking-[0.2em] text-neutral-500 f-mono">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-muted f-mono">
               TCO · 总持有成本
             </span>
             <span className="text-lg font-bold tabular-nums">{fmtMoney(tco, cur)}</span>
           </div>
           <div className="px-4 py-3 text-[12px]">
-            <div className="flex justify-between border-b border-dashed border-neutral-200 py-1">
-              <span className="text-neutral-500">
+            <div className="flex justify-between border-b border-dashed border-line py-1">
+              <span className="text-muted">
                 物品净额（买入{events.length > 0 ? ` + 追加 ${events.length} 笔` : ""} − 残值）
               </span>
               <span className="tabular-nums f-mono">{fmtMoney(itemNet, cur)}</span>
             </div>
             {shareLines.map((l) => (
-              <div key={l.subscriptionId} className="flex justify-between border-b border-dashed border-neutral-200 py-1">
-                <span className="text-neutral-500">
+              <div key={l.subscriptionId} className="flex justify-between border-b border-dashed border-line py-1">
+                <span className="text-muted">
                   <a href={`/subscriptions/${l.subscriptionId}`} className="underline decoration-dotted hover:text-ink">{l.name}</a>
-                  <span className="ml-1 text-[10px] text-neutral-400 f-mono">
+                  <span className="ml-1 text-[10px] text-faint f-mono">
                     份额 {Math.round(l.share * 100)}% · {l.expiry ? `到期 ${isoDay(l.expiry)}` : "—"} · {fmtMoney(l.dailyRateShare, cur)}/日
                   </span>
                 </span>
@@ -105,15 +105,15 @@ export default async function PurchaseDetailPage({
             ))}
             {incomeTotal > 0 && (
               <div className="flex justify-between py-1">
-                <span className="text-neutral-500">累计收益（{incomes.length} 笔）</span>
-                <span className="tabular-nums text-teal-700 f-mono">−{fmtMoney(incomeTotal, cur)}</span>
+                <span className="text-muted">累计收益（{incomes.length} 笔）</span>
+                <span className="tabular-nums text-income f-mono">−{fmtMoney(incomeTotal, cur)}</span>
               </div>
             )}
             {shareLines.length === 0 && (
-              <div className="py-1 text-[11px] text-neutral-400">无订阅份额——可在订阅详情页把本物品加为受益实体</div>
+              <div className="py-1 text-[11px] text-faint">无订阅份额——可在订阅详情页把本物品加为受益实体</div>
             )}
           </div>
-          <div className="border-t border-dashed border-neutral-300 px-4 py-2.5 text-[10px] text-neutral-500 f-mono">
+          <div className="border-t border-dashed border-line-strong px-4 py-2.5 text-[10px] text-muted f-mono">
             时间线：{isoDay(purchase.purchaseDate)} 买入
             {events.map((e) => ` → ${isoDay(e.date)} ${EVENT_KIND_LABEL[e.kind] ?? "费用"}`).join("")}
             {purchase.endDate ? ` → ${isoDay(purchase.endDate)} ${purchase.status === "SOLD" ? "卖出" : "报废"}` : " → 持有中"}
@@ -141,7 +141,7 @@ export default async function PurchaseDetailPage({
             index="02"
             title={`收益记录 / ${incomes.length}`}
             actions={
-              <a href={`/purchases/${purchase.id}/incomes`} className="text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-ink">
+              <a href={`/purchases/${purchase.id}/incomes`} className="text-[10px] uppercase tracking-wider text-muted f-mono hover:text-ink">
                 全部 →
               </a>
             }
@@ -167,11 +167,11 @@ export default async function PurchaseDetailPage({
                 <input type="hidden" name="status" value="SOLD" />
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">卖出日期</label>
+                    <label className="mb-1 block text-[10px] uppercase tracking-[0.15em] text-muted f-mono">卖出日期</label>
                     <input name="endDate" type="date" defaultValue={todayIso} required className="w-full border border-ink bg-base px-2 py-1.5 text-sm outline-none focus:bg-surface f-mono" />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">残值（主币种）</label>
+                    <label className="mb-1 block text-[10px] uppercase tracking-[0.15em] text-muted f-mono">残值（主币种）</label>
                     <input name="resaleBase" type="number" step="0.01" min="0" required className="w-full border border-ink bg-base px-2 py-1.5 text-sm outline-none focus:bg-surface" />
                   </div>
                 </div>
@@ -184,7 +184,7 @@ export default async function PurchaseDetailPage({
               <form action={closePurchaseAction.bind(null, purchase.id)} className="space-y-4 px-4 py-4">
                 <input type="hidden" name="status" value="RETIRED" />
                 <div>
-                  <label className="mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">报废日期</label>
+                  <label className="mb-1 block text-[10px] uppercase tracking-[0.15em] text-muted f-mono">报废日期</label>
                   <input name="endDate" type="date" defaultValue={todayIso} required className="w-full border border-ink bg-base px-2 py-1.5 text-sm outline-none focus:bg-surface f-mono" />
                 </div>
                 <button className="w-full border border-ink bg-surface py-2.5 text-[11px] font-semibold uppercase tracking-wider hover:bg-ink hover:text-surface">

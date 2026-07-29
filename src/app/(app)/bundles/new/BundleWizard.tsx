@@ -148,7 +148,7 @@ export function BundleWizard({
               required
               className="w-full bg-transparent px-2 py-1.5 text-sm outline-none f-mono"
             />
-            <span className="flex items-center border-l border-ink px-2 text-sm text-neutral-500 f-mono">
+            <span className="flex items-center border-l border-ink px-2 text-sm text-muted f-mono">
               +
             </span>
             <input
@@ -184,14 +184,14 @@ export function BundleWizard({
                     <button
                       type="button"
                       onClick={() => update(i, { mode: "new" })}
-                      className={it.mode === "new" ? "font-bold underline" : "text-neutral-400"}
+                      className={it.mode === "new" ? "font-bold underline" : "text-faint"}
                     >
                       新建
                     </button>
                     <button
                       type="button"
                       onClick={() => update(i, { mode: "existing" })}
-                      className={it.mode === "existing" ? "font-bold underline" : "text-neutral-400"}
+                      className={it.mode === "existing" ? "font-bold underline" : "text-faint"}
                     >
                       关联已有
                     </button>
@@ -231,7 +231,7 @@ export function BundleWizard({
                 <button
                   type="button"
                   onClick={() => setItems(items.filter((_, j) => j !== i))}
-                  className="p-2 text-neutral-400 hover:text-red-700"
+                  className="p-2 text-faint hover:text-destructive"
                   disabled={items.length === 1}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -252,7 +252,7 @@ export function BundleWizard({
                 </div>
                 <div>
                   <label className={labelCls}>按比例 ≈</label>
-                  <div className="border border-dashed border-neutral-400 px-2 py-1.5 text-sm f-mono">
+                  <div className="border border-dashed border-faint px-2 py-1.5 text-sm f-mono">
                     {fmtMoney(autoAlloc(it), currency)}
                   </div>
                 </div>
@@ -288,7 +288,7 @@ export function BundleWizard({
                       onChange={(e) => update(i, { periodEnd: e.target.value, plusDays: "", periodTouched: true })}
                       className="w-full bg-transparent px-2 py-1.5 text-sm outline-none f-mono"
                     />
-                    <span className="flex items-center border-l border-ink px-2 text-sm text-neutral-500 f-mono">
+                    <span className="flex items-center border-l border-ink px-2 text-sm text-muted f-mono">
                       +
                     </span>
                     <input
@@ -305,7 +305,7 @@ export function BundleWizard({
             </div>
           ))}
         </div>
-        <div className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
+        <div className="mt-1 text-[9px] uppercase text-faint f-mono">
           关联已有订阅时，分摊金额将作为联合会员付费记录追加到该订阅，历史连续
         </div>
       </div>

@@ -17,7 +17,7 @@ import type { ChannelView } from "@/lib/notifications/service";
 
 const inputCls =
   "w-full border border-ink bg-base px-3 py-2 text-sm outline-none focus:bg-surface";
-const labelCls = "mb-1 block text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
+const labelCls = "mb-1 block text-[9px] uppercase tracking-[0.15em] text-muted f-mono";
 const btnCls =
   "shrink-0 border border-ink bg-surface px-2.5 py-1.5 text-[9px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface disabled:opacity-40";
 
@@ -62,7 +62,7 @@ function WebhookFields({ config }: { config: Record<string, unknown> }) {
           placeholder={"Authorization: Bearer xxx\nContent-Type: application/json"}
           className={`${inputCls} f-mono`}
         />
-        <p className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
+        <p className="mt-1 text-[9px] uppercase text-faint f-mono">
           已设的 Authorization 等敏感头不下发显示，保存时自动保留；同名重填可替换
         </p>
       </div>
@@ -75,7 +75,7 @@ function WebhookFields({ config }: { config: Record<string, unknown> }) {
           placeholder={'{"title": "{{title}}", "body": "{{body}}", "url": "https://subtrace.example/subscriptions/{{meta.subscriptionId}}"}'}
           className={`${inputCls} f-mono`}
         />
-        <p className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
+        <p className="mt-1 text-[9px] uppercase text-faint f-mono">
           占位：{"{{title}} {{body}} {{meta.subscriptionId}} {{meta.subscriptionName}} {{meta.dueDate}} {{meta.dayOffset}}"} ·
           Bark / 企业微信 / ntfy / apprise-api 都能对接
         </p>
@@ -141,17 +141,17 @@ function ChannelRow({ channel }: { channel: ChannelView }) {
       : `${channel.config.host}:${channel.config.port} → ${channel.config.to}`;
 
   return (
-    <div className="border-b border-neutral-200 last:border-0">
+    <div className="border-b border-line last:border-0">
       <div className="flex items-center gap-3 px-4 py-3">
         <span
-          className={`inline-block h-2 w-2 shrink-0 rounded-full ${channel.enabled ? "bg-accent-hover" : "bg-neutral-300"}`}
+          className={`inline-block h-2 w-2 shrink-0 rounded-full ${channel.enabled ? "bg-accent-hover" : "bg-line-strong"}`}
         />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium" title={channel.name}>
             {channel.name}
-            <span className="ml-2 text-[9px] uppercase text-neutral-400 f-mono">{channel.kind}</span>
+            <span className="ml-2 text-[9px] uppercase text-faint f-mono">{channel.kind}</span>
           </div>
-          <div className="truncate text-[10px] text-neutral-500 f-mono">{summary}</div>
+          <div className="truncate text-[10px] text-muted f-mono">{summary}</div>
           {testResult && <div className="mt-0.5 text-[10px] f-mono">{testResult}</div>}
         </div>
         <button
@@ -198,7 +198,7 @@ function ChannelRow({ channel }: { channel: ChannelView }) {
               setEditing(false);
             })
           }
-          className="space-y-4 border-t border-neutral-200 bg-base/40 p-4"
+          className="space-y-4 border-t border-line bg-base/40 p-4"
         >
           <input type="hidden" name="kind" value={channel.kind} />
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -208,7 +208,7 @@ function ChannelRow({ channel }: { channel: ChannelView }) {
             </div>
             <div className="flex flex-col">
               <label className={labelCls}>类型</label>
-              <div className="flex flex-1 items-center border border-neutral-300 bg-neutral-100 px-3 py-2 text-[10px] uppercase tracking-wider text-neutral-500 f-mono">
+              <div className="flex flex-1 items-center border border-line-strong bg-band px-3 py-2 text-[10px] uppercase tracking-wider text-muted f-mono">
                 {channel.kind === "WEBHOOK" ? "Webhook（不可改）" : "SMTP 邮件（不可改）"}
               </div>
             </div>
@@ -248,7 +248,7 @@ export function ChannelsPanel({ channels }: { channels: ChannelView[] }) {
     <div className="space-y-4">
       <Panel index="01" title={`已配置渠道 / ${channels.length}`}>
         {channels.length === 0 && (
-          <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
+          <div className="px-4 py-6 text-center text-[11px] uppercase text-faint f-mono">
             还没有通知渠道，在下方添加
           </div>
         )}

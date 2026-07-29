@@ -21,7 +21,7 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
     <div className="overflow-x-auto">
     <table className="w-full min-w-[560px] text-[13px]">
       <thead>
-        <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+        <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-muted f-mono">
           <th className="px-4 py-2 font-medium">任务</th>
           <th className="px-4 py-2 font-medium">cron（北京时间）</th>
           <th className="px-4 py-2 font-medium">下次运行</th>
@@ -32,15 +32,15 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
       </thead>
       <tbody>
         {jobs.map((j) => (
-          <tr key={j.key} className="border-b border-neutral-200 last:border-0 hover:bg-black/[0.03]">
+          <tr key={j.key} className="border-b border-line last:border-0 hover:bg-black/[0.03]">
             <td className="px-4 py-2.5">
               <Link href={j.link} className="font-medium hover:underline">
                 {j.title}
               </Link>
-              <span className="ml-1.5 text-[9px] text-neutral-400 f-mono">{j.key}</span>
+              <span className="ml-1.5 text-[9px] text-faint f-mono">{j.key}</span>
             </td>
-            <td className="px-4 py-2.5 text-[11px] text-neutral-500 f-mono">{j.cron}</td>
-            <td className="px-4 py-2.5 text-[11px] tabular-nums text-neutral-500 f-mono">
+            <td className="px-4 py-2.5 text-[11px] text-muted f-mono">{j.cron}</td>
+            <td className="px-4 py-2.5 text-[11px] tabular-nums text-muted f-mono">
               {j.nextRun ?? "—"}
             </td>
             <td className="px-4 py-2.5">
@@ -50,10 +50,10 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
                   {j.lastRun.startedAt} · {j.lastRun.durationMs}ms
                 </span>
               ) : (
-                <span className="text-[11px] text-neutral-400 f-mono">从未运行</span>
+                <span className="text-[11px] text-faint f-mono">从未运行</span>
               )}
             </td>
-            <td className="max-w-56 truncate px-4 py-2.5 text-[10px] text-neutral-500 f-mono" title={j.lastRun?.message ?? ""}>
+            <td className="max-w-56 truncate px-4 py-2.5 text-[10px] text-muted f-mono" title={j.lastRun?.message ?? ""}>
               {j.lastRun?.message || "—"}
             </td>
             <td className="px-4 py-2.5 text-right">

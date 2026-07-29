@@ -11,7 +11,7 @@ export function ArchivedPurchaseList({
 }) {
   if (rows.length === 0) {
     return (
-      <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
+      <div className="px-4 py-6 text-center text-[11px] uppercase text-faint f-mono">
         没有已归档的物品
       </div>
     );
@@ -19,12 +19,12 @@ export function ArchivedPurchaseList({
   return (
     <div>
       {rows.map((r) => (
-        <div key={r.id} className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 text-[13px] last:border-0">
+        <div key={r.id} className="flex items-center justify-between border-b border-line px-4 py-2.5 text-[13px] last:border-0">
           <div className="min-w-0 truncate" title={r.name}>
             <a href={`/purchases/${r.id}`} className="font-medium hover:underline">
               {r.name}
             </a>
-            <span className="ml-2 text-[10px] text-neutral-400 f-mono">
+            <span className="ml-2 text-[10px] text-faint f-mono">
               {r.category ?? "—"} · {r.status === "IN_USE" ? "持有中" : r.status === "SOLD" ? "已卖出" : "已报废"} · 购于 {r.purchaseDate}
             </span>
           </div>
@@ -38,8 +38,8 @@ export function ArchivedPurchaseList({
             <ConfirmButton
               onConfirm={async () => deletePurchaseAction(r.id)}
               confirmLabel="确认删除（不可恢复）"
-              className="border border-red-700 bg-surface px-2.5 py-1 text-[10px] uppercase text-red-700 hover:bg-red-700 hover:text-white"
-              confirmClassName="bg-red-700 px-2.5 py-1 text-[10px] uppercase text-white hover:bg-red-800"
+              className="border border-destructive bg-surface px-2.5 py-1 text-[10px] uppercase text-destructive hover:bg-destructive hover:text-white"
+              confirmClassName="bg-destructive px-2.5 py-1 text-[10px] uppercase text-white hover:bg-destructive-hover"
               cancelClassName="border border-ink bg-surface px-2.5 py-1 text-[10px] uppercase hover:bg-ink hover:text-surface"
             />
           </span>

@@ -16,7 +16,7 @@ export default async function BundlesPage() {
     <>
       <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
             04 / bundles
           </div>
           <h1 className="text-xl font-bold uppercase tracking-tight">联合会员</h1>
@@ -32,7 +32,7 @@ export default async function BundlesPage() {
       <div className="space-y-4 px-4 py-5 md:px-6">
         {bundles.length === 0 && (
           <Panel index="01" title="联合会员 / 0">
-            <div className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
+            <div className="px-4 py-8 text-center text-[11px] uppercase text-faint f-mono">
               还没有联合会员，点右上角「新建联合会员」开始
             </div>
           </Panel>
@@ -47,7 +47,7 @@ export default async function BundlesPage() {
             <div className="overflow-x-auto">
             <table className="w-full min-w-[480px] text-[13px]">
               <thead>
-                <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+                <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-muted f-mono">
                   <th className="px-4 py-2 font-medium">子会员</th>
                   <th className="px-4 py-2 text-right font-medium">分摊金额</th>
                   <th className="px-4 py-2 font-medium">服务区间</th>
@@ -55,14 +55,14 @@ export default async function BundlesPage() {
               </thead>
               <tbody>
                 {b.payments.map((p) => (
-                  <tr key={p.id} className="border-b border-neutral-200 last:border-0">
+                  <tr key={p.id} className="border-b border-line last:border-0">
                     <td className="px-4 py-2.5">
                       <Link href={`/subscriptions/${p.subscriptionId}`} className="font-medium hover:underline">
                         {p.subscription.name}
                       </Link>
                     </td>
                     <td className="px-4 py-2.5 text-right tabular-nums f-mono text-[11px]">{fmtMoney(p.amountBase ?? 0, cur)}</td>
-                    <td className="px-4 py-2.5 text-[11px] tabular-nums text-neutral-500 f-mono">
+                    <td className="px-4 py-2.5 text-[11px] tabular-nums text-muted f-mono">
                       {isoDay(p.periodStart)} → {isoDay(p.periodEnd)}
                     </td>
                   </tr>
@@ -76,10 +76,10 @@ export default async function BundlesPage() {
         {archived.length > 0 && (
           <Panel index={String(bundles.length + 1).padStart(2, "0")} title={`已归档 / ${archived.length}`}>
             {archived.map((b) => (
-              <div key={b.id} className="flex items-center justify-between gap-3 border-b border-neutral-200 px-4 py-2.5 text-[13px] last:border-0">
+              <div key={b.id} className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 text-[13px] last:border-0">
                 <span className="min-w-0 truncate" title={b.name}>
                   {b.name}
-                  <span className="ml-2 text-[10px] text-neutral-400 f-mono">
+                  <span className="ml-2 text-[10px] text-faint f-mono">
                     {fmtMoney(b.totalAmountBase, cur)} · {isoDay(b.periodStart)} → {isoDay(b.periodEnd)}
                   </span>
                 </span>

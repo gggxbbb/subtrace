@@ -123,13 +123,13 @@ export function UsageRecordsManager({
         </form>
       )}
 
-      <div className="text-[10px] uppercase text-neutral-400 f-mono">
+      <div className="text-[10px] uppercase text-faint f-mono">
         {rows.length} / {total} 条
       </div>
 
       <div className="border border-ink bg-surface">
         {rows.length === 0 && (
-          <div className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
+          <div className="px-4 py-8 text-center text-[11px] uppercase text-faint f-mono">
             没有匹配的用量记录
           </div>
         )}
@@ -161,15 +161,15 @@ export function UsageRecordsManager({
               </button>
             </form>
           ) : (
-            <div key={r.id} className="group flex items-center justify-between border-b border-neutral-200 px-4 py-2 last:border-0">
+            <div key={r.id} className="group flex items-center justify-between border-b border-line px-4 py-2 last:border-0">
               <div className="text-[12px] f-mono">
-                <span className="text-neutral-500">{r.date}</span>
+                <span className="text-muted">{r.date}</span>
                 <span className="ml-2 font-semibold">{r.userName}</span>
                 <span className="ml-2">
                   {r.kind === "TOTAL" ? `已用 ${r.quantity}` : `+${r.quantity}`} {usageUnit}
                 </span>
-                {r.unitPrice != null && <span className="ml-1 text-neutral-400">@ {r.unitPrice}</span>}
-                {r.quotaTotal != null && <span className="ml-1 text-neutral-400">/ {r.quotaTotal}</span>}
+                {r.unitPrice != null && <span className="ml-1 text-faint">@ {r.unitPrice}</span>}
+                {r.quotaTotal != null && <span className="ml-1 text-faint">/ {r.quotaTotal}</span>}
               </div>
               {canTouch(r) && (
                 <span className="flex items-center gap-2">
@@ -181,7 +181,7 @@ export function UsageRecordsManager({
                   </button>
                   <button
                     onClick={async () => deleteUsageAction(subscriptionId, r.id, back)}
-                    className="invisible border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase text-red-700 f-mono group-hover:visible hover:bg-red-700 hover:text-white"
+                    className="invisible border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase text-destructive f-mono group-hover:visible hover:bg-destructive hover:text-white"
                   >
                     删除
                   </button>

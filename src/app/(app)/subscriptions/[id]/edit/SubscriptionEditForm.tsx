@@ -111,7 +111,7 @@ export function SubscriptionEditForm({
       <div>
         <label className={labelCls}>提醒天数</label>
         <input name="remindDays" defaultValue={initial.remindDays} className={`${inputCls} f-mono`} />
-        <p className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
+        <p className="mt-1 text-[9px] uppercase text-faint f-mono">
           逗号分隔；到期前 N 天经通知渠道提醒 · 留空 = 不提醒
         </p>
       </div>

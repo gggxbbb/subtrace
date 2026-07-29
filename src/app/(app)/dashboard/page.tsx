@@ -49,7 +49,7 @@ export default async function DashboardPage() {
     <>
       <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
             01 / overview
           </div>
           <h1 className="text-xl font-bold uppercase tracking-tight">控制台</h1>
@@ -101,7 +101,7 @@ export default async function DashboardPage() {
         <Panel index="02" title="每日支出 / 30D">
           <div>
             <LedTrendChart data={d.trend} />
-            <div className="mx-4 mb-3 mt-3 flex justify-between border-t border-dashed border-neutral-300 py-1.5 text-[9px] uppercase text-neutral-400 f-mono">
+            <div className="mx-4 mb-3 mt-3 flex justify-between border-t border-dashed border-line-strong py-1.5 text-[9px] uppercase text-faint f-mono">
               <span>30 days ago</span>
               <span style={{ color: ORANGE }}>avg {fmtMoney(avg, cur)}/day</span>
               <span>today</span>
@@ -111,12 +111,12 @@ export default async function DashboardPage() {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Panel index="03" title="即将到期" action="全部" href="/subscriptions">            {d.upcoming.length === 0 && (
-              <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
+              <div className="px-4 py-6 text-center text-[11px] uppercase text-faint f-mono">
                 未来 30 天没有到期订阅
               </div>
             )}
             {d.upcoming.map((u) => (
-              <div key={u.id} className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 last:border-0">
+              <div key={u.id} className="flex items-center justify-between border-b border-line px-4 py-2.5 last:border-0">
                 <div className="flex min-w-0 items-center gap-3">
                   <LedMatrix
                     rows={2}
@@ -133,7 +133,7 @@ export default async function DashboardPage() {
                   />
                   <div className="min-w-0">
                     <div className="truncate text-[13px] font-medium" title={u.name}>{u.name}</div>
-                    <div className="text-[9px] uppercase tracking-wider text-neutral-400 f-mono">
+                    <div className="text-[9px] uppercase tracking-wider text-faint f-mono">
                       {isoDay(u.date)} · {u.auto ? "auto" : "manual"}
                     </div>
                   </div>
@@ -156,18 +156,18 @@ export default async function DashboardPage() {
 
           <Panel index="04" title="用量盈亏红黑榜" action="本区间">
             {d.usageBoard.length === 0 && (
-              <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
+              <div className="px-4 py-6 text-center text-[11px] uppercase text-faint f-mono">
                 还没有配置用量追踪的订阅
               </div>
             )}
             {d.usageBoard.map((u) => (
-              <a key={u.id} href={`/subscriptions/${u.id}`} className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 last:border-0 hover:bg-black/[0.03]">
+              <a key={u.id} href={`/subscriptions/${u.id}`} className="flex items-center justify-between border-b border-line px-4 py-2.5 last:border-0 hover:bg-black/[0.03]">
                 <div className="min-w-0">
                   <div className="truncate text-[13px] font-medium" title={u.name}>{u.name}</div>
-                  <div className="truncate text-[9px] text-neutral-400 f-mono">{u.detail}</div>
+                  <div className="truncate text-[9px] text-faint f-mono">{u.detail}</div>
                 </div>
                 {u.costUnknown ? (
-                  <span className="shrink-0 text-sm font-bold text-neutral-400 f-mono">成本未知</span>
+                  <span className="shrink-0 text-sm font-bold text-faint f-mono">成本未知</span>
                 ) : (
                   <span className="flex shrink-0 items-center gap-1.5 text-sm font-bold tabular-nums f-mono">
                     {u.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(u.verdictAmount), cur)}
@@ -181,16 +181,16 @@ export default async function DashboardPage() {
 
         <Panel index="05" title="物品回本进度" action="物品" href="/purchases">
           {d.purchases.length === 0 && (
-            <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
+            <div className="px-4 py-6 text-center text-[11px] uppercase text-faint f-mono">
               还没有登记物品
             </div>
           )}
           <div className="grid grid-cols-1 gap-px bg-surface sm:grid-cols-2 lg:grid-cols-3">
             {d.purchases.map((p) => (
-              <a key={p.id} href={`/purchases/${p.id}`} className="block border border-neutral-200 bg-surface px-4 py-3 hover:bg-black/[0.03]">
+              <a key={p.id} href={`/purchases/${p.id}`} className="block border border-line bg-surface px-4 py-3 hover:bg-black/[0.03]">
                 <div className="flex items-center justify-between gap-2">
                   <span className="min-w-0 truncate text-[13px] font-medium" title={p.name}>{p.name}</span>
-                  <span className="shrink-0 text-[9px] uppercase text-neutral-400 f-mono">
+                  <span className="shrink-0 text-[9px] uppercase text-faint f-mono">
                     {p.status === "IN_USE" ? `${p.daysHeld}d held` : p.status === "SOLD" ? "已卖出" : "已报废"}
                   </span>
                 </div>
@@ -203,7 +203,7 @@ export default async function DashboardPage() {
                     }}
                   />
                 </div>
-                <div className="mt-1.5 flex justify-between text-[9px] text-neutral-500 f-mono">
+                <div className="mt-1.5 flex justify-between text-[9px] text-muted f-mono">
                   <span>{p.status === "IN_USE" ? `${fmtMoney(p.dailyCost, cur)}/day` : "—"}</span>
                   <span>{fmtMoney(p.amountBase, cur)}</span>
                 </div>
@@ -216,7 +216,7 @@ export default async function DashboardPage() {
           <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-[13px]">
             <thead>
-              <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+              <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-muted f-mono">
                 <th className="px-4 py-2 font-medium">名称</th>
                 <th className="px-4 py-2 font-medium">分类</th>
                 <th className="px-4 py-2 font-medium">周期</th>
@@ -228,7 +228,7 @@ export default async function DashboardPage() {
             </thead>
             <tbody>
               {d.rows.map((s) => (
-                <tr key={s.id} className="border-b border-neutral-200 last:border-0 hover:bg-black/[0.03]">
+                <tr key={s.id} className="border-b border-line last:border-0 hover:bg-black/[0.03]">
                   <td className="px-4 py-2.5">
                     <Link href={`/subscriptions/${s.id}`} className="font-medium hover:underline">
                       {s.name}
@@ -244,19 +244,19 @@ export default async function DashboardPage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-2.5 text-neutral-500">{s.category ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-[11px] text-neutral-500 f-mono">{s.cycleLabel}</td>
-                  <td className="px-4 py-2.5 text-[11px] tabular-nums text-neutral-500 f-mono">
+                  <td className="px-4 py-2.5 text-muted">{s.category ?? "—"}</td>
+                  <td className="px-4 py-2.5 text-[11px] text-muted f-mono">{s.cycleLabel}</td>
+                  <td className="px-4 py-2.5 text-[11px] tabular-nums text-muted f-mono">
                     {s.expiry ? isoDay(s.expiry) : "—"}
                   </td>
                   <td className="px-4 py-2.5 text-right text-[11px] font-semibold tabular-nums f-mono">
                     {s.costUnknown && s.dailyCost === 0 ? (
-                      <span className="text-neutral-400">未知</span>
+                      <span className="text-faint">未知</span>
                     ) : (
                       fmtMoney(s.dailyCost, cur)
                     )}
                   </td>
-                  <td className="px-4 py-2.5 text-right text-[11px] tabular-nums text-neutral-500 f-mono">
+                  <td className="px-4 py-2.5 text-right text-[11px] tabular-nums text-muted f-mono">
                     {s.costUnknown && s.dailyCost === 0 ? "—" : fmtMoney(s.monthlyCost, cur)}
                   </td>
                   <td className="px-4 py-2.5">
@@ -282,7 +282,7 @@ export default async function DashboardPage() {
               ))}
               {d.rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
+                  <td colSpan={7} className="px-4 py-8 text-center text-[11px] uppercase text-faint f-mono">
                     还没有订阅，点右上角「新建订阅」开始
                   </td>
                 </tr>

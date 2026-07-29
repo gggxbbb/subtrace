@@ -172,7 +172,7 @@ export function UsageEntryPanel({
               ))}
             </div>
           )}
-          <div className="text-[9px] uppercase text-neutral-400 f-mono">
+          <div className="text-[9px] uppercase text-faint f-mono">
             单价留空继承上一条记录{pricePlaceholder != null ? `（${pricePlaceholder}）` : "或订阅默认"}
           </div>
         </form>
@@ -243,14 +243,14 @@ export function UsageEntryPanel({
               更新 →
             </button>
           </div>
-          <div className="text-[9px] uppercase text-neutral-400 f-mono">
+          <div className="text-[9px] uppercase text-faint f-mono">
             提交的是「使用到额度」快照；四个数值联动，改任意一个其余自动算
           </div>
         </form>
       )}
 
       {verdict && (
-        <div className="mt-3 border-t border-dashed border-neutral-300 pt-3">
+        <div className="mt-3 border-t border-dashed border-line-strong pt-3">
           {needed !== null && (
             <div className="mb-2 flex items-center gap-2 text-[11px]">
               <Led color={needed === 0 ? "#22c55e" : "var(--accent)"} />
@@ -259,7 +259,7 @@ export function UsageEntryPanel({
               ) : (
                 <span>
                   再去 <strong className="tabular-nums">{needed}</strong> {usageUnit ?? "次"}回本
-                  <span className="text-neutral-400">（按 {refPrice}/{usageUnit ?? "次"}）</span>
+                  <span className="text-faint">（按 {refPrice}/{usageUnit ?? "次"}）</span>
                 </span>
               )}
             </div>
@@ -278,7 +278,7 @@ export function UsageEntryPanel({
           )}
           <div className="grid grid-cols-7 gap-1">
             {["一", "二", "三", "四", "五", "六", "日"].map((w) => (
-              <div key={w} className="text-center text-[9px] uppercase text-neutral-400 f-mono">
+              <div key={w} className="text-center text-[9px] uppercase text-faint f-mono">
                 {w}
               </div>
             ))}
@@ -287,7 +287,7 @@ export function UsageEntryPanel({
                 key={i}
                 className={`flex flex-col items-center py-1 text-[10px] f-mono ${
                   d.today ? "border border-ink bg-base font-bold" : "border border-transparent"
-                } ${d.inPeriod ? "" : "text-neutral-300"}`}
+                } ${d.inPeriod ? "" : "text-line-strong"}`}
               >
                 <span>{d.day}</span>
                 <span
@@ -297,7 +297,7 @@ export function UsageEntryPanel({
               </div>
             ))}
           </div>
-          <div className="mt-1 flex justify-between text-[9px] uppercase text-neutral-400 f-mono">
+          <div className="mt-1 flex justify-between text-[9px] uppercase text-faint f-mono">
             <span>{verdict.periodStart}</span>
             <span>点 = 有用量 · 框 = 今天</span>
             <span>{verdict.periodEnd}</span>
@@ -327,7 +327,7 @@ export function UsageVerdictPanel({
 }) {
   if (!v) {
     return (
-      <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
+      <div className="px-4 py-6 text-center text-[11px] uppercase text-faint f-mono">
         当前无覆盖的服务区间
       </div>
     );
@@ -336,51 +336,51 @@ export function UsageVerdictPanel({
     <div className="px-4 py-4">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <div className="text-[9px] uppercase text-neutral-400 f-mono">已摊成本</div>
+          <div className="text-[9px] uppercase text-faint f-mono">已摊成本</div>
           <div className="text-lg font-bold tabular-nums">{fmtMoney(v.cost, currency)}</div>
         </div>
         {v.kind === "COUNT" ? (
           <>
             <div>
-              <div className="text-[9px] uppercase text-neutral-400 f-mono">用量</div>
+              <div className="text-[9px] uppercase text-faint f-mono">用量</div>
               <div className="text-lg font-bold tabular-nums">
-                {v.usage} <span className="text-[10px] text-neutral-400">{usageUnit}</span>
+                {v.usage} <span className="text-[10px] text-faint">{usageUnit}</span>
               </div>
             </div>
             <div>
-              <div className="text-[9px] uppercase text-neutral-400 f-mono">每次实际成本</div>
+              <div className="text-[9px] uppercase text-faint f-mono">每次实际成本</div>
               <div className="text-lg font-bold tabular-nums">
                 {v.costPerUse != null ? fmtMoney(v.costPerUse, currency) : "—"}
               </div>
             </div>
             <div>
-              <div className="text-[9px] uppercase text-neutral-400 f-mono">盈亏</div>
+              <div className="text-[9px] uppercase text-faint f-mono">盈亏</div>
               {v.costUnknown ? (
-                <div className="text-lg font-bold text-neutral-400">未知</div>
+                <div className="text-lg font-bold text-faint">未知</div>
               ) : (
-                <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.verdictAmount >= 0 ? "text-teal-700" : "text-red-700"}`}>
+                <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.verdictAmount >= 0 ? "text-income" : "text-destructive"}`}>
                   {v.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(v.verdictAmount), currency)}
                   <Led color={v.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
                 </div>
               )}
               {v.costUnknown && (
-                <div className="text-[9px] text-neutral-400 f-mono">成本未记录，盈亏不可信</div>
+                <div className="text-[9px] text-faint f-mono">成本未记录，盈亏不可信</div>
               )}
             </div>
           </>
         ) : (
           <>
             <div>
-              <div className="text-[9px] uppercase text-neutral-400 f-mono">使用率</div>
+              <div className="text-[9px] uppercase text-faint f-mono">使用率</div>
               <div className="text-lg font-bold tabular-nums">
                 {Math.round(v.usageRate * 100)}%
-                <span className="ml-1 text-[10px] font-normal text-neutral-400">
+                <span className="ml-1 text-[10px] font-normal text-faint">
                   {v.used}/{v.total} {usageUnit}
                 </span>
               </div>
             </div>
             <div>
-              <div className="text-[9px] uppercase text-neutral-400 f-mono">用满 100%</div>
+              <div className="text-[9px] uppercase text-faint f-mono">用满 100%</div>
               <div className="flex items-center gap-1.5 text-lg font-bold tabular-nums">
                 {v.hit100At ? (
                   <>
@@ -389,15 +389,15 @@ export function UsageVerdictPanel({
                   </>
                 ) : (
                   <>
-                    <span className="text-sm text-neutral-400">未用满</span>
+                    <span className="text-sm text-faint">未用满</span>
                     <Led color="#ef4444" />
                   </>
                 )}
               </div>
             </div>
             <div>
-              <div className="text-[9px] uppercase text-neutral-400 f-mono">浪费</div>
-              <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.wastedAmount <= 0 ? "text-teal-700" : "text-red-700"}`}>
+              <div className="text-[9px] uppercase text-faint f-mono">浪费</div>
+              <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.wastedAmount <= 0 ? "text-income" : "text-destructive"}`}>
                 {v.wastedAmount <= 0 ? fmtMoney(0, currency) : `−${fmtMoney(v.wastedAmount, currency)}`}
                 <Led color={v.wastedAmount <= 0 ? "#22c55e" : "#ef4444"} />
               </div>
@@ -405,21 +405,21 @@ export function UsageVerdictPanel({
           </>
         )}
       </div>
-      <div className="mt-3 border-t border-dashed border-neutral-300 pt-1.5 text-[9px] uppercase text-neutral-400 f-mono">
+      <div className="mt-3 border-t border-dashed border-line-strong pt-1.5 text-[9px] uppercase text-faint f-mono">
         {v.periodStart} → {v.periodEnd} ·{" "}
         {v.kind === "COUNT"
           ? `价值 ${fmtMoney(v.value, currency)} − 成本 ${fmtMoney(v.cost, currency)}`
           : `未用 ${Math.round((1 - v.usageRate) * 100)}% × 成本 ${fmtMoney(v.cost, currency)}`}
       </div>
       {perUser.length > 0 && (
-        <div className="mt-2 border-t border-dashed border-neutral-300 pt-2">
-          <div className="mb-1 text-[9px] uppercase text-neutral-400 f-mono">各受益人</div>
+        <div className="mt-2 border-t border-dashed border-line-strong pt-2">
+          <div className="mb-1 text-[9px] uppercase text-faint f-mono">各受益人</div>
           {perUser.map((u) => (
             <div key={u.name} className="flex items-center justify-between py-1 text-[11px] f-mono">
               <span>{u.name}</span>
               <span className="flex items-center gap-2">
-                <span className="text-neutral-500">{u.usageLabel}</span>
-                <span className={u.verdictAmount >= 0 ? "text-teal-700" : "text-red-700"}>
+                <span className="text-muted">{u.usageLabel}</span>
+                <span className={u.verdictAmount >= 0 ? "text-income" : "text-destructive"}>
                   {u.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(u.verdictAmount), currency)}
                 </span>
               </span>
@@ -428,16 +428,16 @@ export function UsageVerdictPanel({
         </div>
       )}
       {records.length > 0 && (
-        <div className="mt-2 border-t border-dashed border-neutral-300 pt-2">
+        <div className="mt-2 border-t border-dashed border-line-strong pt-2">
           {[...records].reverse().slice(0, 10).map((r) => (
             <div key={r.id} className="group flex items-center justify-between py-1 text-[11px] f-mono">
-              <span className="text-neutral-500">{r.date}</span>
+              <span className="text-muted">{r.date}</span>
               <span className="flex items-center gap-2">
                 {r.kind === "TOTAL" ? `已用 ${r.quantity}` : `+${r.quantity}`} {usageUnit}
-                {r.unitPrice != null && <span className="text-neutral-400">@ {r.unitPrice}</span>}
+                {r.unitPrice != null && <span className="text-faint">@ {r.unitPrice}</span>}
                 <button
                   onClick={async () => deleteUsageAction(subscriptionId, r.id)}
-                  className="invisible text-red-700 group-hover:visible"
+                  className="invisible text-destructive group-hover:visible"
                 >
                   ×
                 </button>

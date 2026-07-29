@@ -87,7 +87,7 @@ export function PaymentsManager({
       {adding && (
         <form action={recordPaymentAction.bind(null, subscriptionId)} className="space-y-3 border border-ink bg-surface p-4">
           {backInput}
-          <div className="text-[10px] uppercase tracking-wider text-neutral-500 f-mono">新增付费记录</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted f-mono">新增付费记录</div>
           <PaymentEditFields defaultCurrency={defaultCurrency} variant="manager" />
           <button className="bg-ink px-4 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
             保存 →
@@ -95,13 +95,13 @@ export function PaymentsManager({
         </form>
       )}
 
-      <div className="text-[10px] uppercase text-neutral-400 f-mono">
+      <div className="text-[10px] uppercase text-faint f-mono">
         {rows.length} / {total} 条
       </div>
 
       <div className="border border-ink bg-surface">
         {rows.length === 0 && (
-          <div className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
+          <div className="px-4 py-8 text-center text-[11px] uppercase text-faint f-mono">
             没有匹配的付费记录
           </div>
         )}

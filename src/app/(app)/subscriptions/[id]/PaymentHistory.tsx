@@ -34,7 +34,7 @@ export function PaymentHistory({
 
   if (payments.length === 0) {
     return (
-      <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
+      <div className="px-4 py-6 text-center text-[11px] uppercase text-faint f-mono">
         还没有付费记录
       </div>
     );
@@ -80,20 +80,20 @@ export function PaymentHistory({
         ),
       )}
       {estimatedRows.length > 0 && (
-        <div className="mt-auto border-t-2 border-dashed border-neutral-300">
+        <div className="mt-auto border-t-2 border-dashed border-line-strong">
           {estimatedRows.map((seg) => (
             <div
               key={seg.start}
-              className="flex items-center justify-between border-b border-dashed border-neutral-200 bg-neutral-100/60 px-4 py-2.5 last:border-0"
+              className="flex items-center justify-between border-b border-dashed border-line bg-band/60 px-4 py-2.5 last:border-0"
             >
               <div>
-                <div className="text-[13px] font-medium text-neutral-400">
+                <div className="text-[13px] font-medium text-faint">
                   {fmtMoney(seg.net, currency)}
-                  <span className="ml-2 inline-block border border-dashed border-neutral-400 px-1.5 py-0.5 text-[9px] uppercase tracking-wider f-mono">
+                  <span className="ml-2 inline-block border border-dashed border-faint px-1.5 py-0.5 text-[9px] uppercase tracking-wider f-mono">
                     推算 · 未记账
                   </span>
                 </div>
-                <div className="text-[9px] uppercase tracking-wider text-neutral-400 f-mono">
+                <div className="text-[9px] uppercase tracking-wider text-faint f-mono">
                   {seg.start} → {seg.end} · 按标准价估计
                 </div>
               </div>

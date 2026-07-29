@@ -26,14 +26,14 @@ export function PurchaseHeaderActions({
       <a href={`/purchases/${purchaseId}/edit`} className={btnCls}>
         编辑 →
       </a>
-      <button onClick={async () => setPurchaseArchivedAction(purchaseId, !archived)} className={`${btnCls} text-neutral-500`}>
+      <button onClick={async () => setPurchaseArchivedAction(purchaseId, !archived)} className={`${btnCls} text-muted`}>
         {archived ? "取消归档" : "归档"}
       </button>
       <ConfirmButton
         onConfirm={async () => deletePurchaseAction(purchaseId)}
         confirmLabel="确认删除（不可恢复）"
-        className="border border-red-700 bg-surface px-3 py-2 text-[10px] uppercase tracking-wider text-red-700 f-mono hover:bg-red-700 hover:text-white"
-        confirmClassName="bg-red-700 px-3 py-2 text-[10px] uppercase tracking-wider text-white f-mono hover:bg-red-800"
+        className="border border-destructive bg-surface px-3 py-2 text-[10px] uppercase tracking-wider text-destructive f-mono hover:bg-destructive hover:text-white"
+        confirmClassName="bg-destructive px-3 py-2 text-[10px] uppercase tracking-wider text-white f-mono hover:bg-destructive-hover"
         cancelClassName={btnCls}
       />
     </div>
@@ -67,18 +67,18 @@ export function PurchaseIncomePanel({
         </button>
       </form>
       {incomes.length === 0 ? (
-        <p className="text-[11px] text-neutral-400">还没有收益记录——出租、返利等都可以记，自动抵减 TCO。</p>
+        <p className="text-[11px] text-faint">还没有收益记录——出租、返利等都可以记，自动抵减 TCO。</p>
       ) : (
         <div>
           {incomes.map((i) => (
-            <div key={i.id} className="group flex items-center justify-between border-b border-dashed border-neutral-200 py-1.5 text-[12px] last:border-0">
-              <span className="text-neutral-500 f-mono">{i.date}</span>
+            <div key={i.id} className="group flex items-center justify-between border-b border-dashed border-line py-1.5 text-[12px] last:border-0">
+              <span className="text-muted f-mono">{i.date}</span>
               <span className="flex items-center gap-2">
-                <span className="text-teal-700 tabular-nums f-mono">+{fmtMoney(i.amountBase, currency)}</span>
-                {i.note && <span className="text-[10px] text-neutral-400">{i.note}</span>}
+                <span className="text-income tabular-nums f-mono">+{fmtMoney(i.amountBase, currency)}</span>
+                {i.note && <span className="text-[10px] text-faint">{i.note}</span>}
                 <button
                   onClick={async () => deletePurchaseIncomeAction(purchaseId, i.id)}
-                  className="invisible text-red-700 group-hover:visible"
+                  className="invisible text-destructive group-hover:visible"
                 >
                   ×
                 </button>

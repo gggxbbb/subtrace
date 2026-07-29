@@ -25,7 +25,7 @@ export function RechainBanner({
       <span className="flex items-center gap-2">
         <button
           onClick={async () => rechainPaymentsAction(subscriptionId, back)}
-          className="bg-surface px-3 py-1 text-[10px] font-semibold uppercase text-ink hover:bg-neutral-200"
+          className="bg-surface px-3 py-1 text-[10px] font-semibold uppercase text-ink hover:bg-line"
         >
           自动调整 →
         </button>

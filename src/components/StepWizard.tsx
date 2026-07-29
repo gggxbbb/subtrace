@@ -13,7 +13,7 @@ export function StepBar({ steps, step }: { steps: string[]; step: number }) {
         <div
           key={s}
           className={`flex flex-1 items-center justify-center gap-1.5 px-2 py-2 text-[10px] uppercase tracking-wider f-mono ${
-            i === step ? "bg-ink text-surface" : i < step ? "bg-base" : "bg-surface text-neutral-400"
+            i === step ? "bg-ink text-surface" : i < step ? "bg-base" : "bg-surface text-faint"
           }`}
         >
           <span>{i + 1}</span> {s}

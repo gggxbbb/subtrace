@@ -31,7 +31,7 @@ async function buildRows(userId: string): Promise<Row[]> {
 function PurchaseCards({ rows, cur }: { rows: Row[]; cur: string }) {
   if (rows.length === 0) {
     return (
-      <div className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
+      <div className="px-4 py-8 text-center text-[11px] uppercase text-faint f-mono">
         还没有物品，点右上角「登记物品」开始
       </div>
     );
@@ -39,10 +39,10 @@ function PurchaseCards({ rows, cur }: { rows: Row[]; cur: string }) {
   return (
     <div className="grid grid-cols-1 gap-px bg-surface sm:grid-cols-2 lg:grid-cols-3">
       {rows.map((p) => (
-        <Link key={p.id} href={`/purchases/${p.id}`} className="block border border-neutral-200 bg-surface px-4 py-3 hover:bg-black/[0.03]">
+        <Link key={p.id} href={`/purchases/${p.id}`} className="block border border-line bg-surface px-4 py-3 hover:bg-black/[0.03]">
           <div className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-[13px] font-medium" title={p.name}>{p.name}</span>
-            <span className="shrink-0 text-[9px] uppercase text-neutral-400 f-mono">
+            <span className="shrink-0 text-[9px] uppercase text-faint f-mono">
               {p.status === "IN_USE" ? `${p.daysHeld}d held` : p.status === "SOLD" ? "已卖出" : "已报废"}
             </span>
           </div>
@@ -55,7 +55,7 @@ function PurchaseCards({ rows, cur }: { rows: Row[]; cur: string }) {
               }}
             />
           </div>
-          <div className="mt-1.5 flex justify-between text-[9px] text-neutral-500 f-mono">
+          <div className="mt-1.5 flex justify-between text-[9px] text-muted f-mono">
             <span>{p.status === "IN_USE" ? `${fmtMoney(p.dailyCost, cur)}/day` : "—"}</span>
             <span>{fmtMoney(p.amountBase, cur)}</span>
           </div>
@@ -70,7 +70,7 @@ function PurchaseTable({ rows, cur }: { rows: Row[]; cur: string }) {
     <div className="overflow-x-auto">
     <table className="w-full min-w-[680px] text-[13px]">
       <thead>
-        <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+        <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-muted f-mono">
           <th className="px-4 py-2 font-medium">名称</th>
           <th className="px-4 py-2 font-medium">分类</th>
           <th className="px-4 py-2 font-medium">购入日期</th>
@@ -83,14 +83,14 @@ function PurchaseTable({ rows, cur }: { rows: Row[]; cur: string }) {
       </thead>
       <tbody>
         {rows.map((p) => (
-          <tr key={p.id} className="border-b border-neutral-200 last:border-0 hover:bg-black/[0.03]">
+          <tr key={p.id} className="border-b border-line last:border-0 hover:bg-black/[0.03]">
             <td className="px-4 py-2.5">
               <Link href={`/purchases/${p.id}`} className="font-medium hover:underline">
                 {p.name}
               </Link>
             </td>
-            <td className="px-4 py-2.5 text-neutral-500">{p.category ?? "—"}</td>
-            <td className="px-4 py-2.5 text-[11px] tabular-nums text-neutral-500 f-mono">
+            <td className="px-4 py-2.5 text-muted">{p.category ?? "—"}</td>
+            <td className="px-4 py-2.5 text-[11px] tabular-nums text-muted f-mono">
               {isoDay(p.purchaseDate)}
             </td>
             <td className="px-4 py-2.5 text-right text-[11px] tabular-nums f-mono">
@@ -99,20 +99,20 @@ function PurchaseTable({ rows, cur }: { rows: Row[]; cur: string }) {
             <td className="px-4 py-2.5 text-right text-[11px] font-semibold tabular-nums f-mono">
               {p.status === "IN_USE" ? fmtMoney(p.dailyCost, cur) : "—"}
             </td>
-            <td className="px-4 py-2.5 text-right text-[11px] tabular-nums text-neutral-500 f-mono">
+            <td className="px-4 py-2.5 text-right text-[11px] tabular-nums text-muted f-mono">
               {p.daysHeld}d
             </td>
             <td className="px-4 py-2.5 text-right text-[11px] tabular-nums f-mono">
               {p.progress != null ? `${Math.round(p.progress * 100)}%` : "—"}
             </td>
-            <td className="px-4 py-2.5 text-[11px] text-neutral-500">
+            <td className="px-4 py-2.5 text-[11px] text-muted">
               {p.status === "IN_USE" ? "使用中" : p.status === "SOLD" ? "已卖出" : "已报废"}
             </td>
           </tr>
         ))}
         {rows.length === 0 && (
           <tr>
-            <td colSpan={8} className="px-4 py-8 text-center text-[11px] uppercase text-neutral-400 f-mono">
+            <td colSpan={8} className="px-4 py-8 text-center text-[11px] uppercase text-faint f-mono">
               还没有物品，点右上角「登记物品」开始
             </td>
           </tr>
@@ -158,7 +158,7 @@ export default async function PurchasesPage({
     <>
       <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
             03 / purchases
           </div>
           <h1 className="text-xl font-bold uppercase tracking-tight">物品</h1>

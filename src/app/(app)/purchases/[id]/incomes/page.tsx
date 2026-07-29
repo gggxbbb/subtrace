@@ -45,7 +45,7 @@ export default async function IncomesPage({
     <>
       <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
             purchases / {purchase.name} / incomes
           </div>
           <h1 className="text-xl font-bold uppercase tracking-tight">收益记录管理</h1>

@@ -19,7 +19,7 @@ export default async function UsersPage() {
     <>
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
             settings / users
           </div>
           <h1 className="text-xl font-bold uppercase tracking-tight">用户管理</h1>

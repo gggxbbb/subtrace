@@ -28,6 +28,9 @@
   --destructive: #b91c1c; /* red-700 */
   --income: #0f766e; /* teal-700 */
   --ink-hover: #262626; /* neutral-800：实底按钮 hover */
+  --muted-strong: #525252; /* neutral-600：较重的次级文字 */
+  --line-strong: #d4d4d4; /* neutral-300：虚线分隔/禁用点 */
+  --destructive-hover: #991b1b; /* red-800 */
 }
 
 .dark {
@@ -42,6 +45,9 @@
   --destructive: #ef4444;
   --income: #2dd4bf;
   --ink-hover: #cbc9c4;
+  --muted-strong: #8f8b85;
+  --line-strong: #4a4844;
+  --destructive-hover: #f87171;
 }
 
 @theme inline {
@@ -56,6 +62,9 @@
   --color-destructive: var(--destructive);
   --color-income: var(--income);
   --color-ink-hover: var(--ink-hover);
+  --color-muted-strong: var(--muted-strong);
+  --color-line-strong: var(--line-strong);
+  --color-destructive-hover: var(--destructive-hover);
   --font-sans: "JetBrains Mono", system-ui, -apple-system, "Segoe UI", "PingFang SC",
     "HarmonyOS Sans SC", "MiSans VF", "MiSans", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;

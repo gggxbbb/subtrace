@@ -32,7 +32,7 @@ export function ErrorBanner({
 export const inputCls =
   "w-full border border-ink bg-base px-2 py-1.5 text-sm outline-none focus:bg-surface";
 export const labelCls =
-  "mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
+  "mb-1 block text-[10px] uppercase tracking-[0.15em] text-muted f-mono";
 
 export function Led({ color = ORANGE }: { color?: string }) {
   return (
@@ -125,14 +125,14 @@ export function Panel({
           className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.15em] f-mono"
           title={`${index} — ${title}`}
         >
-          <span className="text-neutral-400">{index}</span> — {title}
+          <span className="text-faint">{index}</span> — {title}
         </span>
         <div className="shrink-0">
           {actions ??
             (action && (
             <a
               href={href}
-              className="flex shrink-0 items-center gap-1 text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-ink"
+              className="flex shrink-0 items-center gap-1 text-[10px] uppercase tracking-wider text-muted f-mono hover:text-ink"
             >
               {action} <ArrowRight className="h-3 w-3" />
             </a>
@@ -159,16 +159,16 @@ export function Kpi({
 }) {
   return (
     <div className="border border-ink bg-surface p-4">
-      <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono">
+      <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.15em] text-muted f-mono">
         <span className="min-w-0 truncate" title={label}>{label}</span>
-        <span className="flex shrink-0 items-center gap-1.5 text-neutral-400">
+        <span className="flex shrink-0 items-center gap-1.5 text-faint">
           {index} {led && <Led color={led} />}
         </span>
       </div>
       <div className="mt-2 truncate text-[28px] font-bold leading-none tracking-tight tabular-nums" title={value}>
         {value}
       </div>
-      <div className="mt-2 truncate text-[10px] text-neutral-500 f-mono" title={sub}>{sub}</div>
+      <div className="mt-2 truncate text-[10px] text-muted f-mono" title={sub}>{sub}</div>
     </div>
   );
 }

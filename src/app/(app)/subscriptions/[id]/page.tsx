@@ -139,7 +139,7 @@ export default async function SubscriptionDetailPage({
     <>
       <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
             subscriptions / {sub.category ?? "uncategorized"}
           </div>
           <h1 className="text-xl font-bold uppercase tracking-tight">{sub.name}</h1>
@@ -174,7 +174,7 @@ export default async function SubscriptionDetailPage({
           ))}
           {isOwner && (
             <form action={setStatusAction.bind(null, sub.id, "ARCHIVED")}>
-              <button className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:bg-ink hover:text-surface">
+              <button className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider text-muted f-mono hover:bg-ink hover:text-surface">
                 归档
               </button>
             </form>
@@ -271,7 +271,7 @@ export default async function SubscriptionDetailPage({
             </Panel>
           ) : (
             <Panel index="01" title="共享订阅">
-              <div className="px-4 py-6 text-[11px] leading-relaxed text-neutral-500">
+              <div className="px-4 py-6 text-[11px] leading-relaxed text-muted">
                 这是 <span className="font-semibold text-ink">{sub.owner.username}</span> 共享给你的订阅。
                 你按份额承担成本，用量各自记录；付费与配置由所有者管理。
               </div>
@@ -282,7 +282,7 @@ export default async function SubscriptionDetailPage({
             index="02"
             title={`付费历史 / ${sub.payments.length}`}
             actions={
-              <a href={`/subscriptions/${sub.id}/payments`} className="text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-ink">
+              <a href={`/subscriptions/${sub.id}/payments`} className="text-[10px] uppercase tracking-wider text-muted f-mono hover:text-ink">
                 全部 →
               </a>
             }
@@ -315,7 +315,7 @@ export default async function SubscriptionDetailPage({
               title={`用量录入${sub.script ? " · 脚本同步中" : ""}`}
               actions={
                 sub.script ? (
-                  <a href="/settings/scripts" className="text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-ink">
+                  <a href="/settings/scripts" className="text-[10px] uppercase tracking-wider text-muted f-mono hover:text-ink">
                     脚本管理 →
                   </a>
                 ) : undefined
@@ -335,7 +335,7 @@ export default async function SubscriptionDetailPage({
               index="04"
               title="盈亏 · 当前区间"
               actions={
-                <a href={`/subscriptions/${sub.id}/usage/records`} className="text-[10px] uppercase tracking-wider text-neutral-500 f-mono hover:text-ink">
+                <a href={`/subscriptions/${sub.id}/usage/records`} className="text-[10px] uppercase tracking-wider text-muted f-mono hover:text-ink">
                   全部 →
                 </a>
               }

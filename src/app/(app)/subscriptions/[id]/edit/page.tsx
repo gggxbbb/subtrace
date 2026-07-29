@@ -28,7 +28,7 @@ export default async function EditSubscriptionPage({
     <>
       <header className="flex h-16 items-center border-b border-ink bg-base px-4 md:px-6">
         <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
             subscriptions / {sub.name} / edit
           </div>
           <h1 className="text-xl font-bold uppercase tracking-tight">编辑订阅</h1>
@@ -55,7 +55,7 @@ export default async function EditSubscriptionPage({
             startDate: isoDay(sub.startDate),
           }}
         />
-        <p className="mt-3 text-[10px] text-neutral-400 f-mono">
+        <p className="mt-3 text-[10px] text-faint f-mono">
           跟踪模式（周期/手动）不可切换——建错了请归档后重建。改周期字段只影响之后的推算，不改写付费记录。
         </p>
       </main>

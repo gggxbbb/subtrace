@@ -13,12 +13,12 @@ export function BundleRowActions({ bundleId, archived }: { bundleId: string; arc
       <a href={`/bundles/${bundleId}/edit`} className={btnCls}>
         编辑 →
       </a>
-      <button onClick={async () => setBundleArchivedAction(bundleId, !archived)} className={`${btnCls} text-neutral-500`}>
+      <button onClick={async () => setBundleArchivedAction(bundleId, !archived)} className={`${btnCls} text-muted`}>
         {archived ? "取消归档" : "归档"}
       </button>
       <ConfirmButton
         onConfirm={async () => deleteBundleAction(bundleId)}
-        className="border border-red-700 bg-surface px-2 py-0.5 text-[9px] uppercase text-red-700 f-mono hover:bg-red-700 hover:text-white"
+        className="border border-destructive bg-surface px-2 py-0.5 text-[9px] uppercase text-destructive f-mono hover:bg-destructive hover:text-white"
         cancelClassName={btnCls}
       />
     </span>

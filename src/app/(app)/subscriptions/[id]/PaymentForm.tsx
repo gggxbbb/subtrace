@@ -77,7 +77,7 @@ export function PaymentForm({
             required
             className="w-full bg-transparent px-2 py-1.5 text-sm outline-none f-mono"
           />
-          <span className="flex items-center border-l border-ink px-2 text-sm text-neutral-500 f-mono">
+          <span className="flex items-center border-l border-ink px-2 text-sm text-muted f-mono">
             +
           </span>
           <input
@@ -90,7 +90,7 @@ export function PaymentForm({
             title="按天数：服务止 = 服务起 + N 天"
           />
         </div>
-        <div className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
+        <div className="mt-1 text-[9px] uppercase text-faint f-mono">
           止期为排他日：到期日当天起不再覆盖 · 服务起 = 上一笔止期即无缝顺延 · 右侧 +N 天快速顺延
         </div>
       </div>

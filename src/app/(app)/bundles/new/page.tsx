@@ -25,7 +25,7 @@ export default async function NewBundlePage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 md:px-6">
-      <div className="mb-1 text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+      <div className="mb-1 text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
         bundles / new
       </div>
       <h1 className="mb-5 text-xl font-bold uppercase tracking-tight">新建联合会员</h1>

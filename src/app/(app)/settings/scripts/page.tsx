@@ -40,7 +40,7 @@ export default async function ScriptsPage({
     <>
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
             settings / scripts
           </div>
           <h1 className="text-xl font-bold uppercase tracking-tight">用量脚本</h1>
@@ -55,7 +55,7 @@ export default async function ScriptsPage({
           )}
           {!me.canUseScripts ? (
             <Panel index="01" title="未开放">
-              <div className="px-4 py-8 text-center text-[11px] leading-relaxed text-neutral-500">
+              <div className="px-4 py-8 text-center text-[11px] leading-relaxed text-muted">
                 脚本功能在沙箱中执行用户代码，仅对管理员标记的信任用户开放。
                 <br />
                 请联系管理员在「用户管理」中为你的账号开启。
@@ -63,7 +63,7 @@ export default async function ScriptsPage({
             </Panel>
           ) : subs.length === 0 ? (
             <Panel index="01" title="无可选订阅">
-              <div className="px-4 py-8 text-center text-[11px] leading-relaxed text-neutral-500">
+              <div className="px-4 py-8 text-center text-[11px] leading-relaxed text-muted">
                 还没有额度型订阅。脚本只能挂在额度型订阅上（机场流量、网盘容量等），
                 请先在订阅详情把用量类型设为「额度型」。
               </div>

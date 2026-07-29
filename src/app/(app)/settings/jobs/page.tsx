@@ -17,14 +17,14 @@ export default async function JobsPage() {
     <>
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
         <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
+          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
             settings / jobs
           </div>
           <h1 className="text-xl font-bold uppercase tracking-tight">定时任务</h1>
         </div>
       </header>
       <div className="flex-1 overflow-y-auto p-6">
-        <p className="mb-4 max-w-3xl text-[10px] uppercase leading-relaxed tracking-wider text-neutral-500 f-mono">
+        <p className="mb-4 max-w-3xl text-[10px] uppercase leading-relaxed tracking-wider text-muted f-mono">
           系统内置的每日任务（检查到期提醒、更新汇率），服务器重启当天会自动补跑。
           「立即运行」用于调试，重复点击不会造成重复提醒或错误数据。
         </p>

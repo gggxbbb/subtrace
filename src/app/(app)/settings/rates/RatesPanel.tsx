@@ -14,7 +14,7 @@ import {
 
 const inputCls =
   "w-full border border-ink bg-base px-3 py-2 text-sm outline-none focus:bg-surface";
-const labelCls = "mb-1 block text-[9px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
+const labelCls = "mb-1 block text-[9px] uppercase tracking-[0.15em] text-muted f-mono";
 
 export interface RateRow {
   id: string;
@@ -49,7 +49,7 @@ export function RatesPanel({
               保存
             </button>
           </div>
-          <p className="mt-1.5 text-[9px] uppercase text-neutral-400 f-mono">改动只影响之后的录入预填，已保存的记录不变</p>
+          <p className="mt-1.5 text-[9px] uppercase text-faint f-mono">改动只影响之后的录入预填，已保存的记录不变</p>
         </form>
         <form action={(fd) => start(() => setRatesApiUrlAction(fd))} className="border border-ink bg-surface p-4">
           <label className={labelCls}>汇率 API 模板（{"{base}"} 占位）</label>
@@ -59,14 +59,14 @@ export function RatesPanel({
               保存
             </button>
           </div>
-          <p className="mt-1.5 text-[9px] uppercase text-neutral-400 f-mono">期望响应：{"{\"rates\": {\"主币种\": 数值}}"} · AUTO 币对每日自动刷新</p>
+          <p className="mt-1.5 text-[9px] uppercase text-faint f-mono">期望响应：{"{\"rates\": {\"主币种\": 数值}}"} · AUTO 币对每日自动刷新</p>
         </form>
       </div>
 
       <div className="border border-ink bg-surface">
         <div className="flex items-center justify-between border-b border-ink px-4 py-2">
           <span className="text-[10px] font-semibold uppercase tracking-[0.15em] f-mono">
-            <span className="text-neutral-400">03</span> — 币对 / {rates.length}
+            <span className="text-faint">03</span> — 币对 / {rates.length}
           </span>
           <button
             disabled={pending}
@@ -90,17 +90,17 @@ export function RatesPanel({
           <div className="border-b border-ink bg-base px-4 py-1.5 text-[10px] f-mono">{refreshMsg}</div>
         )}
         {rates.length === 0 && (
-          <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
+          <div className="px-4 py-6 text-center text-[11px] uppercase text-faint f-mono">
             还没有币对，在下方添加
           </div>
         )}
         {rates.map((r) => (
-          <div key={r.id} className="flex items-center gap-3 border-b border-neutral-200 px-4 py-2.5 last:border-0">
+          <div key={r.id} className="flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-0">
             <Led color={r.mode === "AUTO" ? (r.lastError ? "#ef4444" : "#22c55e") : "#d4d4d4"} />
             <span className="w-14 text-[13px] font-bold f-mono">{r.currency}</span>
             <span className="text-[13px] tabular-nums f-mono">1 {r.currency} = {r.rateToBase} {baseCurrency}</span>
-            <span className="text-[9px] uppercase text-neutral-400 f-mono">{r.mode}</span>
-            <span className="flex-1 text-right text-[10px] text-neutral-500 f-mono">
+            <span className="text-[9px] uppercase text-faint f-mono">{r.mode}</span>
+            <span className="flex-1 text-right text-[10px] text-muted f-mono">
               {r.lastError ? (
                 <span className="text-[#ef4444]">更新失败：{r.lastError}（保留旧值 {r.updatedAt}）</span>
               ) : (
@@ -120,7 +120,7 @@ export function RatesPanel({
 
       <div className="border border-ink bg-surface">
         <div className="border-b border-ink px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] f-mono">
-          <span className="text-neutral-400">04</span> — 添加币对
+          <span className="text-faint">04</span> — 添加币对
         </div>
         <form action={(fd) => start(() => upsertRateAction(fd))} className="flex items-end gap-3 p-4">
           <div className="w-28">

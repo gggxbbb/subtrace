@@ -41,13 +41,13 @@ export function PaymentAmount({ p, currency }: { p: PaymentRow; currency: string
         <>
           {fmtMoney(p.amountBase, currency)}
           {p.refundedBase > 0 && (
-            <span className="ml-2 text-[10px] text-neutral-400 f-mono">
+            <span className="ml-2 text-[10px] text-faint f-mono">
               退 {fmtMoney(p.refundedBase, currency)} · 净 {fmtMoney(p.amountBase - p.refundedBase, currency)}
             </span>
           )}
         </>
       ) : (
-        <span className="inline-block border border-dashed border-neutral-400 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-neutral-400 f-mono">
+        <span className="inline-block border border-dashed border-faint px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-faint f-mono">
           金额未知
         </span>
       )}
@@ -172,10 +172,10 @@ export function PaymentRowDisplay({
   onDelete: () => void;
 }) {
   return (
-    <div className="group flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 last:border-0">
+    <div className="group flex items-center justify-between border-b border-line px-4 py-2.5 last:border-0">
       <div>
         <PaymentAmount p={p} currency={currency} />
-        <div className="text-[9px] uppercase tracking-wider text-neutral-400 f-mono">
+        <div className="text-[9px] uppercase tracking-wider text-faint f-mono">
           {showPaidAt ? `支付 ${p.paidAt} · ` : ""}
           {p.periodStart} → {p.periodEnd} · {SOURCE_LABEL[p.source] ?? p.source}
           {p.note ? ` · ${p.note}` : ""}
@@ -192,7 +192,7 @@ export function PaymentRowDisplay({
             </button>
             <ConfirmButton
               onConfirm={onDelete}
-              className="invisible border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase text-red-700 f-mono group-hover:visible hover:bg-red-700 hover:text-white"
+              className="invisible border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase text-destructive f-mono group-hover:visible hover:bg-destructive hover:text-white"
             />
           </>
         )}

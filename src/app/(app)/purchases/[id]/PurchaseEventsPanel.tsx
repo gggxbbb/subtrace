@@ -84,7 +84,7 @@ export function PurchaseEventsPanel({
     <div className="px-4 py-4">
       <ErrorBanner error={error} defaultMessage="保存失败：请检查日期与金额" className="mb-3" />
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-[10px] uppercase text-neutral-400 f-mono">
+        <span className="text-[10px] uppercase text-faint f-mono">
           计入物品净额，与买入价共用同一摊销窗口
         </span>
         <button
@@ -105,7 +105,7 @@ export function PurchaseEventsPanel({
       )}
 
       {events.length === 0 && !adding && (
-        <p className="text-[11px] text-neutral-400">还没有追加费用——配件、维修都可以记。</p>
+        <p className="text-[11px] text-faint">还没有追加费用——配件、维修都可以记。</p>
       )}
 
       {events.map((e) =>
@@ -120,13 +120,13 @@ export function PurchaseEventsPanel({
             </button>
           </form>
         ) : (
-          <div key={e.id} className="group flex items-center justify-between border-b border-dashed border-neutral-200 py-1.5 text-[12px] last:border-0">
+          <div key={e.id} className="group flex items-center justify-between border-b border-dashed border-line py-1.5 text-[12px] last:border-0">
             <span className="f-mono">
-              <span className="text-neutral-500">{e.date}</span>
+              <span className="text-muted">{e.date}</span>
               <span className="ml-2 border border-ink px-1 text-[9px] uppercase">{EVENT_KIND_LABEL[e.kind] ?? e.kind}</span>
-              {e.note && <span className="ml-2 text-neutral-500">{e.note}</span>}
+              {e.note && <span className="ml-2 text-muted">{e.note}</span>}
               {e.extendDays != null && e.extendDays > 0 && (
-                <span className="ml-1 text-[10px] text-teal-700">寿命+{e.extendDays}d</span>
+                <span className="ml-1 text-[10px] text-income">寿命+{e.extendDays}d</span>
               )}
             </span>
             <span className="flex items-center gap-2">
@@ -139,7 +139,7 @@ export function PurchaseEventsPanel({
               </button>
               <button
                 onClick={async () => deletePurchaseEventAction(purchaseId, e.id)}
-                className="invisible text-red-700 group-hover:visible"
+                className="invisible text-destructive group-hover:visible"
               >
                 ×
               </button>
