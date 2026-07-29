@@ -18,14 +18,13 @@ export default async function UsageRecordsPage({
   if (!user) redirect("/login");
   const { id } = await params;
   const sp = await searchParams;
-  const sub = await getSubscription(user.id, id);
+  const [sub, all] = await Promise.all([getSubscription(user.id, id), listUsage(id)]);
   if (!sub) notFound();
   if (!sub.usageKind) redirect(`/subscriptions/${id}/usage`);
 
   const from = sp.from ? new Date(`${sp.from}T00:00:00+08:00`) : null;
   const to = sp.to ? new Date(`${sp.to}T00:00:00+08:00`) : null;
 
-  const all = await listUsage(sub.id);
   // 用户名映射：所有者 + USER 受益人
   const names = new Map<string, string>();
   names.set(sub.ownerId, sub.owner.username);

@@ -17,14 +17,13 @@ export default async function IncomesPage({
   if (!user) redirect("/login");
   const { id } = await params;
   const sp = await searchParams;
-  const purchase = await getPurchase(user.id, id);
+  const [purchase, all] = await Promise.all([getPurchase(user.id, id), listPurchaseIncomes(id)]);
   if (!purchase) notFound();
 
   const q = (sp.q ?? "").trim().toLowerCase();
   const from = sp.from ? new Date(`${sp.from}T00:00:00+08:00`) : null;
   const to = sp.to ? new Date(`${sp.to}T00:00:00+08:00`) : null;
 
-  const all = await listPurchaseIncomes(purchase.id);
   let rows: IncomeRow[] = all.map((i) => ({
     id: i.id,
     amount: i.amount,

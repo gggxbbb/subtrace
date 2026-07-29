@@ -21,15 +21,20 @@ export default async function ScriptsPage({
   const subs = me.canUseScripts ? await listScriptSubs(user.id) : [];
 
   const lastRuns: Record<string, ScriptLastRun | null> = {};
-  for (const s of subs) {
-    const run = await prisma.jobRun.findFirst({
-      where: { jobKey: scriptJobKey(s.id) },
-      orderBy: { startedAt: "desc" },
-    });
+  const runs = await Promise.all(
+    subs.map((s) =>
+      prisma.jobRun.findFirst({
+        where: { jobKey: scriptJobKey(s.id) },
+        orderBy: { startedAt: "desc" },
+      }),
+    ),
+  );
+  subs.forEach((s, i) => {
+    const run = runs[i];
     lastRuns[s.id] = run
       ? { status: run.status, startedAt: fmtDateTime(run.startedAt), message: run.message }
       : null;
-  }
+  });
 
   return (
     <>

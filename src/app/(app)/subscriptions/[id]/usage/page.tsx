@@ -10,9 +10,11 @@ export default async function UsageWizardPage({ params }: { params: Promise<{ id
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const { id } = await params;
-  const sub = await getSubscription(user.id, id);
+  const [sub, recordCount] = await Promise.all([
+    getSubscription(user.id, id),
+    prisma.usageRecord.count({ where: { subscriptionId: id } }),
+  ]);
   if (!sub) notFound();
-  const recordCount = await prisma.usageRecord.count({ where: { subscriptionId: sub.id } });
 
   return (
     <>

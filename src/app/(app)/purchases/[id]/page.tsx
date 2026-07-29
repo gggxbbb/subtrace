@@ -33,12 +33,14 @@ export default async function PurchaseDetailPage({
   const daily = purchaseDailyRate(engine, today);
   const progress = breakevenProgress(engine, today);
   const todayIso = isoDay(today);
-  // TCO（ADR-0003）：物品净额 + 订阅份额 − 累计收益
-  const shareLines = await subscriptionShareCost(user.id, purchase, today);
+  // TCO（ADR-0003）：物品净额 + 订阅份额 − 累计收益（三项取数互相独立，并行）
+  const [shareLines, incomes, events] = await Promise.all([
+    subscriptionShareCost(user.id, purchase, today),
+    listPurchaseIncomes(purchase.id),
+    listPurchaseEvents(purchase.id),
+  ]);
   const subShareTotal = shareLines.reduce((s, l) => l.amount, 0);
-  const incomes = await listPurchaseIncomes(purchase.id);
   const incomeTotal = incomes.reduce((s, i) => s + i.amountBase, 0);
-  const events = await listPurchaseEvents(purchase.id);
   const itemNet = purchaseNet(engine);
   const tco = itemNet + subShareTotal - incomeTotal;
 

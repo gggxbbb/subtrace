@@ -10,8 +10,7 @@ import { BundleRowActions } from "./BundleRowActions";
 export default async function BundlesPage() {
   const user = (await getCurrentUser())!;
   const cur = user.baseCurrency;
-  const bundles = await listBundles(user.id);
-  const archived = await listArchivedBundles(user.id);
+  const [bundles, archived] = await Promise.all([listBundles(user.id), listArchivedBundles(user.id)]);
 
   return (
     <>
