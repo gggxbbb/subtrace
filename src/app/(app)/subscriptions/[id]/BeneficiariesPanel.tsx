@@ -1,15 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Led } from "@/components/te";
+import { Led, inputCls } from "@/components/te";
 import {
   addBeneficiaryAction,
   removeBeneficiaryAction,
   setBeneficiaryWeightAction,
 } from "@/lib/beneficiaries/actions";
 
-const inputCls =
-  "w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white";
 
 export interface BeneficiaryRow {
   id: string;

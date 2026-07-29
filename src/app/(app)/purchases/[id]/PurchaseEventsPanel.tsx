@@ -6,16 +6,13 @@ import { isoDay } from "@/lib/dates";
 import { fmtMoney } from "@/lib/format";
 import { MoneyFields } from "@/components/MoneyFields";
 import { EVENT_KIND_LABEL } from "@/lib/purchases/kinds";
+import { inputCls, labelCls } from "@/components/te";
 import {
   addPurchaseEventAction,
   deletePurchaseEventAction,
   updatePurchaseEventAction,
 } from "@/lib/purchases/actions";
 
-const inputCls =
-  "w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white";
-const labelCls =
-  "mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
 
 export interface EventRow {
   id: string;

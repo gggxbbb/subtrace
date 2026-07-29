@@ -2,11 +2,8 @@
 
 import { useState } from "react";
 import { MoneyFields } from "@/components/MoneyFields";
+import { inputCls, labelCls } from "@/components/te";
 
-const inputCls =
-  "w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white";
-const labelCls =
-  "mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
 
 export interface SubscriptionEditInitial {
   name: string;

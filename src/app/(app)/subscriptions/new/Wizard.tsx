@@ -10,11 +10,8 @@ import { isoDay } from "@/lib/dates";
 import { useSearchParams } from "next/navigation";
 import { MoneyFields } from "@/components/MoneyFields";
 import { createSubscriptionAction } from "@/lib/subscriptions/actions";
+import { inputCls, labelCls } from "@/components/te";
 
-const inputCls =
-  "w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white";
-const labelCls =
-  "mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
 
 const CYCLE_UNIT_LABEL: Record<string, string> = { DAY: "日", WEEK: "周", MONTH: "月", YEAR: "年" };
 

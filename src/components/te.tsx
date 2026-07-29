@@ -6,6 +6,12 @@ import { ArrowRight } from "lucide-react";
 
 export const ORANGE = "#FF5A00";
 
+/** 表单控件样式（多数派定义；设置区密集变体保留在各面板本地） */
+export const inputCls =
+  "w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white";
+export const labelCls =
+  "mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
+
 export function Led({ color = ORANGE }: { color?: string }) {
   return (
     <span
