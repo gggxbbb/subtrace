@@ -23,8 +23,8 @@ export default async function ChannelsPage() {
       <div className="flex-1 overflow-y-auto p-6">
       <div className="mx-auto max-w-3xl">
         <p className="mb-4 text-[10px] uppercase leading-relaxed tracking-wider text-neutral-500 f-mono">
-          每日扫描任务（内置调度或 POST /api/cron/reminders）命中「到期日 − 提醒天数 = 今天」的订阅后，
-          向这里已启用的渠道投递；投递结果落库可查。提醒天数在每个订阅的编辑页配置，默认 7,3,0。
+          系统每天定时检查「到期日 − 提醒天数 = 今天」的订阅，经这里已启用的渠道发送提醒；
+          发送记录可在「定时任务」页查看。提醒天数在每个订阅的编辑页配置，默认 7,3,0。
         </p>
         <ChannelsPanel channels={channels} />
       </div>

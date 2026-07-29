@@ -38,7 +38,7 @@ export default async function RatesPage({
             </div>
           )}
           <p className="mb-4 text-[10px] uppercase leading-relaxed tracking-wider text-neutral-500 f-mono">
-            汇率只用于录入外币记录时预填折算值；保存进记录的是主币种快照，之后改汇率不影响历史（ADR-0004）。
+            汇率只用于录入外币记录时预填折算值；保存进记录的是当时折算好的主币种金额，之后改汇率不影响历史记录。
           </p>
           <RatesPanel
             baseCurrency={me.baseCurrency}

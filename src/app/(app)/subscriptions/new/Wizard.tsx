@@ -204,7 +204,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
                 <MoneyFields
                   names={{ amount: "listPrice", currency: "listCurrency", amountBase: "listPriceBase" }}
                   defaults={{ currency: baseCurrency }}
-                  labels={{ amount: "标准价", amountBase: "折算主币种（快照）" }}
+                  labels={{ amount: "标准价", amountBase: "折算主币种" }}
                 />
                 <label className="flex items-center gap-2 text-[12px]">
                   <input type="checkbox" name="autoRenew" defaultChecked className="h-4 w-4 accent-black" />

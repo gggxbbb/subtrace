@@ -97,7 +97,7 @@ export function SubscriptionEditForm({
               currency: initial.listCurrency,
               amountBase: initial.listPriceBase,
             }}
-            labels={{ amount: "标准价", amountBase: "折算主币种（快照）" }}
+            labels={{ amount: "标准价", amountBase: "折算主币种" }}
           />
           <label className="flex items-center gap-2 text-[12px]">
             <input type="checkbox" name="autoRenew" defaultChecked={initial.autoRenew} className="h-4 w-4 accent-black" />

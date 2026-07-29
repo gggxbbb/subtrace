@@ -49,7 +49,7 @@ export function RatesPanel({
               保存
             </button>
           </div>
-          <p className="mt-1.5 text-[9px] uppercase text-neutral-400 f-mono">改动只影响之后的录入预填，历史快照不变（ADR-0004）</p>
+          <p className="mt-1.5 text-[9px] uppercase text-neutral-400 f-mono">改动只影响之后的录入预填，已保存的记录不变</p>
         </form>
         <form action={(fd) => start(() => setRatesApiUrlAction(fd))} className="border border-black bg-white p-4">
           <label className={labelCls}>汇率 API 模板（{"{base}"} 占位）</label>

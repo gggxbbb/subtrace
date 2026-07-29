@@ -104,7 +104,7 @@ export default async function ReportsPage({
             index="R1"
             label="摊销成本"
             value={fmtMoney(r.totalAmortized, cur)}
-            sub={delta != null ? `较上期 ${delta >= 0 ? "+" : ""}${Math.round(delta * 100)}%` : "成本段按天切片"}
+            sub={delta != null ? `较上期 ${delta >= 0 ? "+" : ""}${Math.round(delta * 100)}%` : "按服务天数逐日分摊"}
             led={delta != null ? (delta <= 0 ? "#22c55e" : "#ef4444") : undefined}
           />
           <Kpi index="R2" label="实付" value={fmtMoney(r.totalPaid, cur)} sub="区间内实际流出" />
