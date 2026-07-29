@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { isoDay } from "@/lib/dates";
-import { PrefillForm } from "@/components/PrefillForm";
+import { MoneyFields } from "@/components/MoneyFields";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getPurchase } from "@/lib/purchases/service";
 import { updatePurchaseAction } from "@/lib/purchases/actions";
@@ -30,37 +30,33 @@ export default async function EditPurchasePage({ params }: { params: Promise<{ i
         </div>
       </header>
       <main className="mx-auto max-w-xl px-4 py-8 md:px-6">
-        <PrefillForm action={updatePurchaseAction.bind(null, purchase.id)} className="space-y-4 border border-black bg-white p-5">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label className={labelCls}>名称</label>
-              <input name="name" defaultValue={purchase.name} required className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>分类</label>
-              <input name="category" defaultValue={purchase.category ?? ""} className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>买入价</label>
-              <input name="amount" type="number" step="0.01" min="0" defaultValue={purchase.amount} required className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>币种</label>
-              <input name="currency" defaultValue={purchase.currency} className={`${inputCls} f-mono`} />
-            </div>
-            <div>
-              <label className={labelCls}>折算主币种</label>
-              <input name="amountBase" type="number" step="0.01" min="0" defaultValue={purchase.amountBase} className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>购买日期</label>
-              <input name="purchaseDate" type="date" defaultValue={isoDay(purchase.purchaseDate)} required className={`${inputCls} f-mono`} />
-            </div>
-            <div className="col-span-2">
-              <label className={labelCls}>预期寿命（天，留空=未定）</label>
-              <input name="expectedDays" type="number" min="1" defaultValue={purchase.expectedDays ?? ""} className={inputCls} />
-            </div>
+        <form action={updatePurchaseAction.bind(null, purchase.id)} className="space-y-4 border border-black bg-white p-5">
+        <MoneyFields
+          defaults={{
+            amount: purchase.amount,
+            currency: purchase.currency,
+            amountBase: purchase.amountBase,
+          }}
+          labels={{ amount: "买入价" }}
+        />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label className={labelCls}>名称</label>
+            <input name="name" defaultValue={purchase.name} required className={inputCls} />
           </div>
+          <div>
+            <label className={labelCls}>分类</label>
+            <input name="category" defaultValue={purchase.category ?? ""} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>购买日期</label>
+            <input name="purchaseDate" type="date" defaultValue={isoDay(purchase.purchaseDate)} required className={`${inputCls} f-mono`} />
+          </div>
+          <div>
+            <label className={labelCls}>预期寿命（天，留空=未定）</label>
+            <input name="expectedDays" type="number" min="1" defaultValue={purchase.expectedDays ?? ""} className={inputCls} />
+          </div>
+        </div>
           <button className="w-full bg-black py-2.5 text-[11px] font-semibold uppercase tracking-wider text-white hover:bg-neutral-800">
             保存 →
           </button>
@@ -70,7 +66,7 @@ export default async function EditPurchasePage({ params }: { params: Promise<{ i
           >
             取消
           </a>
-        </PrefillForm>
+        </form>
       </main>
     </>
   );

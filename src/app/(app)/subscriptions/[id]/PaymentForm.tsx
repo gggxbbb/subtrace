@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { isoDay } from "@/lib/dates";
-import { attachRatePrefill } from "@/lib/exchange/prefill";
+import { MoneyFields } from "@/components/MoneyFields";
 import { useSearchParams } from "next/navigation";
 import { recordPaymentAction } from "@/lib/subscriptions/actions";
 
@@ -41,30 +41,18 @@ export function PaymentForm({
     }
   };
 
-  const formRef = useRef<HTMLFormElement>(null);
-  useEffect(() => attachRatePrefill(formRef.current), []);
-
   return (
-    <form ref={formRef} action={action} className="space-y-4 px-4 py-4">
+    <form action={action} className="space-y-4 px-4 py-4">
       {error && (
         <div className="border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
           记录失败：请检查日期与金额
         </div>
       )}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <label className={labelCls}>实付金额（留空 = 金额未知，只记区间）</label>
-          <input name="amount" type="number" step="0.01" min="0" defaultValue={prefill.amount ?? undefined} className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>币种</label>
-          <input name="currency" defaultValue={prefill.currency} className={`${inputCls} f-mono`} />
-        </div>
-      </div>
-      <div>
-        <label className={labelCls}>折算主币种金额（快照，默认同实付；实付留空则同未知）</label>
-        <input name="amountBase" type="number" step="0.01" min="0" placeholder="留空 = 实付金额" className={inputCls} />
-      </div>
+      <MoneyFields
+        allowUnknown
+        defaults={{ amount: prefill.amount, currency: prefill.currency }}
+        labels={{ amount: "实付金额" }}
+      />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className={labelCls}>支付日期</label>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { isoDay } from "@/lib/dates";
-import { attachRatePrefill } from "@/lib/exchange/prefill";
+import { MoneyFields } from "@/components/MoneyFields";
 import { Led } from "@/components/te";
 import {
   deletePaymentAction,
@@ -44,24 +44,15 @@ const today = () => isoDay(new Date());
 function PaymentFields({ row, defaultCurrency }: { row?: PaymentRow; defaultCurrency: string }) {
   return (
     <>
-      <div className="grid grid-cols-4 gap-2">
-        <div>
-          <label className={labelCls}>实付</label>
-          <input name="amount" type="number" step="0.01" min="0" defaultValue={row?.amount ?? ""} placeholder="留空 = 未知" className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>币种</label>
-          <input name="currency" defaultValue={row?.currency ?? defaultCurrency} className={`${inputCls} f-mono`} />
-        </div>
-        <div>
-          <label className={labelCls}>折算主币种</label>
-          <input name="amountBase" type="number" step="0.01" min="0" defaultValue={row?.amountBase ?? ""} placeholder="留空 = 未知" className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>退款</label>
-          <input name="refundedBase" type="number" step="0.01" min="0" defaultValue={row?.refundedBase ?? 0} className={inputCls} />
-        </div>
-      </div>
+      <MoneyFields
+        allowUnknown
+        defaults={{
+          amount: row?.amount,
+          currency: row?.currency ?? defaultCurrency,
+          amountBase: row?.amountBase,
+        }}
+        labels={{ amount: "实付" }}
+      />
       <div className="grid grid-cols-4 gap-2">
         <div>
           <label className={labelCls}>支付日期</label>
@@ -85,9 +76,15 @@ function PaymentFields({ row, defaultCurrency }: { row?: PaymentRow; defaultCurr
           </select>
         </div>
       </div>
-      <div>
-        <label className={labelCls}>备注</label>
-        <input name="note" defaultValue={row?.note ?? ""} className={inputCls} />
+      <div className="grid grid-cols-4 gap-2">
+        <div>
+          <label className={labelCls}>退款</label>
+          <input name="refundedBase" type="number" step="0.01" min="0" defaultValue={row?.refundedBase ?? 0} className={inputCls} />
+        </div>
+        <div className="col-span-3">
+          <label className={labelCls}>备注</label>
+          <input name="note" defaultValue={row?.note ?? ""} className={inputCls} />
+        </div>
       </div>
     </>
   );
@@ -158,7 +155,7 @@ export function PaymentsManager({
       </form>
 
       {adding && (
-        <form ref={(el) => { attachRatePrefill(el); }} action={recordPaymentAction.bind(null, subscriptionId)} className="space-y-3 border border-black bg-white p-4">
+        <form action={recordPaymentAction.bind(null, subscriptionId)} className="space-y-3 border border-black bg-white p-4">
           {backInput}
           <div className="text-[10px] uppercase tracking-wider text-neutral-500 f-mono">新增付费记录</div>
           <PaymentFields defaultCurrency={defaultCurrency} />
@@ -180,7 +177,7 @@ export function PaymentsManager({
         )}
         {rows.map((p) =>
           editingId === p.id ? (
-            <form key={p.id} ref={(el) => { attachRatePrefill(el); }} action={updatePaymentAction.bind(null, subscriptionId, p.id)} className="space-y-3 border-b border-black bg-[#E4E3E0] px-4 py-3">
+            <form key={p.id} action={updatePaymentAction.bind(null, subscriptionId, p.id)} className="space-y-3 border-b border-black bg-[#E4E3E0] px-4 py-3">
               {backInput}
               <PaymentFields row={p} defaultCurrency={defaultCurrency} />
               <div className="flex gap-2">
