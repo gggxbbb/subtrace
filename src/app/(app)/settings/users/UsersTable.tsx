@@ -5,6 +5,7 @@
 import { useState, useTransition } from "react";
 import { deleteUserAction, resetUserPasswordAction, setCanUseScriptsAction, setUserRoleAction } from "@/lib/auth/actions";
 import { Panel } from "@/components/te";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { isoDay } from "@/lib/dates";
 
 export interface UserRow {
@@ -100,17 +101,12 @@ export function UsersTable({ users }: { users: UserRow[] }) {
                     >
                       重置密码
                     </button>
-                    <button
-                      disabled={pending}
-                      onClick={() => {
-                        if (confirm(`删除用户 ${u.username}？其订阅/物品/渠道等全部数据将一并删除，不可恢复。`)) {
-                          run(() => deleteUserAction(u.id));
-                        }
-                      }}
+                    <ConfirmButton
+                      onConfirm={() => run(() => deleteUserAction(u.id))}
+                      confirmLabel="确认删除"
                       className="border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono text-[#ef4444] hover:bg-[#ef4444] hover:text-white disabled:opacity-40"
-                    >
-                      删除
-                    </button>
+                      confirmClassName="bg-red-700 px-2 py-0.5 text-[9px] uppercase text-white f-mono hover:bg-red-800"
+                    />
                   </span>
                 )}
               </td>

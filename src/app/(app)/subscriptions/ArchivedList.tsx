@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { deleteSubscriptionAction } from "@/lib/subscriptions/actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
 
 /** 已归档订阅列表：可硬删除（二次确认） */
 export function ArchivedList({
@@ -9,7 +9,6 @@ export function ArchivedList({
 }: {
   rows: { id: string; name: string; category: string | null; startDate: string }[];
 }) {
-  const [confirmId, setConfirmId] = useState<string | null>(null);
   if (rows.length === 0) {
     return (
       <div className="px-4 py-6 text-center text-[11px] uppercase text-neutral-400 f-mono">
@@ -29,29 +28,13 @@ export function ArchivedList({
               {r.category ?? "—"} · 始于 {r.startDate}
             </span>
           </div>
-          {confirmId === r.id ? (
-            <span className="flex shrink-0 items-center gap-1.5">
-              <button
-                onClick={async () => deleteSubscriptionAction(r.id)}
-                className="bg-red-700 px-2.5 py-1 text-[10px] uppercase text-white hover:bg-red-800"
-              >
-                确认删除（不可恢复）
-              </button>
-              <button
-                onClick={() => setConfirmId(null)}
-                className="border border-black bg-white px-2.5 py-1 text-[10px] uppercase hover:bg-black hover:text-white"
-              >
-                算了
-              </button>
-            </span>
-          ) : (
-            <button
-              onClick={() => setConfirmId(r.id)}
-              className="shrink-0 border border-red-700 bg-white px-2.5 py-1 text-[10px] uppercase text-red-700 hover:bg-red-700 hover:text-white"
-            >
-              删除
-            </button>
-          )}
+          <ConfirmButton
+            onConfirm={async () => deleteSubscriptionAction(r.id)}
+            confirmLabel="确认删除（不可恢复）"
+            className="shrink-0 border border-red-700 bg-white px-2.5 py-1 text-[10px] uppercase text-red-700 hover:bg-red-700 hover:text-white"
+            confirmClassName="bg-red-700 px-2.5 py-1 text-[10px] uppercase text-white hover:bg-red-800"
+            cancelClassName="border border-black bg-white px-2.5 py-1 text-[10px] uppercase hover:bg-black hover:text-white"
+          />
         </div>
       ))}
     </div>

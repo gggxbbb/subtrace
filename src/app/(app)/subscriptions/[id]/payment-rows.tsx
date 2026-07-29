@@ -5,6 +5,7 @@
 // 两处的布局差异经 variant/showPaidAt 参数化，渲染与各自原版逐像素一致。
 
 import { Led, inputCls, labelCls } from "@/components/te";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { fmtMoney } from "@/lib/format";
 import { MoneyFields } from "@/components/MoneyFields";
 import { isoDay } from "@/lib/dates";
@@ -187,12 +188,10 @@ export function PaymentRowDisplay({
             >
               编辑
             </button>
-            <button
-              onClick={onDelete}
+            <ConfirmButton
+              onConfirm={onDelete}
               className="invisible border border-black bg-white px-2 py-0.5 text-[9px] uppercase text-red-700 f-mono group-hover:visible hover:bg-red-700 hover:text-white"
-            >
-              删除
-            </button>
+            />
           </>
         )}
         <Led color={p.source === "PROMO" ? "#FF5A00" : "#22c55e"} />

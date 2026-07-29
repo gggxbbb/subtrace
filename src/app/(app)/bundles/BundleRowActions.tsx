@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { deleteBundleAction, setBundleArchivedAction } from "@/lib/bundles/actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
 
 const btnCls =
   "border border-black bg-white px-2 py-0.5 text-[9px] uppercase f-mono hover:bg-black hover:text-white";
 
 /** 联合会员标题行操作：编辑 / 归档 / 删除（二次确认） */
 export function BundleRowActions({ bundleId, archived }: { bundleId: string; archived: boolean }) {
-  const [confirm, setConfirm] = useState(false);
   return (
     <span className="flex items-center gap-1.5">
       <a href={`/bundles/${bundleId}/edit`} className={btnCls}>
@@ -17,26 +16,11 @@ export function BundleRowActions({ bundleId, archived }: { bundleId: string; arc
       <button onClick={async () => setBundleArchivedAction(bundleId, !archived)} className={`${btnCls} text-neutral-500`}>
         {archived ? "取消归档" : "归档"}
       </button>
-      {confirm ? (
-        <>
-          <button
-            onClick={async () => deleteBundleAction(bundleId)}
-            className="bg-red-700 px-2 py-0.5 text-[9px] uppercase text-white f-mono hover:bg-red-800"
-          >
-            确认删除
-          </button>
-          <button onClick={() => setConfirm(false)} className={btnCls}>
-            算了
-          </button>
-        </>
-      ) : (
-        <button
-          onClick={() => setConfirm(true)}
-          className="border border-red-700 bg-white px-2 py-0.5 text-[9px] uppercase text-red-700 f-mono hover:bg-red-700 hover:text-white"
-        >
-          删除
-        </button>
-      )}
+      <ConfirmButton
+        onConfirm={async () => deleteBundleAction(bundleId)}
+        className="border border-red-700 bg-white px-2 py-0.5 text-[9px] uppercase text-red-700 f-mono hover:bg-red-700 hover:text-white"
+        cancelClassName={btnCls}
+      />
     </span>
   );
 }

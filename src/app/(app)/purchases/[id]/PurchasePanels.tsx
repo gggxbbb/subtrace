@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { fmtMoney } from "@/lib/format";
 import { IncomeFormFields } from "./income-fields";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import {
   addPurchaseIncomeAction,
   deletePurchaseAction,
@@ -21,7 +21,6 @@ export function PurchaseHeaderActions({
   purchaseId: string;
   archived: boolean;
 }) {
-  const [confirmDelete, setConfirmDelete] = useState(false);
   return (
     <div className="flex items-center gap-2.5">
       <a href={`/purchases/${purchaseId}/edit`} className={btnCls}>
@@ -30,26 +29,13 @@ export function PurchaseHeaderActions({
       <button onClick={async () => setPurchaseArchivedAction(purchaseId, !archived)} className={`${btnCls} text-neutral-500`}>
         {archived ? "取消归档" : "归档"}
       </button>
-      {confirmDelete ? (
-        <>
-          <button
-            onClick={async () => deletePurchaseAction(purchaseId)}
-            className="bg-red-700 px-3 py-2 text-[10px] uppercase tracking-wider text-white f-mono hover:bg-red-800"
-          >
-            确认删除（不可恢复）
-          </button>
-          <button onClick={() => setConfirmDelete(false)} className={btnCls}>
-            算了
-          </button>
-        </>
-      ) : (
-        <button
-          onClick={() => setConfirmDelete(true)}
-          className="border border-red-700 bg-white px-3 py-2 text-[10px] uppercase tracking-wider text-red-700 f-mono hover:bg-red-700 hover:text-white"
-        >
-          删除
-        </button>
-      )}
+      <ConfirmButton
+        onConfirm={async () => deletePurchaseAction(purchaseId)}
+        confirmLabel="确认删除（不可恢复）"
+        className="border border-red-700 bg-white px-3 py-2 text-[10px] uppercase tracking-wider text-red-700 f-mono hover:bg-red-700 hover:text-white"
+        confirmClassName="bg-red-700 px-3 py-2 text-[10px] uppercase tracking-wider text-white f-mono hover:bg-red-800"
+        cancelClassName={btnCls}
+      />
     </div>
   );
 }

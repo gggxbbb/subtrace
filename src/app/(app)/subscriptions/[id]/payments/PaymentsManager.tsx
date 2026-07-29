@@ -128,9 +128,7 @@ export function PaymentsManager({
               canEdit={canEdit}
               onEdit={() => setEditingId(p.id)}
               onDelete={async () => {
-                if (confirm("删除这笔付费记录？锚点将回退重算。")) {
-                  await deletePaymentAction(subscriptionId, p.id, back);
-                }
+                await deletePaymentAction(subscriptionId, p.id, back);
               }}
             />
           ),
