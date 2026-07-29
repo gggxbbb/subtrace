@@ -25,12 +25,14 @@ export function ViewSwitcher({
 }) {
   const [view, setView] = useState<ViewKind>(desktopDefault);
 
+  // SSR/首帧渲染 desktopDefault 避免水合不匹配；挂载后同步本地存储与移动端默认。
   useEffect(() => {
+    const apply = (v: ViewKind) => { if (v !== desktopDefault) setView(v); };
     const stored = localStorage.getItem(storageKey);
     if (stored === "list" || stored === "card") {
-      if (stored !== desktopDefault) setView(stored);
+      apply(stored);
     } else if (window.matchMedia("(max-width: 767px)").matches && desktopDefault !== "card") {
-      setView("card");
+      apply("card");
     }
   }, [storageKey, desktopDefault]);
 

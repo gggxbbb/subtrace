@@ -39,6 +39,10 @@ export default async function EditBundlePage({ params }: { params: Promise<{ id:
     periodTouched: true,
   }));
 
+  const now = new Date();
+  const todayStr = iso(now);
+  const nextYearStr = iso(new Date(now.getTime() + 365 * 86_400_000));
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 md:px-6">
       <div className="mb-1 text-[9px] uppercase tracking-[0.25em] text-neutral-500 f-mono">
@@ -53,6 +57,8 @@ export default async function EditBundlePage({ params }: { params: Promise<{ id:
         <BundleWizard
           existingSubs={existingSubs}
           currency={user.baseCurrency}
+          today={todayStr}
+          nextYear={nextYearStr}
           initial={{
             name: bundle.name,
             totalAmount: bundle.totalAmount.toString(),

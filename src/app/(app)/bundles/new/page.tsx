@@ -30,7 +30,12 @@ export default async function NewBundlePage() {
       </div>
       <h1 className="mb-5 text-xl font-bold uppercase tracking-tight">新建联合会员</h1>
       <Suspense>
-        <BundleWizard existingSubs={existingSubs} currency={user.baseCurrency} />
+        <BundleWizard
+          existingSubs={existingSubs}
+          currency={user.baseCurrency}
+          today={isoDay(today)}
+          nextYear={isoDay(new Date(today.getTime() + 365 * 86_400_000))}
+        />
       </Suspense>
     </div>
   );

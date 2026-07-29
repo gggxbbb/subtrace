@@ -50,6 +50,8 @@ export function BundleWizard({
   action,
   submitLabel = "创建联合会员 →",
   currency,
+  today,
+  nextYear,
 }: {
   existingSubs: { id: string; name: string; expiry: string | null }[];
   /** 编辑模式：预填数据（子会员全部按「关联已有」呈现） */
@@ -58,10 +60,11 @@ export function BundleWizard({
   action?: (formData: FormData) => Promise<void>;
   submitLabel?: string;
   currency: string;
+  /** 北京日历日（server 计算传入；编辑模式被 initial 覆盖） */
+  today: string;
+  nextYear: string;
 }) {
   const error = useSearchParams().get("error");
-  const today = isoDay(new Date());
-  const nextYear = isoDay(new Date(Date.now() + 365 * 86_400_000));
   const [items, setItems] = useState<Item[]>(initial?.items ?? [newItem(today, nextYear)]);
   const [total, setTotal] = useState(initial?.totalAmount ?? "");
 

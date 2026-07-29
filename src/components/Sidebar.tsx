@@ -4,7 +4,7 @@
 // NAV 数据与分组渲染为单一来源，两端共用，权限门控（admin/trusted）一致。
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeftRight,
@@ -157,8 +157,12 @@ export function MobileNav({ username, role, canUseScripts }: { username: string;
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  // 路由变化自动收起抽屉
-  useEffect(() => setOpen(false), [pathname]);
+  // 路由变化自动收起抽屉（渲染期间调整状态，替代 effect 内 setState）
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
+    setOpen(false);
+  }
 
   return (
     <>

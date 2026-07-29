@@ -4,9 +4,13 @@
 
 **Blocked by:** None
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] BundleWizard 不再在渲染期调 new Date()
-- [ ] Sidebar/ViewSwitcher 无 effect 内同步 setState
-- [ ] `pnpm lint` 3 个存量 error 消除（总 error 归零）
-- [ ] 抽屉路由变化仍自动收起；视图切换持久化行为不变
+- [x] BundleWizard 不再在渲染期调 new Date()
+- [x] Sidebar/ViewSwitcher 无 effect 内同步 setState
+- [x] `pnpm lint` 3 个存量 error 消除（总 error 归零）
+- [x] 抽屉路由变化仍自动收起；视图切换持久化行为不变
+
+## Answer
+
+三处修复：①BundleWizard 渲染期 new Date() → today/nextYear 改由两个 server 父页计算传入（edit 页的 Date.now() 同规则触发，一并提升为渲染前常量；顺带客户端时区 edge 消除）。②Sidebar 抽屉收起改「渲染期间调整状态」（prevPathname guard），删除 effect 与未用 import。③ViewSwitcher 重构为 apply 闭包（SSR 首帧仍 desktopDefault 保水合一致，挂载后同步 localStorage/媒体查询），规则不再触发且无需 eslint-disable。lint error 3 → 0（存量 6 warning 不变），194 测试全绿；冒烟 bundles/new 日期默认 2026-07-29 → 2027-07-29 正确。
