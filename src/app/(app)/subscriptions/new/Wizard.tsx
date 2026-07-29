@@ -9,6 +9,7 @@ import { useRef, useState } from "react";
 import { isoDay } from "@/lib/dates";
 import { useSearchParams } from "next/navigation";
 import { MoneyFields } from "@/components/MoneyFields";
+import { StepBar, useStepWizard } from "@/components/StepWizard";
 import { createSubscriptionAction } from "@/lib/subscriptions/actions";
 import { inputCls, labelCls, ErrorBanner } from "@/components/te";
 
@@ -17,8 +18,6 @@ const CYCLE_UNIT_LABEL: Record<string, string> = { DAY: "日", WEEK: "周", MONT
 
 export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }) {
   const formRef = useRef<HTMLFormElement>(null);
-  const [step, setStep] = useState(0);
-  const [stepError, setStepError] = useState<string | null>(null);
   const [mode, setMode] = useState<"CYCLE" | "MANUAL">("CYCLE");
   const [cycleKind, setCycleKind] = useState<"CALENDAR" | "FIXED_DAYS">("CALENDAR");
   const [summary, setSummary] = useState<[string, string][]>([]);
@@ -32,22 +31,18 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
     return el && "value" in el ? String(el.value) : "";
   };
 
-  /** 进入下一步前的逐步校验；进入确认步时采集摘要 */
-  const next = () => {
-    if (step === 0 && !field("name").trim()) {
-      setStepError("名称必填");
-      return;
-    }
-    if (step === 1 && mode === "CYCLE") {
-      const cycleOk =
-        cycleKind === "CALENDAR" ? Number(field("cycleCount")) >= 1 : Number(field("fixedDays")) >= 1;
-      if (!cycleOk || !field("listPrice").trim()) {
-        setStepError("周期模式需要完整周期与标准价");
-        return;
+  const { step, stepError, next, back } = useStepWizard({
+    validate: (s) => {
+      if (s === 0 && !field("name").trim()) return "名称必填";
+      if (s === 1 && mode === "CYCLE") {
+        const cycleOk =
+          cycleKind === "CALENDAR" ? Number(field("cycleCount")) >= 1 : Number(field("fixedDays")) >= 1;
+        if (!cycleOk || !field("listPrice").trim()) return "周期模式需要完整周期与标准价";
       }
-    }
-    setStepError(null);
-    if (step === 2) {
+      return null;
+    },
+    onAdvance: (s) => {
+      if (s !== 2) return;
       const rows: [string, string][] = [
         ["名称", field("name")],
         ["分类", field("category") || "—"],
@@ -73,14 +68,8 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
       }
       rows.push(["提醒天数", field("remindDays") || "不提醒"]);
       setSummary(rows);
-    }
-    setStep(step + 1);
-  };
-
-  const back = () => {
-    setStepError(null);
-    setStep(step - 1);
-  };
+    },
+  });
 
   return (
     <div className="mx-auto max-w-xl px-4 py-8 md:px-6">
@@ -91,19 +80,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
       <ErrorBanner error={error} defaultMessage="创建失败：请检查必填项（周期模式需要完整周期与标准价）" className="mb-4" />
 
       <div className="border border-black bg-white">
-        {/* 步骤条（同用量跟踪向导） */}
-        <div className="flex border-b border-black">
-          {steps.map((s, i) => (
-            <div
-              key={s}
-              className={`flex flex-1 items-center justify-center gap-1.5 px-2 py-2 text-[10px] uppercase tracking-wider f-mono ${
-                i === step ? "bg-black text-white" : i < step ? "bg-[#E4E3E0]" : "bg-white text-neutral-400"
-              }`}
-            >
-              <span>{i + 1}</span> {s}
-            </div>
-          ))}
-        </div>
+        <StepBar steps={steps} step={step} />
 
         <form ref={formRef} action={createSubscriptionAction}>
           <input type="hidden" name="trackingMode" value={mode} />

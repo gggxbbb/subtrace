@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Led, inputCls, labelCls } from "@/components/te";
+import { StepBar } from "@/components/StepWizard";
 import { fmtMoney } from "@/lib/format";
 import { setUsageConfigAction, disableUsageAction, purgeUsageAction } from "@/lib/usage/actions";
 
@@ -125,19 +126,7 @@ export function UsageWizard({
 
   return (
     <div className="border border-black bg-white">
-      {/* 步骤条 */}
-      <div className="flex border-b border-black">
-        {steps.map((s, i) => (
-          <div
-            key={s}
-            className={`flex flex-1 items-center justify-center gap-1.5 px-2 py-2 text-[10px] uppercase tracking-wider f-mono ${
-              i === step ? "bg-black text-white" : i < step ? "bg-[#E4E3E0]" : "bg-white text-neutral-400"
-            }`}
-          >
-            <span>{i + 1}</span> {s}
-          </div>
-        ))}
-      </div>
+      <StepBar steps={steps} step={step} />
 
       <div className="p-5">
         {step === 0 && (

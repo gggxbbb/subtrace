@@ -99,7 +99,6 @@ export async function createSubscriptionAction(formData: FormData) {
         });
       }
     }
-    redirect(`/subscriptions/${createdId}`);
   } catch (e) {
     if (e instanceof NoRateError) redirect("/subscriptions/new?error=fx");
     redirect("/subscriptions/new?error=1");
