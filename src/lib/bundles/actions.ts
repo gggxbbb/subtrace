@@ -3,12 +3,16 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "../auth/session";
+import { resolveMoney } from "../money";
 import { createBundle, deleteBundle, replaceBundle, setBundleArchived, type BundleInput, type BundleItemInput } from "./service";
 
 const parseDate = (v: FormDataEntryValue | null) => new Date(`${String(v)}T00:00:00+08:00`);
 
 /** 解析向导提交：主体字段 + 子会员 JSON */
-function parsePayload(formData: FormData): BundleInput {
+async function parsePayload(
+  user: { id: string; baseCurrency: string },
+  formData: FormData,
+): Promise<BundleInput> {
   const parsed = JSON.parse(String(formData.get("items") ?? "[]")) as {
     subscriptionId?: string;
     newName?: string;
@@ -27,11 +31,15 @@ function parsePayload(formData: FormData): BundleInput {
     periodStart: it.periodStart ? new Date(`${it.periodStart}T00:00:00+08:00`) : periodStart,
     periodEnd: it.periodEnd ? new Date(`${it.periodEnd}T00:00:00+08:00`) : periodEnd,
   }));
+  // 打包实付三件套（ADR-0010 决策树兜底，无汇率拒绝）
+  const total = await resolveMoney(formData, user, {
+    names: { amount: "totalAmount", currency: "currency", amountBase: "totalAmountBase" },
+  });
   return {
     name: String(formData.get("name") ?? ""),
-    totalAmount: Number(formData.get("totalAmount")),
-    currency: String(formData.get("currency") ?? "CNY"),
-    totalAmountBase: Number(formData.get("totalAmountBase") ?? formData.get("totalAmount")),
+    totalAmount: total.amount!,
+    currency: total.currency!,
+    totalAmountBase: total.amountBase!,
     periodStart,
     periodEnd,
     items,
@@ -42,8 +50,9 @@ export async function createBundleAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   try {
-    await createBundle(user.id, parsePayload(formData));
-  } catch {
+    await createBundle(user.id, await parsePayload(user, formData));
+  } catch (e) {
+    if (e instanceof Error && "code" in e && e.code === "fx") redirect("/bundles/new?error=fx");
     redirect("/bundles/new?error=1");
   }
   redirect("/bundles");
@@ -54,8 +63,9 @@ export async function replaceBundleAction(bundleId: string, formData: FormData) 
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   try {
-    await replaceBundle(user.id, bundleId, parsePayload(formData));
-  } catch {
+    await replaceBundle(user.id, bundleId, await parsePayload(user, formData));
+  } catch (e) {
+    if (e instanceof Error && "code" in e && e.code === "fx") redirect(`/bundles/${bundleId}/edit?error=fx`);
     redirect(`/bundles/${bundleId}/edit?error=1`);
   }
   revalidatePath("/bundles");

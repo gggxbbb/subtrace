@@ -17,6 +17,7 @@ import {
   type SubscriptionInput,
 } from "./service";
 import { advanceCycle } from "../cost-engine";
+import { NoRateError, resolveMoney } from "../money";
 
 const parseDate = (v: FormDataEntryValue | null) =>
   new Date(`${String(v)}T00:00:00+08:00`);
@@ -44,34 +45,43 @@ export async function createSubscriptionAction(formData: FormData) {
 
   const trackingMode = String(formData.get("trackingMode")) as "CYCLE" | "MANUAL";
   const cycleKind = String(formData.get("cycleKind") ?? "") || undefined;
-  const input: SubscriptionInput = {
-    name: String(formData.get("name") ?? ""),
-    category: String(formData.get("category") ?? "") || undefined,
-    trackingMode,
-    cycleKind: cycleKind as "CALENDAR" | "FIXED_DAYS" | undefined,
-    cycleUnit: (String(formData.get("cycleUnit") ?? "") || undefined) as
-      | "DAY"
-      | "WEEK"
-      | "MONTH"
-      | "YEAR"
-      | undefined,
-    cycleCount: parseNum(formData.get("cycleCount")),
-    fixedDays: parseNum(formData.get("fixedDays")),
-    listPrice: parseNum(formData.get("listPrice")),
-    listCurrency: String(formData.get("listCurrency") ?? "") || undefined,
-    listPriceBase: parseNum(formData.get("listPriceBase")),
-    autoRenew: formData.get("autoRenew") !== null,
-    remindDays: parseRemindDaysField(formData.get("remindDays")),
-    startDate: parseDate(formData.get("startDate")),
-  };
-  if (!input.name.trim()) redirect("/subscriptions/new?error=1");
-  let createdId: string;
   try {
+    // 标准价三件套仅周期模式渲染（ADR-0010 决策树兜底）
+    const list =
+      trackingMode === "CYCLE"
+        ? await resolveMoney(formData, user, {
+            names: { amount: "listPrice", currency: "listCurrency", amountBase: "listPriceBase" },
+          })
+        : null;
+    const input: SubscriptionInput = {
+      name: String(formData.get("name") ?? ""),
+      category: String(formData.get("category") ?? "") || undefined,
+      trackingMode,
+      cycleKind: cycleKind as "CALENDAR" | "FIXED_DAYS" | undefined,
+      cycleUnit: (String(formData.get("cycleUnit") ?? "") || undefined) as
+        | "DAY"
+        | "WEEK"
+        | "MONTH"
+        | "YEAR"
+        | undefined,
+      cycleCount: parseNum(formData.get("cycleCount")),
+      fixedDays: parseNum(formData.get("fixedDays")),
+      listPrice: list?.amount ?? undefined,
+      listCurrency: list?.currency ?? undefined,
+      listPriceBase: list?.amountBase ?? undefined,
+      autoRenew: formData.get("autoRenew") !== null,
+      remindDays: parseRemindDaysField(formData.get("remindDays")),
+      startDate: parseDate(formData.get("startDate")),
+    };
+    if (!input.name.trim()) redirect("/subscriptions/new?error=1");
     const created = await createSubscription(user.id, input);
-    createdId = created.id;
+    const createdId = created.id;
     // 同时记一笔付费（推荐路径）：到期日与成本立即以实付为准
     if (formData.get("firstPayment") !== null) {
-      const amount = parseNum(formData.get("firstAmount")) ?? input.listPriceBase ?? input.listPrice;
+      const first = await resolveMoney(formData, user, { prefix: "first", allowUnknown: true });
+      // 实付留空 = 同标准价：用标准价三元组（快照口径一致）
+      const amount = first.amount ?? list?.amount ?? null;
+      const amountBase = first.amountBase ?? list?.amountBase ?? null;
       const periodStart = formData.get("firstPeriodStart")
         ? parseDate(formData.get("firstPeriodStart"))
         : input.startDate;
@@ -85,8 +95,8 @@ export async function createSubscriptionAction(formData: FormData) {
       if (amount != null && periodEnd) {
         await recordPayment(user.id, createdId, {
           amount,
-          currency: input.listCurrency ?? "CNY",
-          amountBase: amount,
+          currency: first.currency ?? list?.currency ?? null,
+          amountBase,
           paidAt: formData.get("firstPaidAt") ? parseDate(formData.get("firstPaidAt")) : input.startDate,
           periodStart,
           periodEnd,
@@ -94,33 +104,33 @@ export async function createSubscriptionAction(formData: FormData) {
         });
       }
     }
+    redirect(`/subscriptions/${createdId}`);
   } catch (e) {
     if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
+    if (e instanceof NoRateError) redirect("/subscriptions/new?error=fx");
     redirect("/subscriptions/new?error=1");
   }
-  redirect(`/subscriptions/${createdId}`);
 }
 
 export async function recordPaymentAction(subscriptionId: string, formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  // 金额留空 = 金额未知（ticket 12）：只记服务区间，成本不计
-  const amount = parseNum(formData.get("amount")) ?? null;
-  const input: PaymentInput = {
-    amount,
-    currency: amount === null ? null : String(formData.get("currency") ?? "") || null,
-    amountBase: parseNum(formData.get("amountBase")) ?? amount,
-    refundedBase: parseNum(formData.get("refundedBase")) ?? 0,
-    paidAt: parseDate(formData.get("paidAt")),
-    periodStart: parseDate(formData.get("periodStart")),
-    periodEnd: parseDate(formData.get("periodEnd")),
-    source: String(formData.get("source") ?? "MANUAL") as PaymentInput["source"],
-    note: String(formData.get("note") ?? "") || undefined,
-  };
   try {
+    // 金额留空 = 金额未知（ticket 12）：只记服务区间，成本不计
+    const money = await resolveMoney(formData, user, { allowUnknown: true });
+    const input: PaymentInput = {
+      ...money,
+      refundedBase: parseNum(formData.get("refundedBase")) ?? 0,
+      paidAt: parseDate(formData.get("paidAt")),
+      periodStart: parseDate(formData.get("periodStart")),
+      periodEnd: parseDate(formData.get("periodEnd")),
+      source: String(formData.get("source") ?? "MANUAL") as PaymentInput["source"],
+      note: String(formData.get("note") ?? "") || undefined,
+    };
     await recordPayment(user.id, subscriptionId, input);
-  } catch {
+  } catch (e) {
+    if (e instanceof NoRateError) redirect(`/subscriptions/${subscriptionId}?error=fx`);
     redirect(`/subscriptions/${subscriptionId}?error=1`);
   }
   revalidatePath(`/subscriptions/${subscriptionId}`);
@@ -142,12 +152,10 @@ export async function setStatusAction(
   redirect("/subscriptions");
 }
 
-const paymentInputFrom = (formData: FormData): PaymentInput => {
-  const amount = parseNum(formData.get("amount")) ?? null;
+const paymentInputFrom = async (user: { id: string; baseCurrency: string }, formData: FormData): Promise<PaymentInput> => {
+  const money = await resolveMoney(formData, user, { allowUnknown: true });
   return {
-    amount,
-    currency: amount === null ? null : String(formData.get("currency") ?? "") || null,
-    amountBase: parseNum(formData.get("amountBase")) ?? amount,
+    ...money,
     refundedBase: parseNum(formData.get("refundedBase")) ?? 0,
     paidAt: parseDate(formData.get("paidAt")),
     periodStart: parseDate(formData.get("periodStart")),
@@ -164,7 +172,12 @@ export async function updatePaymentAction(
 ) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  await updatePayment(user.id, paymentId, paymentInputFrom(formData));
+  try {
+    await updatePayment(user.id, paymentId, await paymentInputFrom(user, formData));
+  } catch (e) {
+    if (e instanceof NoRateError) redirect(`/subscriptions/${subscriptionId}/payments?error=fx`);
+    redirect(`/subscriptions/${subscriptionId}/payments?error=1`);
+  }
   revalidatePath(`/subscriptions/${subscriptionId}`);
   revalidatePath("/dashboard");
   const back = formData.get("back");
@@ -194,19 +207,32 @@ export async function deleteSubscriptionAction(subscriptionId: string) {
 export async function updateSubscriptionAction(subscriptionId: string, formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  await updateSubscription(user.id, subscriptionId, {
-    name: String(formData.get("name") ?? ""),
-    category: String(formData.get("category") ?? ""),
-    cycleKind: (String(formData.get("cycleKind") ?? "") || undefined) as "CALENDAR" | "FIXED_DAYS" | undefined,
-    cycleUnit: (String(formData.get("cycleUnit") ?? "") || undefined) as "DAY" | "WEEK" | "MONTH" | "YEAR" | undefined,
-    cycleCount: parseNum(formData.get("cycleCount")),
-    fixedDays: parseNum(formData.get("fixedDays")),
-    listPriceBase: parseNum(formData.get("listPriceBase")),
-    listCurrency: String(formData.get("listCurrency") ?? "") || undefined,
-    autoRenew: formData.get("autoRenew") !== null,
-    remindDays: parseRemindDaysField(formData.get("remindDays")),
-    startDate: parseDate(formData.get("startDate")),
-  });
+  try {
+    // 标准价三件套仅周期模式渲染；手动模式无字段，不解析
+    const list =
+      formData.get("listPrice") !== null
+        ? await resolveMoney(formData, user, {
+            names: { amount: "listPrice", currency: "listCurrency", amountBase: "listPriceBase" },
+          })
+        : null;
+    await updateSubscription(user.id, subscriptionId, {
+      name: String(formData.get("name") ?? ""),
+      category: String(formData.get("category") ?? ""),
+      cycleKind: (String(formData.get("cycleKind") ?? "") || undefined) as "CALENDAR" | "FIXED_DAYS" | undefined,
+      cycleUnit: (String(formData.get("cycleUnit") ?? "") || undefined) as "DAY" | "WEEK" | "MONTH" | "YEAR" | undefined,
+      cycleCount: parseNum(formData.get("cycleCount")),
+      fixedDays: parseNum(formData.get("fixedDays")),
+      listPrice: list?.amount ?? undefined,
+      listPriceBase: list?.amountBase ?? undefined,
+      listCurrency: list?.currency ?? undefined,
+      autoRenew: formData.get("autoRenew") !== null,
+      remindDays: parseRemindDaysField(formData.get("remindDays")),
+      startDate: parseDate(formData.get("startDate")),
+    });
+  } catch (e) {
+    if (e instanceof NoRateError) redirect(`/subscriptions/${subscriptionId}/edit?error=fx`);
+    redirect(`/subscriptions/${subscriptionId}/edit?error=1`);
+  }
   revalidatePath(`/subscriptions/${subscriptionId}`);
   revalidatePath("/subscriptions");
   revalidatePath("/dashboard");

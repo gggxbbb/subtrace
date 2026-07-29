@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { isoDay } from "@/lib/dates";
 import { fmtMoney } from "@/lib/format";
+import { MoneyFields } from "@/components/MoneyFields";
 import {
   addPurchaseIncomeAction,
   deletePurchaseAction,
@@ -80,10 +81,7 @@ export function PurchaseIncomePanel({
   return (
     <div className="px-4 py-4">
       <form action={addPurchaseIncomeAction.bind(null, purchaseId)} className="mb-3 flex items-end gap-2">
-        <div className="w-28">
-          <label className={labelCls}>金额</label>
-          <input name="amount" type="number" step="0.01" min="0.01" required className={inputCls} />
-        </div>
+        <MoneyFields layout="inline" defaults={{ currency: "CNY" }} />
         <div className="flex-1">
           <label className={labelCls}>日期</label>
           <input name="date" type="date" defaultValue={today} required className={`${inputCls} f-mono`} />

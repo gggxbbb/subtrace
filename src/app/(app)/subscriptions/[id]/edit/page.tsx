@@ -8,10 +8,17 @@ import { SubscriptionEditForm } from "./SubscriptionEditForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function EditSubscriptionPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditSubscriptionPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const { id } = await params;
+  const { error } = await searchParams;
   const sub = await getSubscription(user.id, id);
   if (!sub) notFound();
   if (sub.ownerId !== user.id) redirect(`/subscriptions/${id}`);
@@ -27,6 +34,13 @@ export default async function EditSubscriptionPage({ params }: { params: Promise
         </div>
       </header>
       <main className="mx-auto max-w-xl px-4 py-8 md:px-6">
+        {error && (
+          <div className="mb-4 border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
+            {error === "fx"
+              ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
+              : "保存失败：请检查必填项"}
+          </div>
+        )}
         <SubscriptionEditForm
           subscriptionId={sub.id}
           action={updateSubscriptionAction.bind(null, sub.id)}
@@ -38,6 +52,7 @@ export default async function EditSubscriptionPage({ params }: { params: Promise
             cycleUnit: (sub.cycleUnit as "DAY" | "WEEK" | "MONTH" | "YEAR" | null) ?? "MONTH",
             cycleCount: sub.cycleCount ?? 1,
             fixedDays: sub.fixedDays,
+            listPrice: sub.listPrice,
             listPriceBase: sub.listPriceBase,
             listCurrency: sub.listCurrency ?? "CNY",
             autoRenew: sub.autoRenew,

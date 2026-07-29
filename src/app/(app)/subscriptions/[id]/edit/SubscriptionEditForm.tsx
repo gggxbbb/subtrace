@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MoneyFields } from "@/components/MoneyFields";
 
 const inputCls =
   "w-full border border-black bg-[#E4E3E0] px-2 py-1.5 text-sm outline-none focus:bg-white";
@@ -15,6 +16,7 @@ export interface SubscriptionEditInitial {
   cycleUnit: "DAY" | "WEEK" | "MONTH" | "YEAR";
   cycleCount: number;
   fixedDays: number | null;
+  listPrice: number | null;
   listPriceBase: number | null;
   listCurrency: string;
   autoRenew: boolean;
@@ -88,16 +90,15 @@ export function SubscriptionEditForm({
               <input name="fixedDays" type="number" min="1" defaultValue={initial.fixedDays ?? ""} placeholder="30" required className={inputCls} />
             </div>
           )}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label className={labelCls}>标准价</label>
-              <input name="listPriceBase" type="number" step="0.01" min="0" defaultValue={initial.listPriceBase ?? ""} required className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>币种</label>
-              <input name="listCurrency" defaultValue={initial.listCurrency} className={`${inputCls} f-mono`} />
-            </div>
-          </div>
+          <MoneyFields
+            names={{ amount: "listPrice", currency: "listCurrency", amountBase: "listPriceBase" }}
+            defaults={{
+              amount: initial.listPrice,
+              currency: initial.listCurrency,
+              amountBase: initial.listPriceBase,
+            }}
+            labels={{ amount: "标准价", amountBase: "折算主币种（快照）" }}
+          />
           <label className="flex items-center gap-2 text-[12px]">
             <input type="checkbox" name="autoRenew" defaultChecked={initial.autoRenew} className="h-4 w-4 accent-black" />
             自动续费（到期自动扣款）

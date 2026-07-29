@@ -127,6 +127,7 @@ export default async function PurchaseDetailPage({
                 id: e.id,
                 kind: e.kind,
                 amount: e.amount,
+                currency: e.currency,
                 amountBase: e.amountBase,
                 date: isoDay(e.date),
                 extendDays: e.extendDays,

@@ -30,6 +30,8 @@ export function MoneyFields({
   defaults,
   labels,
   allowUnknown = false,
+  requiredAmount,
+  onAmountChange,
   layout = "grid",
 }: {
   prefix?: string;
@@ -39,6 +41,10 @@ export function MoneyFields({
   labels?: { amount?: string; currency?: string; amountBase?: string };
   /** 金额留空 = 金额未知（ticket 12） */
   allowUnknown?: boolean;
+  /** 金额必填开关；默认 !allowUnknown（首笔付费等「留空=同标准价」场景传 false） */
+  requiredAmount?: boolean;
+  /** 金额变更回显（联合会员实时分摊等需要读值的场景） */
+  onAmountChange?: (v: string) => void;
   /** grid = 三列网格；inline = 行内定宽（配合外层 flex 行） */
   layout?: "grid" | "inline";
 }) {
@@ -78,9 +84,9 @@ export function MoneyFields({
         step="0.01"
         min="0"
         value={amount}
-        onChange={(e) => setAmount(e.target.value)}
+        onChange={(e) => { setAmount(e.target.value); onAmountChange?.(e.target.value); }}
         onBlur={fill}
-        required={!allowUnknown}
+        required={requiredAmount ?? !allowUnknown}
         placeholder={unknownHint}
         className={inputCls}
       />

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { isoDay } from "@/lib/dates";
 import { fmtMoney } from "@/lib/format";
+import { MoneyFields } from "@/components/MoneyFields";
 import { EVENT_KIND_LABEL } from "@/lib/purchases/kinds";
 import {
   addPurchaseEventAction,
@@ -19,6 +21,7 @@ export interface EventRow {
   id: string;
   kind: string;
   amount: number;
+  currency: string;
   amountBase: number;
   date: string;
   extendDays: number | null;
@@ -47,10 +50,7 @@ function EventFields({ row }: { row?: EventRow }) {
           ))}
         </div>
       </div>
-      <div className="w-28">
-        <label className={labelCls}>金额</label>
-        <input name="amount" type="number" step="0.01" min="0.01" defaultValue={row?.amount} required className={inputCls} />
-      </div>
+      <MoneyFields layout="inline" defaults={{ amount: row?.amount, currency: row?.currency ?? "CNY", amountBase: row?.amountBase }} />
       <div>
         <label className={labelCls}>日期</label>
         <input name="date" type="date" defaultValue={row?.date ?? today()} required className={`${inputCls} f-mono`} />
@@ -81,9 +81,17 @@ export function PurchaseEventsPanel({
 }) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const error = useSearchParams().get("error");
 
   return (
     <div className="px-4 py-4">
+      {error && (
+        <div className="mb-3 border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
+          {error === "fx"
+            ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
+            : "保存失败：请检查日期与金额"}
+        </div>
+      )}
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[10px] uppercase text-neutral-400 f-mono">
           计入物品净额，与买入价共用同一摊销窗口

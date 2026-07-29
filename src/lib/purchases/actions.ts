@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "../auth/session";
+import { NoRateError, resolveMoney } from "../money";
 import {
   addPurchaseEvent,
   addPurchaseIncome,
@@ -29,21 +30,23 @@ const parseNum = (v: FormDataEntryValue | null) => {
 export async function createPurchaseAction(formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const amount = Number(formData.get("amount"));
-  const input: PurchaseInput = {
-    name: String(formData.get("name") ?? ""),
-    category: String(formData.get("category") ?? "") || undefined,
-    amount,
-    currency: String(formData.get("currency") ?? "CNY"),
-    amountBase: parseNum(formData.get("amountBase")) ?? amount,
-    purchaseDate: parseDate(formData.get("purchaseDate")),
-    expectedDays: parseNum(formData.get("expectedDays")),
-  };
-  if (!input.name.trim() || !Number.isFinite(amount)) redirect("/purchases/new?error=1");
   let createdId: string;
   try {
+    const money = await resolveMoney(formData, user);
+    const input: PurchaseInput = {
+      name: String(formData.get("name") ?? ""),
+      category: String(formData.get("category") ?? "") || undefined,
+      amount: money.amount!,
+      currency: money.currency!,
+      amountBase: money.amountBase!,
+      purchaseDate: parseDate(formData.get("purchaseDate")),
+      expectedDays: parseNum(formData.get("expectedDays")),
+    };
+    if (!input.name.trim()) redirect("/purchases/new?error=1");
     createdId = (await createPurchase(user.id, input)).id;
-  } catch {
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("NEXT_REDIRECT")) throw e;
+    if (e instanceof NoRateError) redirect("/purchases/new?error=fx");
     redirect("/purchases/new?error=1");
   }
   redirect(`/purchases/${createdId}`);
@@ -66,16 +69,21 @@ export async function closePurchaseAction(purchaseId: string, formData: FormData
 export async function updatePurchaseAction(purchaseId: string, formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const amount = parseNum(formData.get("amount"));
-  await updatePurchase(user.id, purchaseId, {
-    name: String(formData.get("name") ?? ""),
-    category: String(formData.get("category") ?? ""),
-    amount,
-    currency: String(formData.get("currency") ?? "CNY"),
-    amountBase: parseNum(formData.get("amountBase")) ?? amount,
-    purchaseDate: parseDate(formData.get("purchaseDate")),
-    expectedDays: parseNum(formData.get("expectedDays")),
-  });
+  try {
+    const money = await resolveMoney(formData, user);
+    await updatePurchase(user.id, purchaseId, {
+      name: String(formData.get("name") ?? ""),
+      category: String(formData.get("category") ?? ""),
+      amount: money.amount!,
+      currency: money.currency ?? "CNY",
+      amountBase: money.amountBase!,
+      purchaseDate: parseDate(formData.get("purchaseDate")),
+      expectedDays: parseNum(formData.get("expectedDays")),
+    });
+  } catch (e) {
+    if (e instanceof NoRateError) redirect(`/purchases/${purchaseId}/edit?error=fx`);
+    redirect(`/purchases/${purchaseId}/edit?error=1`);
+  }
   revalidatePath(`/purchases/${purchaseId}`);
   revalidatePath("/purchases");
   redirect(`/purchases/${purchaseId}`);
@@ -84,17 +92,22 @@ export async function updatePurchaseAction(purchaseId: string, formData: FormDat
 export async function addPurchaseIncomeAction(purchaseId: string, formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const amount = Number(formData.get("amount"));
-  if (!Number.isFinite(amount) || amount <= 0) redirect(`/purchases/${purchaseId}`);
-  await addPurchaseIncome(user.id, purchaseId, {
-    amount,
-    currency: String(formData.get("currency") ?? "CNY"),
-    amountBase: parseNum(formData.get("amountBase")) ?? amount,
-    date: parseDate(formData.get("date")),
-    note: String(formData.get("note") ?? "") || undefined,
-  });
-  revalidatePath(`/purchases/${purchaseId}`);
   const back = formData.get("back");
+  const sep = back ? "&" : "";
+  try {
+    const money = await resolveMoney(formData, user);
+    await addPurchaseIncome(user.id, purchaseId, {
+      amount: money.amount!,
+      currency: money.currency!,
+      amountBase: money.amountBase!,
+      date: parseDate(formData.get("date")),
+      note: String(formData.get("note") ?? "") || undefined,
+    });
+  } catch (e) {
+    if (e instanceof NoRateError) redirect(`/purchases/${purchaseId}/incomes?error=fx${sep}${back ?? ""}`);
+    redirect(`/purchases/${purchaseId}/incomes?error=1${sep}${back ?? ""}`);
+  }
+  revalidatePath(`/purchases/${purchaseId}`);
   redirect(back ? `/purchases/${purchaseId}/incomes?${back}` : `/purchases/${purchaseId}`);
 }
 
@@ -127,13 +140,19 @@ export async function deletePurchaseAction(purchaseId: string) {
 export async function updatePurchaseIncomeAction(purchaseId: string, incomeId: string, formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const amount = Number(formData.get("amount"));
-  await updatePurchaseIncome(user.id, incomeId, {
-    amount,
-    amountBase: parseNum(formData.get("amountBase")) ?? amount,
-    date: parseDate(formData.get("date")),
-    note: String(formData.get("note") ?? "") || null,
-  });
+  try {
+    const money = await resolveMoney(formData, user);
+    await updatePurchaseIncome(user.id, incomeId, {
+      amount: money.amount!,
+      currency: money.currency!,
+      amountBase: money.amountBase!,
+      date: parseDate(formData.get("date")),
+      note: String(formData.get("note") ?? "") || null,
+    });
+  } catch (e) {
+    if (e instanceof NoRateError) redirect(`/purchases/${purchaseId}/incomes?error=fx`);
+    redirect(`/purchases/${purchaseId}/incomes?error=1`);
+  }
   revalidatePath(`/purchases/${purchaseId}`);
   redirect(`/purchases/${purchaseId}/incomes?${formData.get("back") ?? ""}`);
 }
@@ -141,17 +160,21 @@ export async function updatePurchaseIncomeAction(purchaseId: string, incomeId: s
 export async function addPurchaseEventAction(purchaseId: string, formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const amount = Number(formData.get("amount"));
-  if (!Number.isFinite(amount) || amount <= 0) redirect(`/purchases/${purchaseId}`);
-  await addPurchaseEvent(user.id, purchaseId, {
-    kind: String(formData.get("kind") ?? "OTHER") as "ACCESSORY" | "REPAIR" | "OTHER",
-    amount,
-    currency: String(formData.get("currency") ?? "CNY"),
-    amountBase: parseNum(formData.get("amountBase")) ?? amount,
-    date: parseDate(formData.get("date")),
-    extendDays: parseNum(formData.get("extendDays")),
-    note: String(formData.get("note") ?? "") || undefined,
-  });
+  try {
+    const money = await resolveMoney(formData, user);
+    await addPurchaseEvent(user.id, purchaseId, {
+      kind: String(formData.get("kind") ?? "OTHER") as "ACCESSORY" | "REPAIR" | "OTHER",
+      amount: money.amount!,
+      currency: money.currency!,
+      amountBase: money.amountBase!,
+      date: parseDate(formData.get("date")),
+      extendDays: parseNum(formData.get("extendDays")),
+      note: String(formData.get("note") ?? "") || undefined,
+    });
+  } catch (e) {
+    if (e instanceof NoRateError) redirect(`/purchases/${purchaseId}?error=fx`);
+    redirect(`/purchases/${purchaseId}?error=1`);
+  }
   revalidatePath(`/purchases/${purchaseId}`);
   revalidatePath("/purchases");
   revalidatePath("/dashboard");
@@ -161,16 +184,20 @@ export async function addPurchaseEventAction(purchaseId: string, formData: FormD
 export async function updatePurchaseEventAction(purchaseId: string, eventId: string, formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const amount = Number(formData.get("amount"));
-  if (!Number.isFinite(amount) || amount <= 0) redirect(`/purchases/${purchaseId}`);
-  await updatePurchaseEvent(user.id, eventId, {
-    kind: String(formData.get("kind") ?? "OTHER") as "ACCESSORY" | "REPAIR" | "OTHER",
-    amount,
-    amountBase: parseNum(formData.get("amountBase")) ?? amount,
-    date: parseDate(formData.get("date")),
-    extendDays: parseNum(formData.get("extendDays")) ?? null,
-    note: String(formData.get("note") ?? "") || null,
-  });
+  try {
+    const money = await resolveMoney(formData, user);
+    await updatePurchaseEvent(user.id, eventId, {
+      kind: String(formData.get("kind") ?? "OTHER") as "ACCESSORY" | "REPAIR" | "OTHER",
+      amount: money.amount!,
+      amountBase: money.amountBase!,
+      date: parseDate(formData.get("date")),
+      extendDays: parseNum(formData.get("extendDays")) ?? null,
+      note: String(formData.get("note") ?? "") || null,
+    });
+  } catch (e) {
+    if (e instanceof NoRateError) redirect(`/purchases/${purchaseId}?error=fx`);
+    redirect(`/purchases/${purchaseId}?error=1`);
+  }
   revalidatePath(`/purchases/${purchaseId}`);
   revalidatePath("/purchases");
   revalidatePath("/dashboard");

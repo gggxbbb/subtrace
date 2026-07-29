@@ -8,6 +8,7 @@
 import { useRef, useState } from "react";
 import { isoDay } from "@/lib/dates";
 import { useSearchParams } from "next/navigation";
+import { MoneyFields } from "@/components/MoneyFields";
 import { createSubscriptionAction } from "@/lib/subscriptions/actions";
 
 const inputCls =
@@ -43,7 +44,7 @@ export default function NewSubscriptionPage() {
     if (step === 1 && mode === "CYCLE") {
       const cycleOk =
         cycleKind === "CALENDAR" ? Number(field("cycleCount")) >= 1 : Number(field("fixedDays")) >= 1;
-      if (!cycleOk || !field("listPriceBase").trim()) {
+      if (!cycleOk || !field("listPrice").trim()) {
         setStepError("周期模式需要完整周期与标准价");
         return;
       }
@@ -63,7 +64,7 @@ export default function NewSubscriptionPage() {
             ? `每 ${field("cycleCount") || "1"} ${CYCLE_UNIT_LABEL[field("cycleUnit")] ?? field("cycleUnit")}`
             : `每 ${field("fixedDays")} 天`,
         ]);
-        rows.push(["标准价", `${field("listPriceBase")} ${field("listCurrency") || "CNY"}`]);
+        rows.push(["标准价", `${field("listPrice")} ${field("listCurrency") || "CNY"}`]);
         rows.push(["自动续费", formRef.current?.elements.namedItem("autoRenew") && (formRef.current.elements.namedItem("autoRenew") as HTMLInputElement).checked ? "是" : "否"]);
         const firstOn = (formRef.current?.elements.namedItem("firstPayment") as HTMLInputElement | null)?.checked;
         rows.push([
@@ -92,7 +93,9 @@ export default function NewSubscriptionPage() {
       <h1 className="mb-5 text-xl font-bold uppercase tracking-tight">新建订阅</h1>
       {error && (
         <div className="mb-4 border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
-          创建失败：请检查必填项（周期模式需要完整周期与标准价）
+          {error === "fx"
+            ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
+            : "创建失败：请检查必填项（周期模式需要完整周期与标准价）"}
         </div>
       )}
 
@@ -198,17 +201,11 @@ export default function NewSubscriptionPage() {
                     <input name="fixedDays" type="number" min="1" placeholder="30" required className={inputCls} />
                   </div>
                 )}
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                    <label className={labelCls}>标准价</label>
-                    <input name="listPriceBase" type="number" step="0.01" min="0" placeholder="25.00" required className={inputCls} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>币种</label>
-                    <input name="listCurrency" defaultValue="CNY" className={`${inputCls} f-mono`} />
-                  </div>
-                </div>
-                <input type="hidden" name="listPrice" value="" />
+                <MoneyFields
+                  names={{ amount: "listPrice", currency: "listCurrency", amountBase: "listPriceBase" }}
+                  defaults={{ currency: "CNY" }}
+                  labels={{ amount: "标准价", amountBase: "折算主币种（快照）" }}
+                />
                 <label className="flex items-center gap-2 text-[12px]">
                   <input type="checkbox" name="autoRenew" defaultChecked className="h-4 w-4 accent-black" />
                   自动续费（到期自动扣款）
@@ -233,33 +230,36 @@ export default function NewSubscriptionPage() {
                     <span className="ml-1 text-[10px] text-neutral-500">推荐：到期日与成本立刻以实付为准，不再靠推算</span>
                   </span>
                 </label>
-                <div className="grid grid-cols-2 gap-3 p-3">
-                  <div>
-                    <label className={labelCls}>实付金额</label>
-                    <input name="firstAmount" type="number" step="0.01" min="0" placeholder="同标准价" className={inputCls} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>来源</label>
-                    <select name="firstSource" defaultValue="AUTO" className={inputCls}>
-                      <option value="AUTO">自动扣费</option>
-                      <option value="MANUAL">手动续费</option>
-                      <option value="PROMO">活动价</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelCls}>支付日期</label>
-                    <input name="firstPaidAt" type="date" defaultValue={today} className={`${inputCls} f-mono`} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>服务起</label>
-                    <input name="firstPeriodStart" type="date" defaultValue={today} className={`${inputCls} f-mono`} />
-                  </div>
-                  <div className="col-span-2">
-                    <label className={labelCls}>服务止（到期日）</label>
-                    <input name="firstPeriodEnd" type="date" className={`${inputCls} f-mono`} />
-                    <p className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
-                      留空 = 服务起 + 一个周期
-                    </p>
+                <div className="space-y-3 p-3">
+                  <MoneyFields
+                    prefix="first"
+                    requiredAmount={false}
+                    labels={{ amount: "实付金额（留空 = 同标准价）" }}
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>来源</label>
+                      <select name="firstSource" defaultValue="AUTO" className={inputCls}>
+                        <option value="AUTO">自动扣费</option>
+                        <option value="MANUAL">手动续费</option>
+                        <option value="PROMO">活动价</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>支付日期</label>
+                      <input name="firstPaidAt" type="date" defaultValue={today} className={`${inputCls} f-mono`} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>服务起</label>
+                      <input name="firstPeriodStart" type="date" defaultValue={today} className={`${inputCls} f-mono`} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>服务止（到期日）</label>
+                      <input name="firstPeriodEnd" type="date" className={`${inputCls} f-mono`} />
+                      <p className="mt-1 text-[9px] uppercase text-neutral-400 f-mono">
+                        留空 = 服务起 + 一个周期
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -12,10 +12,17 @@ const inputCls =
 const labelCls =
   "mb-1 block text-[10px] uppercase tracking-[0.15em] text-neutral-500 f-mono";
 
-export default async function EditPurchasePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditPurchasePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const { id } = await params;
+  const { error } = await searchParams;
   const purchase = await getPurchase(user.id, id);
   if (!purchase) notFound();
 
@@ -30,6 +37,13 @@ export default async function EditPurchasePage({ params }: { params: Promise<{ i
         </div>
       </header>
       <main className="mx-auto max-w-xl px-4 py-8 md:px-6">
+        {error && (
+          <div className="mb-4 border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
+            {error === "fx"
+              ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
+              : "保存失败：请检查必填项"}
+          </div>
+        )}
         <form action={updatePurchaseAction.bind(null, purchase.id)} className="space-y-4 border border-black bg-white p-5">
         <MoneyFields
           defaults={{

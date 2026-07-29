@@ -45,7 +45,9 @@ export function PaymentForm({
     <form action={action} className="space-y-4 px-4 py-4">
       {error && (
         <div className="border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
-          记录失败：请检查日期与金额
+          {error === "fx"
+            ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
+            : "记录失败：请检查日期与金额"}
         </div>
       )}
       <MoneyFields

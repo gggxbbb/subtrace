@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { isoDay } from "@/lib/dates";
 import { fmtMoney } from "@/lib/format";
+import { MoneyFields } from "@/components/MoneyFields";
 import {
   addPurchaseIncomeAction,
   deletePurchaseIncomeAction,
@@ -42,10 +44,18 @@ export function IncomesManager({
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const error = useSearchParams().get("error");
   const backInput = <input type="hidden" name="back" value={back} />;
 
   return (
     <>
+      {error && (
+        <div className="mb-3 border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
+          {error === "fx"
+            ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
+            : "保存失败：请检查日期与金额"}
+        </div>
+      )}
       <form method="GET" className="flex items-end gap-2 border border-black bg-white p-3">
         <div className="flex-1">
           <label className={labelCls}>来源包含</label>
@@ -73,10 +83,7 @@ export function IncomesManager({
       {adding && (
         <form action={addPurchaseIncomeAction.bind(null, purchaseId)} className="flex items-end gap-2 border border-black bg-white p-3">
           {backInput}
-          <div className="w-28">
-            <label className={labelCls}>金额</label>
-            <input name="amount" type="number" step="0.01" min="0.01" required className={inputCls} />
-          </div>
+          <MoneyFields layout="inline" defaults={{ currency: "CNY" }} />
           <div>
             <label className={labelCls}>日期</label>
             <input name="date" type="date" defaultValue={today()} required className={`${inputCls} f-mono`} />
@@ -106,10 +113,7 @@ export function IncomesManager({
           editingId === r.id ? (
             <form key={r.id} action={updatePurchaseIncomeAction.bind(null, purchaseId, r.id)} className="flex items-end gap-2 border-b border-black bg-[#E4E3E0] px-4 py-3">
               {backInput}
-              <div className="w-28">
-                <label className={labelCls}>金额</label>
-                <input name="amount" type="number" step="0.01" min="0.01" defaultValue={r.amount} required className={inputCls} />
-              </div>
+              <MoneyFields layout="inline" defaults={{ amount: r.amount, currency: r.currency, amountBase: r.amountBase }} />
               <div>
                 <label className={labelCls}>日期</label>
                 <input name="date" type="date" defaultValue={r.date} required className={`${inputCls} f-mono`} />

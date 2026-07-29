@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { isoDay } from "@/lib/dates";
 import { MoneyFields } from "@/components/MoneyFields";
 import { fmtMoney } from "@/lib/format";
@@ -109,10 +110,18 @@ export function PaymentsManager({
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const error = useSearchParams().get("error");
   const backInput = <input type="hidden" name="back" value={back} />;
 
   return (
     <>
+      {error && (
+        <div className="mb-3 border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
+          {error === "fx"
+            ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
+            : "保存失败：请检查日期与金额"}
+        </div>
+      )}
       {/* 筛选：GET 表单，query 可分享 */}
       <form method="GET" className="flex items-end gap-2 border border-black bg-white p-3">
         <div className="flex-1">

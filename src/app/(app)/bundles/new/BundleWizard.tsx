@@ -5,6 +5,7 @@ import { isoDay } from "@/lib/dates";
 import { useSearchParams } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { fmtMoney } from "@/lib/format";
+import { MoneyFields } from "@/components/MoneyFields";
 import { createBundleAction } from "@/lib/bundles/actions";
 
 const inputCls =
@@ -115,7 +116,9 @@ export function BundleWizard({
     <form action={action ?? createBundleAction} className="space-y-4 border border-black bg-white p-5">
       {error && (
         <div className="border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
-          创建失败：请检查打包信息与子会员
+          {error === "fx"
+            ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
+            : "创建失败：请检查打包信息与子会员"}
         </div>
       )}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -124,20 +127,12 @@ export function BundleWizard({
           <input name="name" required defaultValue={initial?.name} placeholder="88VIP 联名" className={inputCls} />
         </div>
         <div>
-          <label className={labelCls}>打包实付</label>
-          <div className="flex gap-2">
-            <input
-              name="totalAmount"
-              type="number"
-              step="0.01"
-              min="0"
-              required
-              value={total}
-              onChange={(e) => setTotal(e.target.value)}
-              className={inputCls}
-            />
-            <input name="currency" defaultValue={initial?.currency ?? "CNY"} className={`${inputCls} w-20 f-mono`} />
-          </div>
+          <MoneyFields
+            names={{ amount: "totalAmount", currency: "currency", amountBase: "totalAmountBase" }}
+            defaults={{ amount: initial?.totalAmount ? Number(initial.totalAmount) : null, currency: initial?.currency ?? "CNY" }}
+            labels={{ amount: "打包实付", amountBase: "折算主币种" }}
+            onAmountChange={setTotal}
+          />
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

@@ -22,7 +22,9 @@ export default function NewPurchasePage() {
       <h1 className="mb-5 text-xl font-bold uppercase tracking-tight">登记物品</h1>
       {error && (
         <div className="mb-4 border border-black bg-[#FF5A00] px-3 py-2 text-[11px] uppercase text-white f-mono">
-          登记失败：请检查必填项
+          {error === "fx"
+            ? "币种无汇率：请先在设置→汇率添加币对，或手填折算金额"
+            : "登记失败：请检查必填项"}
         </div>
       )}
       <form action={createPurchaseAction} className="space-y-4 border border-black bg-white p-5">
