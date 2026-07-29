@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { isoDay } from "@/lib/dates";
 import { fmtMoney } from "@/lib/format";
-import { MoneyFields } from "@/components/MoneyFields";
+import { IncomeFormFields } from "../income-fields";
 import { inputCls, labelCls, ErrorBanner } from "@/components/te";
 import {
   addPurchaseIncomeAction,
@@ -22,7 +21,6 @@ export interface IncomeRow {
   note: string | null;
 }
 
-const today = () => isoDay(new Date());
 
 export function IncomesManager({
   purchaseId,
@@ -74,15 +72,7 @@ export function IncomesManager({
       {adding && (
         <form action={addPurchaseIncomeAction.bind(null, purchaseId)} className="flex items-end gap-2 border border-black bg-white p-3">
           {backInput}
-          <MoneyFields layout="inline" defaults={{ currency }} />
-          <div>
-            <label className={labelCls}>日期</label>
-            <input name="date" type="date" defaultValue={today()} required className={`${inputCls} f-mono`} />
-          </div>
-          <div className="flex-1">
-            <label className={labelCls}>来源（可选）</label>
-            <input name="note" placeholder="出租 3 天 / 返利" className={inputCls} />
-          </div>
+          <IncomeFormFields currency={currency} noteOptional />
           <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
             保存 →
           </button>
@@ -104,15 +94,10 @@ export function IncomesManager({
           editingId === r.id ? (
             <form key={r.id} action={updatePurchaseIncomeAction.bind(null, purchaseId, r.id)} className="flex items-end gap-2 border-b border-black bg-[#E4E3E0] px-4 py-3">
               {backInput}
-              <MoneyFields layout="inline" defaults={{ amount: r.amount, currency: r.currency, amountBase: r.amountBase }} />
-              <div>
-                <label className={labelCls}>日期</label>
-                <input name="date" type="date" defaultValue={r.date} required className={`${inputCls} f-mono`} />
-              </div>
-              <div className="flex-1">
-                <label className={labelCls}>来源</label>
-                <input name="note" defaultValue={r.note ?? ""} className={inputCls} />
-              </div>
+              <IncomeFormFields
+                currency={currency}
+                defaults={{ amount: r.amount, currency: r.currency, amountBase: r.amountBase, date: r.date, note: r.note }}
+              />
               <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
                 保存
               </button>

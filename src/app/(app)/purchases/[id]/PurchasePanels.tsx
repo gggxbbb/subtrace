@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { isoDay } from "@/lib/dates";
 import { fmtMoney } from "@/lib/format";
-import { MoneyFields } from "@/components/MoneyFields";
-import { inputCls, labelCls } from "@/components/te";
+import { IncomeFormFields } from "./income-fields";
 import {
   addPurchaseIncomeAction,
   deletePurchaseAction,
@@ -74,19 +72,10 @@ export function PurchaseIncomePanel({
   incomes: IncomeRow[];
   currency: string;
 }) {
-  const today = isoDay(new Date());
   return (
     <div className="px-4 py-4">
       <form action={addPurchaseIncomeAction.bind(null, purchaseId)} className="mb-3 flex items-end gap-2">
-        <MoneyFields layout="inline" defaults={{ currency }} />
-        <div className="flex-1">
-          <label className={labelCls}>日期</label>
-          <input name="date" type="date" defaultValue={today} required className={`${inputCls} f-mono`} />
-        </div>
-        <div className="flex-1">
-          <label className={labelCls}>来源（可选）</label>
-          <input name="note" placeholder="出租 3 天 / 返利" className={inputCls} />
-        </div>
+        <IncomeFormFields currency={currency} dateFlex noteOptional />
         <button className="bg-black px-3 py-1.5 text-[11px] font-semibold uppercase text-white hover:bg-neutral-800">
           记一笔 →
         </button>

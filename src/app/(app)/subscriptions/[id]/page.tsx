@@ -18,7 +18,8 @@ import {
 } from "@/lib/beneficiaries/service";
 import { getUsageVerdict, listUsage } from "@/lib/usage/service";
 import { PaymentForm } from "./PaymentForm";
-import { PaymentHistory, type HistoryPayment } from "./PaymentHistory";
+import { PaymentHistory } from "./PaymentHistory";
+import type { PaymentRow } from "./payment-rows";
 import { BeneficiariesPanel, type BeneficiaryRow } from "./BeneficiariesPanel";
 import {
   UsageEntryPanel,
@@ -291,7 +292,7 @@ export default async function SubscriptionDetailPage({
               canEdit={isOwner}
               estimatedRows={estimatedRows}
               currency={cur}
-              payments={[...sub.payments].reverse().map((p): HistoryPayment => ({
+              payments={[...sub.payments].reverse().map((p): PaymentRow => ({
                 id: p.id,
                 amount: p.amount,
                 currency: p.currency,
