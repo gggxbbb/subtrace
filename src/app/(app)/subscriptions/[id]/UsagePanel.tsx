@@ -86,11 +86,10 @@ export function UsageEntryPanel({
   const lastUsed = last?.kind === "TOTAL" ? last.quantity : 0;
   const [qTotal, setQTotal] = useState<number>(lastTotal);
   const [qUsedTo, setQUsedTo] = useState<number>(lastUsed);
-  const r1 = (n: number) => Math.round(n * 10) / 10;
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const qDelta = r2(qUsedTo - lastUsed);
-  const qUsedToPct = qTotal > 0 ? r1((qUsedTo / qTotal) * 100) : 0;
-  const qDeltaPct = qTotal > 0 ? r1((qDelta / qTotal) * 100) : 0;
+  const qUsedToPct = qTotal > 0 ? r2((qUsedTo / qTotal) * 100) : 0;
+  const qDeltaPct = qTotal > 0 ? r2((qDelta / qTotal) * 100) : 0;
 
   // 回本提示：计数型按参考单价还差多少用量回本；额度型看距用满还差多少
   const refPrice = last?.unitPrice ?? defaultUnitPrice;
@@ -102,7 +101,7 @@ export function UsageEntryPanel({
     verdict?.kind === "QUOTA"
       ? verdict.usageRate >= 1
         ? { done: true as const }
-        : { done: false as const, remainingPct: Math.round((1 - verdict.usageRate) * 100) }
+        : { done: false as const, remainingPct: r2((1 - verdict.usageRate) * 100) }
       : null;
   // 日历数据：从区间首日所在周的周一开始，到区间末日止
   const calDays: { day: number; inPeriod: boolean; used: boolean; today: boolean }[] = [];
@@ -136,7 +135,7 @@ export function UsageEntryPanel({
             </div>
             <div className="w-20">
               <label className={labelCls}>本次用量</label>
-              <input name="quantity" type="number" step="0.5" min="0.5" value={quantity} onChange={(e) => setQuantity(e.target.value)} required className={inputCls} />
+              <input name="quantity" type="number" step="any" min="0.01" value={quantity} onChange={(e) => setQuantity(e.target.value)} required className={inputCls} />
             </div>
             <div className="w-24">
               <label className={labelCls}>本次单价</label>
@@ -188,7 +187,7 @@ export function UsageEntryPanel({
               <input
                 name="quotaTotal"
                 type="number"
-                step="1"
+                step="any"
                 min="1"
                 value={qTotal || ""}
                 onChange={(e) => setQTotal(parseFloat(e.target.value) || 0)}
@@ -202,6 +201,7 @@ export function UsageEntryPanel({
               <label className={labelCls}>本次额度</label>
               <input
                 type="number"
+                step="any"
                 value={qDelta}
                 onChange={(e) => setQUsedTo(r2(lastUsed + (parseFloat(e.target.value) || 0)))}
                 className={`${inputCls} w-24`}
@@ -211,7 +211,7 @@ export function UsageEntryPanel({
               <label className={labelCls}>本次 %</label>
               <input
                 type="number"
-                step="0.1"
+                step="any"
                 value={qDeltaPct}
                 onChange={(e) => setQUsedTo(r2(lastUsed + (qTotal * (parseFloat(e.target.value) || 0)) / 100))}
                 className={`${inputCls} w-20`}
@@ -222,7 +222,7 @@ export function UsageEntryPanel({
               <input
                 name="used"
                 type="number"
-                step="1"
+                step="any"
                 min="0"
                 value={qUsedTo}
                 onChange={(e) => setQUsedTo(parseFloat(e.target.value) || 0)}
@@ -233,7 +233,7 @@ export function UsageEntryPanel({
               <label className={labelCls}>使用到 %</label>
               <input
                 type="number"
-                step="0.1"
+                step="any"
                 value={qUsedToPct}
                 onChange={(e) => setQUsedTo(r2((qTotal * (parseFloat(e.target.value) || 0)) / 100))}
                 className={`${inputCls} w-20`}
@@ -373,7 +373,7 @@ export function UsageVerdictPanel({
             <div>
               <div className="text-[9px] uppercase text-faint f-mono">使用率</div>
               <div className="text-lg font-bold tabular-nums">
-                {Math.round(v.usageRate * 100)}%
+                {Math.round(v.usageRate * 10000) / 100}%
                 <span className="ml-1 text-[10px] font-normal text-faint">
                   {v.used}/{v.total} {usageUnit}
                 </span>
@@ -409,7 +409,7 @@ export function UsageVerdictPanel({
         {v.periodStart} → {v.periodEnd} ·{" "}
         {v.kind === "COUNT"
           ? `价值 ${fmtMoney(v.value, currency)} − 成本 ${fmtMoney(v.cost, currency)}`
-          : `未用 ${Math.round((1 - v.usageRate) * 100)}% × 成本 ${fmtMoney(v.cost, currency)}`}
+          : `未用 ${Math.round((1 - v.usageRate) * 10000) / 100}% × 成本 ${fmtMoney(v.cost, currency)}`}
       </div>
       {perUser.length > 0 && (
         <div className="mt-2 border-t border-dashed border-line-strong pt-2">

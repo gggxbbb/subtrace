@@ -235,7 +235,7 @@ export function UsageWizard({
                   <label className={labelCls}>每月总额度</label>
                   <input
                     type="number"
-                    step="1"
+                    step="any"
                     min="1"
                     value={quotaTotal}
                     onChange={(e) => setQuotaTotal(e.target.value)}

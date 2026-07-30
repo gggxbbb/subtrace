@@ -103,7 +103,7 @@ export function UsageRecordsManager({
           </div>
           <div>
             <label className={labelCls}>{usageKind === "QUOTA" ? "使用到额度" : `用量（${usageUnit ?? "次"}）`}</label>
-            <input name={usageKind === "QUOTA" ? "used" : "quantity"} type="number" step="0.5" min="0" required className={inputCls} />
+            <input name={usageKind === "QUOTA" ? "used" : "quantity"} type="number" step="any" min="0" required className={inputCls} />
           </div>
           {usageKind === "COUNT" && (
             <div>
@@ -114,7 +114,7 @@ export function UsageRecordsManager({
           {usageKind === "QUOTA" && (
             <div>
               <label className={labelCls}>当月总额度</label>
-              <input name="quotaTotal" type="number" step="1" min="1" placeholder="继承默认" className={inputCls} />
+              <input name="quotaTotal" type="number" step="any" min="0.01" placeholder="继承默认" className={inputCls} />
             </div>
           )}
           <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
@@ -143,7 +143,7 @@ export function UsageRecordsManager({
               </div>
               <div>
                 <label className={labelCls}>数量</label>
-                <input name="quantity" type="number" step="0.5" min="0" defaultValue={r.quantity} required className={inputCls} />
+                <input name="quantity" type="number" step="any" min="0" defaultValue={r.quantity} required className={inputCls} />
               </div>
               <div>
                 <label className={labelCls}>单价</label>
@@ -151,7 +151,7 @@ export function UsageRecordsManager({
               </div>
               <div>
                 <label className={labelCls}>总额度</label>
-                <input name="quotaTotal" type="number" step="1" min="1" defaultValue={r.quotaTotal ?? ""} className={inputCls} />
+                <input name="quotaTotal" type="number" step="any" min="0.01" defaultValue={r.quotaTotal ?? ""} className={inputCls} />
               </div>
               <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
                 保存
