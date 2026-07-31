@@ -1,43 +1,12 @@
 import { AlertTriangle, Plus } from "lucide-react";
 import Link from "next/link";
 import { Kpi, Led, LedMatrix, ORANGE, Panel } from "@/components/te";
+import { LedTrendChart } from "@/components/LedTrendChart";
 import { isoDay } from "@/lib/dates";
 import { fmtMoney } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getDashboardData } from "@/lib/dashboard";
 import { logoutAction } from "@/lib/auth/actions";
-
-/** 点阵趋势屏：30 天插值铺满，柱高=当日摊销，柱顶白点、柱身橙点 */
-function LedTrendChart({ data }: { data: number[] }) {
-  const rows = 8;
-  const max = Math.max(...data, 0.01) * 1.1;
-  const heights = data.map((v) => Math.max(0, Math.round((v / max) * rows)));
-  const cols: number[] = [];
-  for (let i = 0; i < heights.length - 1; i++) {
-    const a = heights[i];
-    const b = heights[i + 1];
-    cols.push(a, Math.round(a + (b - a) / 3), Math.round(a + ((b - a) * 2) / 3));
-  }
-  cols.push(heights[heights.length - 1]);
-  return (
-    <div className="bg-[#111] px-4 py-4">
-      <LedMatrix
-        rows={rows}
-        cols={cols.length}
-        size={9}
-        gap={4}
-        dark
-        stretch
-        lit={(r, c) => {
-          const h = cols[c];
-          const fromBottom = rows - 1 - r;
-          if (h === 0 || fromBottom >= h) return false;
-          return fromBottom === h - 1 ? "#F5F4F0" : true;
-        }}
-      />
-    </div>
-  );
-}
 
 export default async function DashboardPage() {
   const user = (await getCurrentUser())!;

@@ -9,11 +9,20 @@
 
 **Blocked by:** 01
 
-**Status:** open
+**Status:** resolved
 
-- [ ] 88 列常数与插值逻辑从 page.tsx 删除，无残留
-- [ ] SSR HTML 中该屏为 100px 纯黑带（无点阵 span）
-- [ ] tsc + 全量测试绿
-- [ ] 浏览器冒烟（hub web + xd://browser，gggxbbb / test-password-123）：宽屏观感与现状一致；视口收窄到 ~413px 点阵清晰可见、黑带高度不变；拖宽拖窄无闪烁/无布局跳动
+- [x] 88 列常数与插值逻辑从 page.tsx 删除，无残留
+- [x] SSR HTML 中该屏为 100px 纯黑带（无点阵 span）
+- [x] tsc + 全量测试绿
+- [x] 浏览器冒烟（hub web + xd://browser，gggxbbb / test-password-123）：宽屏观感与现状一致；视口收窄到 ~413px 点阵清晰可见、黑带高度不变；拖宽拖窄无闪烁/无布局跳动
+
+## Answer
+
+实现于 `src/components/LedTrendChart.tsx`（client），`dashboard/page.tsx` 删内联旧实现改为服务端薄壳传 `d.trend`。
+
+- 结构：外层 `bg-[#111] px-4 py-4` + 内层钉死 `height:100` 测量盒；`layout===null` 时不渲染点阵 → SSR 与首帧同构纯黑带（实测 SSR HTML role=img 3 个 = 即将到期小点阵，live 4 个，差值即趋势屏）。行数零头沉底被黑底吃掉，任何宽度带高恒 100 → 零 CLS。
+- ResizeObserver → `gridLayout(w)`；cols/rows 不变时 setState 返回旧引用，天然防抖。
+- 柱高：`resampleArea(data, cols)` → `round(v/max*rows)`，max 从原始 `data` 算（比例尺与 resize 解耦）。复用 `te.tsx` 的 LedMatrix（stretch + size=9 封顶正好是 gridLayout 的 dot 语义），通用组件未动。
+- 冒烟实测：413px → 50列×14行、点 3.03px、635 亮点；1400px → 88列×8行、点 8.48px；截图确认窄屏全屏可见、观感与宽屏一致。tsc + 204 测试全绿。
 
 ## Comments

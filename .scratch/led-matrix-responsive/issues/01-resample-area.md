@@ -7,14 +7,12 @@
 
 **Blocked by:** None
 
-**Status:** claimed
+**Status:** resolved
 
 - [x] TDD：先写失败测试再实现
 - [x] resampleArea：总量守恒（Σout×(len/n) ≈ Σin，浮点容差）；n=1；n=len 偏差有界；n>len 单调坡+端点精确；全零输入；单尖峰收缩后不消失（>0）
 - [x] gridLayout：w=347 → cols=50, dot≈3, rows=14；w=1000 → cols=88（封顶）, dot≈7.4, rows=9；w≥1144 → dot=9, rows=8；w 极小 → cols=8 下限
 - [x] `pnpm exec tsc --noEmit` + `pnpm test` 全绿
-
-**Status:** resolved
 
 ## Answer
 
