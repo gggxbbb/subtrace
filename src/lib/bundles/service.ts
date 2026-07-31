@@ -51,10 +51,17 @@ export async function createBundle(ownerId: string, input: BundleInput): Promise
 
 /** 物料化子会员：按比例分摊 → 每个 item 一条 BUNDLE 付费记录（新子会员顺带建订阅） */
 async function materializeItems(ownerId: string, bundleId: string, input: BundleInput) {
-  const allocations = allocateBundle(
-    input.totalAmountBase,
-    input.items.map((it) => it.listPriceBase ?? 0),
+  // 混合分摊（ADR-0011 折扣权益场景）：手填项先占份额，剩余为自动池按标准价比例分配
+  const manualSum = input.items.reduce((s, it) => s + (it.allocatedBase ?? 0), 0);
+  const autoIdx = input.items
+    .map((it, i) => (it.allocatedBase == null ? i : -1))
+    .filter((i) => i >= 0);
+  const autoAllocations = allocateBundle(
+    Math.max(0, input.totalAmountBase - manualSum),
+    autoIdx.map((i) => input.items[i].listPriceBase ?? 0),
   );
+  const amountOf = (i: number) =>
+    input.items[i].allocatedBase ?? autoAllocations[autoIdx.indexOf(i)];
   for (const [i, item] of input.items.entries()) {
     let subscriptionId = item.subscriptionId;
     if (subscriptionId) {
@@ -71,9 +78,9 @@ async function materializeItems(ownerId: string, bundleId: string, input: Bundle
       subscriptionId = sub.id;
     }
     await recordPayment(ownerId, subscriptionId, {
-      amount: item.allocatedBase ?? allocations[i],
+      amount: amountOf(i),
       currency: input.currency,
-      amountBase: item.allocatedBase ?? allocations[i],
+      amountBase: amountOf(i),
       paidAt: input.periodStart,
       periodStart: item.periodStart,
       periodEnd: item.periodEnd,

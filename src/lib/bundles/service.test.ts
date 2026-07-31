@@ -63,6 +63,31 @@ describe("创建联合会员", () => {
     expect(fresh!.anchorDate).toEqual(d("2027-07-18"));
   });
 
+  it("混合分摊：手填项先占份额，自动池 = 总价 − 手填合计（ADR-0011 折扣权益场景）", async () => {
+    await createBundle(ownerId, {
+      name: "88VIP 联名",
+      totalAmount: 88,
+      currency: "CNY",
+      totalAmountBase: 88,
+      ...period,
+      items: [
+        { newSubscription: { name: "优酷 VIP" }, listPriceBase: 198, ...period },
+        { newSubscription: { name: "网易云音乐" }, listPriceBase: 99, ...period },
+        { newSubscription: { name: "淘宝折扣权益" }, listPriceBase: null, allocatedBase: 40, ...period },
+      ],
+    });
+    const pay = async (name: string) => {
+      const sub = await prisma.subscription.findFirst({ where: { name } });
+      return (await prisma.payment.findFirst({ where: { subscriptionId: sub!.id } }))!.amountBase!;
+    };
+    // 自动池 88 − 40 = 48，按 198:99 比例分配；总额 = 打包实付
+    expect(await pay("优酷 VIP")).toBeCloseTo(48 * (198 / 297));
+    expect(await pay("网易云音乐")).toBeCloseTo(48 * (99 / 297));
+    expect(await pay("淘宝折扣权益")).toBe(40);
+    const total = (await pay("优酷 VIP")) + (await pay("网易云音乐")) + (await pay("淘宝折扣权益"));
+    expect(total).toBeCloseTo(88);
+  });
+
   it("手动覆盖分摊额生效", async () => {
     await createBundle(ownerId, {
       name: "自定义联名",

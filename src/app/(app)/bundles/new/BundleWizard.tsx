@@ -69,9 +69,19 @@ export function BundleWizard({
   const [total, setTotal] = useState(initial?.totalAmount ?? "");
 
   const totalNum = Number(total) || 0;
-  const priceSum = items.reduce((s, it) => s + (Number(it.listPriceBase) || 0), 0);
+  // 混合分摊口径与服务端一致：手填项先占份额，剩余自动池按标准价比例分配（ADR-0011）
+  const manualSum = items.reduce(
+    (s, it) => s + (it.allocatedBase.trim() !== "" ? Number(it.allocatedBase) || 0 : 0),
+    0,
+  );
+  const autoPriceSum = items.reduce(
+    (s, it) => s + (it.allocatedBase.trim() === "" ? Number(it.listPriceBase) || 0 : 0),
+    0,
+  );
   const autoAlloc = (it: Item) =>
-    priceSum > 0 ? (totalNum * (Number(it.listPriceBase) || 0)) / priceSum : 0;
+    autoPriceSum > 0
+      ? (Math.max(0, totalNum - manualSum) * (Number(it.listPriceBase) || 0)) / autoPriceSum
+      : 0;
 
   const update = (i: number, patch: Partial<Item>) =>
     setItems(items.map((it, j) => (j === i ? { ...it, ...patch } : it)));
@@ -307,6 +317,9 @@ export function BundleWizard({
         </div>
         <div className="mt-1 text-[9px] uppercase text-faint f-mono">
           关联已有订阅时，分摊金额将作为联合会员付费记录追加到该订阅，历史连续
+        </div>
+        <div className="mt-1 text-[9px] uppercase text-faint f-mono">
+          折扣类会员（88VIP 等）的「折扣权益」也可加为子会员：手填分摊额作成本基，建好后到该订阅「用量跟踪」设为省钱型，即可追踪已省盈亏（ADR-0011）
         </div>
       </div>
 
