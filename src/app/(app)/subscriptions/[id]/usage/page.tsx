@@ -29,7 +29,7 @@ export default async function UsageWizardPage({ params }: { params: Promise<{ id
       <main className="mx-auto max-w-2xl space-y-4 p-6">
         <UsageWizard
           subscriptionId={sub.id}
-          initialKind={(sub.usageKind as "COUNT" | "QUOTA" | null) ?? null}
+          initialKind={(sub.usageKind as "COUNT" | "QUOTA" | "SAVINGS" | null) ?? null}
           initialUnit={sub.usageUnit}
           initialAltUnitPrice={sub.altUnitPrice}
           initialQuotaTotal={sub.quotaTotal}

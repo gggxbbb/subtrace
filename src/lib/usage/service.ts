@@ -5,6 +5,7 @@ import {
   actualCostPerUse,
   costSegments,
   coversDate,
+  savingsVerdict,
   usageInPeriod,
   usageValue,
   verdict,
@@ -17,8 +18,11 @@ import {
 import type { Beneficiary, UsageRecord } from "@/generated/prisma/client";
 import { shareForViewer } from "../beneficiaries/service";
 
+export type UsageKind = "COUNT" | "QUOTA" | "SAVINGS";
+
 export interface UsageConfigInput {
-  usageKind: "COUNT" | "QUOTA";
+  usageKind: UsageKind;
+  /** 省钱型忽略（落库置空） */
   usageUnit: string;
   altUnitPrice?: number;
   quotaTotal?: number;
@@ -33,7 +37,7 @@ export async function setUsageConfig(
     where: { id: subscriptionId, ownerId },
     data: {
       usageKind: input.usageKind,
-      usageUnit: input.usageUnit,
+      usageUnit: input.usageKind === "SAVINGS" ? null : input.usageUnit,
       altUnitPrice: input.usageKind === "COUNT" ? (input.altUnitPrice ?? null) : null,
       quotaTotal: input.usageKind === "QUOTA" ? (input.quotaTotal ?? null) : null,
     },
@@ -70,6 +74,50 @@ export async function addQuotaSnapshot(
   if (quantity == null) throw new Error("需要已用量或百分比 usage_required");
   return prisma.usageRecord.create({
     data: { subscriptionId, userId, date: input.date, quantity, unitPrice: input.unitPrice, quotaTotal, kind: "TOTAL" },
+  });
+}
+
+/** 省钱型：录入已省金额（amount 增量；cumulative 平台累计值自动与本区间已记求差，ADR-0011） */
+export async function addSavings(
+  actorId: string,
+  subscriptionId: string,
+  userId: string,
+  input: { date: Date; amount?: number; cumulative?: number },
+): Promise<UsageRecord> {
+  const sub = await assertUsageAllowed(actorId, subscriptionId);
+  if (sub.usageKind !== "SAVINGS") throw new Error("非省钱型订阅 not_savings_kind");
+  if (input.amount != null && input.cumulative != null) {
+    throw new Error("增量与累计值二选一 savings_ambiguous");
+  }
+  let quantity = input.amount;
+  if (quantity == null) {
+    if (input.cumulative == null) throw new Error("需要已省金额或累计值 savings_required");
+    // 基准 = 该记录所在服务区间内、该用户已记的已省之和——会员期重置（新区间）时自然归零
+    const withPayments = await prisma.subscription.findUniqueOrThrow({
+      where: { id: subscriptionId },
+      include: { payments: true },
+    });
+    const covering = costSegments(
+      toEngineSub(withPayments),
+      toEnginePayments(withPayments.payments),
+      input.date,
+    ).find((s) => coversDate(s, input.date));
+    const periodRecords = await prisma.usageRecord.findMany({
+      where: {
+        subscriptionId,
+        userId,
+        kind: "DELTA",
+        ...(covering ? { date: { gte: covering.start, lt: covering.end } } : {}),
+      },
+    });
+    const baseline = periodRecords.reduce((s, r) => s + r.quantity, 0);
+    quantity = Math.round((input.cumulative - baseline) * 100) / 100;
+    if (quantity <= 0) {
+      throw new Error("累计值未超过本区间已记已省，若是新周期请改用增量录入 savings_not_increased");
+    }
+  }
+  return prisma.usageRecord.create({
+    data: { subscriptionId, userId, date: input.date, quantity, kind: "DELTA" },
   });
 }
 
@@ -141,7 +189,21 @@ export interface QuotaVerdict {
   verdictAmount: number;
 }
 
-export type UsageVerdict = CountVerdict | QuotaVerdict;
+export interface SavingsVerdict {
+  kind: "SAVINGS";
+  periodStart: Date;
+  periodEnd: Date;
+  /** 当前服务区间净额（按份额） */
+  cost: number;
+  /** 覆盖段金额未知（ticket 12）：成本为 0 是「没记」，盈亏不可信 */
+  costUnknown?: boolean;
+  /** 区间内已省金额合计（主币种，增量求和） */
+  saved: number;
+  /** = saved − cost（正=赚）；回本差额取反即得 */
+  verdictAmount: number;
+}
+
+export type UsageVerdict = CountVerdict | QuotaVerdict | SavingsVerdict;
 
 /** 当前服务区间的盈亏（覆盖 today 的成本段；无覆盖为 null）。
  *  传 forUserId 时按该受益人切片：成本 × 份额，用量只计其本人记录 */
@@ -191,6 +253,22 @@ export function getUsageVerdict(
       wastedAmount,
       costPerUnit: used > 0 ? costShare / used : null,
       verdictAmount: -wastedAmount + 0, // 避免 -0
+    };
+  }
+
+  if (sub.usageKind === "SAVINGS") {
+    // 省钱型：增量求和即已省金额，盈亏 = Σ已省 − 已摊成本（ADR-0011）
+    const saved = myRecords
+      .filter((r) => r.kind === "DELTA" && r.date >= covering.start && r.date < covering.end)
+      .reduce((s, r) => s + r.quantity, 0);
+    return {
+      kind: "SAVINGS",
+      periodStart: covering.start,
+      periodEnd: covering.end,
+      cost: costShare,
+      costUnknown,
+      saved,
+      verdictAmount: savingsVerdict(costShare, saved),
     };
   }
 

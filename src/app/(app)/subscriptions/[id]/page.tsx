@@ -92,7 +92,9 @@ export default async function SubscriptionDetailPage({
               usageLabel:
                 pv.kind === "COUNT"
                   ? `${pv.usage} ${sub.usageUnit ?? ""}`
-                  : `${Math.round(pv.usageRate * 100)}%`,
+                  : pv.kind === "SAVINGS"
+                    ? `已省 ${fmtMoney(pv.saved, cur)}`
+                    : `${Math.round(pv.usageRate * 100)}%`,
               verdictAmount: pv.verdictAmount,
             };
           })
@@ -119,20 +121,30 @@ export default async function SubscriptionDetailPage({
           costPerUse: v.costPerUse,
           costUnknown: v.costUnknown,
         }
-      : {
-          kind: "QUOTA",
-          periodStart: iso(v.periodStart),
-          periodEnd: iso(v.periodEnd),
-          cost: v.cost,
-          used: v.used,
-          total: v.total,
-          usageRate: v.usageRate,
-          hit100At: v.hit100At ? iso(v.hit100At) : null,
-          wastedAmount: v.wastedAmount,
-          costPerUnit: v.costPerUnit,
-          verdictAmount: v.verdictAmount,
-          costUnknown: v.costUnknown,
-        }
+      : v.kind === "SAVINGS"
+        ? {
+            kind: "SAVINGS",
+            periodStart: iso(v.periodStart),
+            periodEnd: iso(v.periodEnd),
+            cost: v.cost,
+            saved: v.saved,
+            verdictAmount: v.verdictAmount,
+            costUnknown: v.costUnknown,
+          }
+        : {
+            kind: "QUOTA",
+            periodStart: iso(v.periodStart),
+            periodEnd: iso(v.periodEnd),
+            cost: v.cost,
+            used: v.used,
+            total: v.total,
+            usageRate: v.usageRate,
+            hit100At: v.hit100At ? iso(v.hit100At) : null,
+            wastedAmount: v.wastedAmount,
+            costPerUnit: v.costPerUnit,
+            verdictAmount: v.verdictAmount,
+            costUnknown: v.costUnknown,
+          }
     : null;
 
   return (
@@ -323,12 +335,13 @@ export default async function SubscriptionDetailPage({
             >
               <UsageEntryPanel
                 subscriptionId={sub.id}
-                usageKind={(sub.usageKind as "COUNT" | "QUOTA" | null) ?? null}
+                usageKind={(sub.usageKind as "COUNT" | "QUOTA" | "SAVINGS" | null) ?? null}
                 usageUnit={sub.usageUnit}
                 defaultUnitPrice={sub.altUnitPrice}
                 defaultQuotaTotal={sub.quotaTotal}
                 records={usageRecordRows}
                 verdict={verdictData}
+                currency={cur}
               />
             </Panel>
             <Panel

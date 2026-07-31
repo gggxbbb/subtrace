@@ -69,7 +69,7 @@ export default async function UsageRecordsPage({
       <main className="mx-auto max-w-3xl space-y-4 p-6">
         <UsageRecordsManager
           subscriptionId={sub.id}
-          usageKind={sub.usageKind as "COUNT" | "QUOTA"}
+          usageKind={sub.usageKind as "COUNT" | "QUOTA" | "SAVINGS"}
           usageUnit={sub.usageUnit}
           rows={rows}
           total={all.length}
@@ -78,6 +78,7 @@ export default async function UsageRecordsPage({
           back={back}
           currentUserId={user.id}
           isOwner={sub.ownerId === user.id}
+          currency={user.baseCurrency}
         />
       </main>
     </>

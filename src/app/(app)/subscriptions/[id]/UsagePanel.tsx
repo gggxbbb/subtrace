@@ -6,6 +6,7 @@ import { fmtMoney } from "@/lib/format";
 import { Led, inputCls, labelCls } from "@/components/te";
 import {
   addQuotaSnapshotAction,
+  addSavingsAction,
   addUsageAction,
   deleteUsageAction,
 } from "@/lib/usage/actions";
@@ -46,6 +47,15 @@ export type VerdictData =
       costPerUnit: number | null;
       verdictAmount: number;
       costUnknown?: boolean;
+    }
+  | {
+      kind: "SAVINGS";
+      periodStart: string;
+      periodEnd: string;
+      cost: number;
+      saved: number;
+      verdictAmount: number;
+      costUnknown?: boolean;
     };
 
 /** 用量录入卡：类型/单位可就地设定；本次用量、本次单价、当月总额度逐条可调，默认继承上一条记录 */
@@ -57,18 +67,20 @@ export function UsageEntryPanel({
   defaultQuotaTotal,
   records,
   verdict,
+  currency,
 }: {
   subscriptionId: string;
-  usageKind: "COUNT" | "QUOTA" | null;
+  usageKind: "COUNT" | "QUOTA" | "SAVINGS" | null;
   usageUnit: string | null;
   defaultUnitPrice: number | null;
   defaultQuotaTotal: number | null;
   records: UsageRecordRow[];
   verdict: VerdictData | null;
+  currency: string;
 }) {
   const today = isoDay(new Date());
   const last = records[records.length - 1];
-  const kind: "COUNT" | "QUOTA" = usageKind ?? "COUNT";
+  const kind: "COUNT" | "QUOTA" | "SAVINGS" = usageKind ?? "COUNT";
   // 从历史提取去重的 用量×单价 元组（最近优先）
   const tuples: { quantity: number; unitPrice: number | null }[] = [];
   for (const r of [...records].reverse()) {
@@ -103,6 +115,19 @@ export function UsageEntryPanel({
         ? { done: true as const }
         : { done: false as const, remainingPct: r2((1 - verdict.usageRate) * 100) }
       : null;
+  // 省钱型：本区间已记已省（累计录入的求差基准，无覆盖区间时为全部记录）与回本差额
+  const savingsBaseline =
+    r2(
+      records
+        .filter((r) => !verdict || (r.date >= verdict.periodStart && r.date < verdict.periodEnd))
+        .reduce((s, r) => s + r.quantity, 0),
+    );
+  const savingsHint =
+    verdict?.kind === "SAVINGS" && !verdict.costUnknown
+      ? verdict.cost - verdict.saved > 0
+        ? { done: false as const, remaining: r2(verdict.cost - verdict.saved) }
+        : { done: true as const, net: r2(verdict.saved - verdict.cost) }
+      : null;
   // 日历数据：从区间首日所在周的周一开始，到区间末日止
   const calDays: { day: number; inPeriod: boolean; used: boolean; today: boolean }[] = [];
   if (verdict) {
@@ -126,7 +151,37 @@ export function UsageEntryPanel({
 
   return (
     <div className="px-4 py-4">
-      {kind === "COUNT" ? (
+      {kind === "SAVINGS" ? (
+        <form key="savings" action={addSavingsAction.bind(null, subscriptionId)} className="space-y-2">
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <label className={labelCls}>日期</label>
+              <input name="date" type="date" defaultValue={today} required className={`${inputCls} f-mono`} />
+            </div>
+            <div className="w-28">
+              <label className={labelCls}>本次已省</label>
+              <input name="amount" type="number" step="0.01" min="0.01" placeholder="6.00" className={inputCls} />
+            </div>
+            <div className="w-32">
+              <label className={labelCls}>或平台累计已省</label>
+              <input
+                name="cumulative"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder={savingsBaseline > 0 ? `${savingsBaseline}` : "342.00"}
+                className={inputCls}
+              />
+            </div>
+            <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
+              记一笔 →
+            </button>
+          </div>
+          <div className="text-[9px] uppercase text-faint f-mono">
+            二选一：直接记本次省了多少；或照抄平台「当期已省」，自动与本区间已记（{fmtMoney(savingsBaseline, currency)}）求差
+          </div>
+        </form>
+      ) : kind === "COUNT" ? (
         <form key="count" action={addUsageAction.bind(null, subscriptionId)} className="space-y-2">
           <div className="flex items-end gap-2">
             <div className="flex-1">
@@ -276,6 +331,20 @@ export function UsageEntryPanel({
               )}
             </div>
           )}
+          {savingsHint && (
+            <div className="mb-2 flex items-center gap-2 text-[11px]">
+              <Led color={savingsHint.done ? "#22c55e" : "var(--accent)"} />
+              {savingsHint.done ? (
+                <span>
+                  已回本，净省 <strong className="tabular-nums">{fmtMoney(savingsHint.net, currency)}</strong>
+                </span>
+              ) : (
+                <span>
+                  再省 <strong className="tabular-nums">{fmtMoney(savingsHint.remaining, currency)}</strong> 回本
+                </span>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-7 gap-1">
             {["一", "二", "三", "四", "五", "六", "日"].map((w) => (
               <div key={w} className="text-center text-[9px] uppercase text-faint f-mono">
@@ -368,6 +437,43 @@ export function UsageVerdictPanel({
               )}
             </div>
           </>
+        ) : v.kind === "SAVINGS" ? (
+          <>
+            <div>
+              <div className="text-[9px] uppercase text-faint f-mono">已省金额</div>
+              <div className="text-lg font-bold tabular-nums">{fmtMoney(v.saved, currency)}</div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase text-faint f-mono">盈亏</div>
+              {v.costUnknown ? (
+                <div className="text-lg font-bold text-faint">未知</div>
+              ) : (
+                <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.verdictAmount >= 0 ? "text-income" : "text-destructive"}`}>
+                  {v.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(v.verdictAmount), currency)}
+                  <Led color={v.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
+                </div>
+              )}
+              {v.costUnknown && (
+                <div className="text-[9px] text-faint f-mono">成本未记录，盈亏不可信</div>
+              )}
+            </div>
+            <div>
+              <div className="text-[9px] uppercase text-faint f-mono">回本差额</div>
+              <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.verdictAmount >= 0 ? "text-income" : ""}`}>
+                {v.verdictAmount >= 0 ? (
+                  <>
+                    已净省 {fmtMoney(v.saved - v.cost, currency)}
+                    <Led color="#22c55e" />
+                  </>
+                ) : (
+                  <>
+                    还差 {fmtMoney(v.cost - v.saved, currency)}
+                    <Led color="var(--accent)" />
+                  </>
+                )}
+              </div>
+            </div>
+          </>
         ) : (
           <>
             <div>
@@ -409,7 +515,9 @@ export function UsageVerdictPanel({
         {v.periodStart} → {v.periodEnd} ·{" "}
         {v.kind === "COUNT"
           ? `价值 ${fmtMoney(v.value, currency)} − 成本 ${fmtMoney(v.cost, currency)}`
-          : `未用 ${Math.round((1 - v.usageRate) * 10000) / 100}% × 成本 ${fmtMoney(v.cost, currency)}`}
+          : v.kind === "SAVINGS"
+            ? `已省 ${fmtMoney(v.saved, currency)} − 成本 ${fmtMoney(v.cost, currency)}`
+            : `未用 ${Math.round((1 - v.usageRate) * 10000) / 100}% × 成本 ${fmtMoney(v.cost, currency)}`}
       </div>
       {perUser.length > 0 && (
         <div className="mt-2 border-t border-dashed border-line-strong pt-2">
@@ -433,7 +541,9 @@ export function UsageVerdictPanel({
             <div key={r.id} className="group flex items-center justify-between py-1 text-[11px] f-mono">
               <span className="text-muted">{r.date}</span>
               <span className="flex items-center gap-2">
-                {r.kind === "TOTAL" ? `已用 ${r.quantity}` : `+${r.quantity}`} {usageUnit}
+                {v.kind === "SAVINGS"
+                  ? `+${fmtMoney(r.quantity, currency)}`
+                  : `${r.kind === "TOTAL" ? `已用 ${r.quantity}` : `+${r.quantity}`} ${usageUnit ?? ""}`}
                 {r.unitPrice != null && <span className="text-faint">@ {r.unitPrice}</span>}
                 <button
                   onClick={async () => deleteUsageAction(subscriptionId, r.id)}

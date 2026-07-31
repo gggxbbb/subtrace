@@ -228,6 +228,11 @@ export function actualCostPerUse(costShare: number, usageQty: number): number | 
   return usageQty > 0 ? costShare / usageQty : null;
 }
 
+/** 省钱型盈亏 = 已省金额 − 已摊成本（正=赚，负=亏；ADR-0011）。回本差额 = 取反。 */
+export function savingsVerdict(costShare: number, saved: number): number {
+  return saved - costShare;
+}
+
 /**
  * 联合会员分摊（ADR-0002）：打包实付 × 子会员标准价 / Σ标准价。
  * 原价未知（0）的子会员不参与分摊；全部未知时全为 0（可手动覆盖）。

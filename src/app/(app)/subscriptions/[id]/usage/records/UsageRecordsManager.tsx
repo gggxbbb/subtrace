@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { isoDay } from "@/lib/dates";
+import { fmtMoney } from "@/lib/format";
 import { inputCls, labelCls } from "@/components/te";
 import {
   addQuotaSnapshotAction,
+  addSavingsAction,
   addUsageAction,
   deleteUsageAction,
   updateUsageAction,
@@ -35,9 +37,10 @@ export function UsageRecordsManager({
   back,
   currentUserId,
   isOwner,
+  currency,
 }: {
   subscriptionId: string;
-  usageKind: "COUNT" | "QUOTA";
+  usageKind: "COUNT" | "QUOTA" | "SAVINGS";
   usageUnit: string | null;
   rows: UsageRow[];
   total: number;
@@ -46,6 +49,7 @@ export function UsageRecordsManager({
   back: string;
   currentUserId: string;
   isOwner: boolean;
+  currency: string;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -64,14 +68,16 @@ export function UsageRecordsManager({
             ))}
           </select>
         </div>
-        <div>
-          <label className={labelCls}>类型</label>
-          <select name="kind" defaultValue={filters.kind} className={inputCls}>
-            <option value="">全部</option>
-            <option value="DELTA">增量</option>
-            <option value="TOTAL">快照</option>
-          </select>
-        </div>
+        {usageKind !== "SAVINGS" && (
+          <div>
+            <label className={labelCls}>类型</label>
+            <select name="kind" defaultValue={filters.kind} className={inputCls}>
+              <option value="">全部</option>
+              <option value="DELTA">增量</option>
+              <option value="TOTAL">快照</option>
+            </select>
+          </div>
+        )}
         <div>
           <label className={labelCls}>从</label>
           <input name="from" type="date" defaultValue={filters.from} className={`${inputCls} f-mono`} />
@@ -91,7 +97,27 @@ export function UsageRecordsManager({
         </button>
       </form>
 
-      {adding && (
+      {adding && usageKind === "SAVINGS" && (
+        <form
+          action={addSavingsAction.bind(null, subscriptionId)}
+          className="flex items-end gap-2 border border-ink bg-surface p-3"
+        >
+          {backInput}
+          <div>
+            <label className={labelCls}>日期</label>
+            <input name="date" type="date" defaultValue={today()} required className={`${inputCls} f-mono`} />
+          </div>
+          <div>
+            <label className={labelCls}>本次已省</label>
+            <input name="amount" type="number" step="0.01" min="0.01" required className={inputCls} />
+          </div>
+          <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
+            保存 →
+          </button>
+        </form>
+      )}
+
+      {adding && usageKind !== "SAVINGS" && (
         <form
           action={(usageKind === "QUOTA" ? addQuotaSnapshotAction : addUsageAction).bind(null, subscriptionId)}
           className="flex items-end gap-2 border border-ink bg-surface p-3"
@@ -142,17 +168,21 @@ export function UsageRecordsManager({
                 <input name="date" type="date" defaultValue={r.date} required className={`${inputCls} f-mono`} />
               </div>
               <div>
-                <label className={labelCls}>数量</label>
+                <label className={labelCls}>{usageKind === "SAVINGS" ? "已省金额" : "数量"}</label>
                 <input name="quantity" type="number" step="any" min="0" defaultValue={r.quantity} required className={inputCls} />
               </div>
-              <div>
-                <label className={labelCls}>单价</label>
-                <input name="unitPrice" type="number" step="0.01" min="0" defaultValue={r.unitPrice ?? ""} className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>总额度</label>
-                <input name="quotaTotal" type="number" step="any" min="0.01" defaultValue={r.quotaTotal ?? ""} className={inputCls} />
-              </div>
+              {usageKind !== "SAVINGS" && (
+                <>
+                  <div>
+                    <label className={labelCls}>单价</label>
+                    <input name="unitPrice" type="number" step="0.01" min="0" defaultValue={r.unitPrice ?? ""} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>总额度</label>
+                    <input name="quotaTotal" type="number" step="any" min="0.01" defaultValue={r.quotaTotal ?? ""} className={inputCls} />
+                  </div>
+                </>
+              )}
               <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
                 保存
               </button>
@@ -166,7 +196,9 @@ export function UsageRecordsManager({
                 <span className="text-muted">{r.date}</span>
                 <span className="ml-2 font-semibold">{r.userName}</span>
                 <span className="ml-2">
-                  {r.kind === "TOTAL" ? `已用 ${r.quantity}` : `+${r.quantity}`} {usageUnit}
+                  {usageKind === "SAVINGS"
+                    ? `+${fmtMoney(r.quantity, currency)}`
+                    : `${r.kind === "TOTAL" ? `已用 ${r.quantity}` : `+${r.quantity}`} ${usageUnit ?? ""}`}
                 </span>
                 {r.unitPrice != null && <span className="ml-1 text-faint">@ {r.unitPrice}</span>}
                 {r.quotaTotal != null && <span className="ml-1 text-faint">/ {r.quotaTotal}</span>}

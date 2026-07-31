@@ -6,10 +6,12 @@ import { getCurrentUser } from "../auth/session";
 import { dayField } from "../form";
 import {
   addQuotaSnapshot,
+  addSavings,
   addUsage,
   deleteUsage,
   setUsageConfig,
   updateUsage,
+  type UsageKind,
 } from "./service";
 import { prisma } from "../db";
 
@@ -18,7 +20,7 @@ export async function setUsageConfigAction(subscriptionId: string, formData: For
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   await setUsageConfig(user.id, subscriptionId, {
-    usageKind: String(formData.get("usageKind")) as "COUNT" | "QUOTA",
+    usageKind: String(formData.get("usageKind")) as UsageKind,
     usageUnit: String(formData.get("usageUnit") ?? ""),
     altUnitPrice: formData.get("altUnitPrice") ? Number(formData.get("altUnitPrice")) : undefined,
     quotaTotal: formData.get("quotaTotal") ? Number(formData.get("quotaTotal")) : undefined,
@@ -59,6 +61,22 @@ export async function addQuotaSnapshotAction(subscriptionId: string, formData: F
   redirect(`/subscriptions/${subscriptionId}`);
 }
 
+
+/** 省钱型：录入已省金额（amount 增量或 cumulative 平台累计值，二选一） */
+export async function addSavingsAction(subscriptionId: string, formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const amount = formData.get("amount");
+  const cumulative = formData.get("cumulative");
+  await addSavings(user.id, subscriptionId, user.id, {
+    date: dayField(formData.get("date")),
+    amount: amount && String(amount).trim() !== "" ? Number(amount) : undefined,
+    cumulative: cumulative && String(cumulative).trim() !== "" ? Number(cumulative) : undefined,
+  });
+  revalidatePath(`/subscriptions/${subscriptionId}`);
+  const back = formData.get("back");
+  redirect(back ? `/subscriptions/${subscriptionId}/usage/records?${back}` : `/subscriptions/${subscriptionId}`);
+}
 
 export async function deleteUsageAction(subscriptionId: string, usageId: string, back?: string) {
   const user = await getCurrentUser();

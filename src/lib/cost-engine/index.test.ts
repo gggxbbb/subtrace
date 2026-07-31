@@ -12,6 +12,7 @@ import {
   dayDiff,
   purchaseCurrentDailyRate,
   purchaseDailyRate,
+  savingsVerdict,
   segmentDailyRate,
   usageInPeriod,
   usageValue,
@@ -180,6 +181,17 @@ describe("物品回本模型", () => {
     expect(breakevenProgress(laptop(), d("2027-01-01"))).toBeCloseTo(365 / 730);
     expect(breakevenProgress(laptop(), d("2028-01-01"))).toBe(1);
     expect(breakevenProgress(laptop({ expectedDays: undefined }), d("2027-01-01"))).toBeUndefined();
+  });
+});
+
+describe("省钱型盈亏（ADR-0011）", () => {
+  it("盈亏 = 已省 − 已摊成本：未回本为负、已回本为正", () => {
+    expect(savingsVerdict(99, 30)).toBeCloseTo(-69); // 京东 Plus 年卡 99，已省 30
+    expect(savingsVerdict(99, 120)).toBeCloseTo(21);
+  });
+
+  it("零成本基（联合会员比例摊满）盈亏恒正——折扣权益需手填分摊额", () => {
+    expect(savingsVerdict(0, 50)).toBeCloseTo(50);
   });
 });
 

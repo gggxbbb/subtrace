@@ -8,7 +8,9 @@ import { fmtMoney } from "@/lib/format";
 import { setUsageConfigAction, disableUsageAction, purgeUsageAction } from "@/lib/usage/actions";
 
 
-type Kind = "COUNT" | "QUOTA";
+type Kind = "COUNT" | "QUOTA" | "SAVINGS";
+
+const KIND_LABEL: Record<Kind, string> = { COUNT: "计数型", QUOTA: "额度型", SAVINGS: "省钱型" };
 
 /** 用量跟踪向导：概念讲解 → 选类型 → 字段配置 → 保存 */
 export function UsageWizard({
@@ -51,14 +53,16 @@ export function UsageWizard({
           <div className="flex items-center gap-2 text-sm font-bold">
             <Led color="#ef4444" /> 这个订阅已经在跟踪用量
           </div>
-          <div className="border border-ink">
+            <div className="border border-ink">
             {(
               [
-                ["当前类型", initialKind === "COUNT" ? "计数型" : "额度型"],
-                ["单位", initialUnit ?? "（未填）"],
+                ["当前类型", KIND_LABEL[initialKind ?? "COUNT"]],
+                ...(initialKind !== "SAVINGS" ? [["单位", initialUnit ?? "（未填）"]] : []),
                 ...(initialKind === "COUNT"
                   ? [["替代单价", initialAltUnitPrice != null ? fmtMoney(initialAltUnitPrice, currency) : "（未填）"]]
-                  : [["每月总额度", initialQuotaTotal != null ? `${initialQuotaTotal}` : "（未填）"]]),
+                  : initialKind === "QUOTA"
+                    ? [["每月总额度", initialQuotaTotal != null ? `${initialQuotaTotal}` : "（未填）"]]
+                    : []),
                 ["已有记录", `${recordCount} 条`],
               ] as const
             ).map(([k, v]) => (
@@ -134,9 +138,9 @@ export function UsageWizard({
             <h2 className="text-sm font-bold">用量跟踪回答一个问题：这钱花得值不值？</h2>
             <p className="text-[12px] leading-relaxed text-muted-strong">
               订阅的成本系统已经在算了（实付金额按服务天数摊销）。用量跟踪在此基础上记录你<strong>实际用了多少</strong>，
-              两相对比得出盈亏。按订阅的性质，有两种追踪方式：
+              两相对比得出盈亏。按订阅的性质，有三种追踪方式：
             </p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="border border-ink p-3">
                 <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase f-mono">
                   <Led color="var(--accent)" /> 计数型
@@ -160,6 +164,18 @@ export function UsageWizard({
                   没用完的部分按比例折算成浪费的钱。
                 </p>
               </div>
+              <div className="border border-ink p-3">
+                <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase f-mono">
+                  <Led color="#22c55e" /> 省钱型
+                </div>
+                <p className="text-[11px] leading-relaxed text-muted-strong">
+                  适合<strong>提供消费折扣</strong>的会员：京东 Plus、88VIP、盒马 X——平台会直接告诉你“当期已省”。
+                </p>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-muted-strong">
+                  记下的就是<strong>省下的金额</strong>本身（逐笔记或照抄平台累计值），
+                  系统拿「Σ已省 − 已摊成本」回答<strong>“回本没有”</strong>。
+                </p>
+              </div>
             </div>
             <p className="text-[11px] text-faint">
               不启用也可以——用量跟踪是可选项，纯看成本的订阅不用开。
@@ -170,11 +186,12 @@ export function UsageWizard({
         {step === 1 && (
           <div className="space-y-4">
             <h2 className="text-sm font-bold">这个订阅属于哪一种？</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {(
                 [
                   ["COUNT", "计数型", "按次使用，单次有市场价", "健身房 · 按摩 · 洗车 · 私教课", "var(--accent)"],
                   ["QUOTA", "额度型", "每月固定额度，看使用率", "流量机场 · iCloud · API 点数", "#0ea5e9"],
+                  ["SAVINGS", "省钱型", "消费折扣，记省下的金额", "京东 Plus · 88VIP · 盒马 X", "#22c55e"],
                 ] as const
               ).map(([k, title, desc, examples, color]) => (
                 <button
@@ -199,7 +216,14 @@ export function UsageWizard({
 
         {step === 2 && (
           <div className="space-y-4">
-            <h2 className="text-sm font-bold">{kind === "COUNT" ? "计数型字段" : "额度型字段"}</h2>
+            <h2 className="text-sm font-bold">{kind === "COUNT" ? "计数型字段" : kind === "QUOTA" ? "额度型字段" : "省钱型"}</h2>
+            {kind === "SAVINGS" ? (
+              <div className="border border-ink p-4 text-[11px] leading-relaxed text-muted-strong">
+                无需配置字段。省钱型记录的就是<strong>省下的金额</strong>：盈亏 = Σ已省 − 已摊成本。
+                录入时可以逐笔记「本次已省」，也可以照抄平台「当期已省」累计值——系统自动与本区间已记求差，
+                会员期重置后重新累计即可。
+              </div>
+            ) : (
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>用量单位</label>
@@ -248,6 +272,7 @@ export function UsageWizard({
                 </div>
               )}
             </div>
+            )}
           </div>
         )}
 
@@ -257,11 +282,13 @@ export function UsageWizard({
             <div className="border border-ink">
               {(
                 [
-                  ["类型", kind === "COUNT" ? "计数型（按次算回本）" : "额度型（看使用率）"],
-                  ["单位", unit || "（未填）"],
+                  ["类型", kind === "COUNT" ? "计数型（按次算回本）" : kind === "QUOTA" ? "额度型（看使用率）" : "省钱型（已省金额即价值）"],
+                  ...(kind !== "SAVINGS" ? [["单位", unit || "（未填）"]] : []),
                   ...(kind === "COUNT"
                     ? [["替代单价", altUnitPrice ? `${fmtMoney(Number(altUnitPrice), currency)} / ${unit || "次"}` : "（未填）"]]
-                    : [["每月总额度", quotaTotal ? `${quotaTotal} ${unit || ""}` : "（未填）"]]),
+                    : kind === "QUOTA"
+                      ? [["每月总额度", quotaTotal ? `${quotaTotal} ${unit || ""}` : "（未填）"]]
+                      : []),
                 ] as const
               ).map(([k, v]) => (
                 <div key={k} className="flex justify-between border-b border-ink px-3 py-2 text-[12px] last:border-b-0">
