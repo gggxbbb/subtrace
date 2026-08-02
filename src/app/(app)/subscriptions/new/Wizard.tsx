@@ -18,6 +18,9 @@ const CYCLE_UNIT_LABEL: Record<string, string> = { DAY: "日", WEEK: "周", MONT
 
 export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }) {
   const formRef = useRef<HTMLFormElement>(null);
+  // 进入确认步后的提交守卫窗（截止时间戳）：React 复用导航位 <button> 节点，推进手势的
+  // 后续激活（双击第二击 / Enter / Space）会落在刚变成 type=submit 的「创建」上造成误提交。
+  const submitGuardUntil = useRef(0);
   const [mode, setMode] = useState<"CYCLE" | "MANUAL">("CYCLE");
   const [cycleKind, setCycleKind] = useState<"CALENDAR" | "FIXED_DAYS">("CALENDAR");
   const [summary, setSummary] = useState<[string, string][]>([]);
@@ -43,6 +46,7 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
     },
     onAdvance: (s) => {
       if (s !== 2) return;
+      submitGuardUntil.current = Date.now() + 600;
       const rows: [string, string][] = [
         ["名称", field("name")],
         ["分类", field("category") || "—"],
@@ -82,7 +86,13 @@ export function NewSubscriptionWizard({ baseCurrency }: { baseCurrency: string }
       <div className="border border-ink bg-surface">
         <StepBar steps={steps} step={step} />
 
-        <form ref={formRef} action={createSubscriptionAction}>
+        <form
+          ref={formRef}
+          action={createSubscriptionAction}
+          onSubmit={(e) => {
+            if (Date.now() < submitGuardUntil.current) e.preventDefault();
+          }}
+        >
           <input type="hidden" name="trackingMode" value={mode} />
           <input type="hidden" name="cycleKind" value={cycleKind} />
 
