@@ -423,6 +423,8 @@ export interface PackVerdict {
   periodWaste: { quantity: number; amount: number };
   /** 累计已确认浪费 */
   totalWaste: { quantity: number; amount: number };
+  /** 已确认浪费明细（按确认日倒序；事件带日期、不绑区间，续费后历史浪费仍可回看——spec story 23） */
+  wasteEvents: { date: Date; quantity: number; amount: number }[];
   /** 累计推算消费（快照校准口径） */
   consumptionInferred: number;
   /** = −本区间确认浪费金额（≤0） */
@@ -501,6 +503,7 @@ function packVerdict(
       quantity: ledger.waste.reduce((s, w) => s + w.quantity, 0),
       amount: ledger.waste.reduce((s, w) => s + w.amount, 0),
     },
+    wasteEvents: [...ledger.waste].sort((a, b) => b.date.getTime() - a.date.getTime()),
     consumptionInferred: ledger.consumptionInferred,
     verdictAmount: -periodWaste.amount + 0, // 避免 -0
   };

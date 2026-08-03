@@ -656,6 +656,33 @@ describe("PackVerdict 装配", () => {
     expect(v.nextExpiry!.date).toEqual(d("2027-01-15"));
     expect(v.nextExpiry!.quantity).toBe(30);
     expect(v.nextExpiry!.projectedBalance).toBe(25);
+    // 浪费明细：带确认日的事件列表（story 23 回看入口的数据源）
+    expect(v.wasteEvents).toHaveLength(1);
+    expect(v.wasteEvents[0].date).toEqual(d("2026-08-01"));
+    expect(v.wasteEvents[0].quantity).toBe(30);
+    expect(v.wasteEvents[0].amount).toBeCloseTo(50);
+  });
+
+  it("浪费明细跨区间可回看（story 23）：续费后新区间 periodWaste 归零，wasteEvents 仍在", async () => {
+    const sub = await ledger();
+    // 续费：在 2027-07-01 到期前加一笔 2027-07-01 ~ 2028-07-01 的付费记录
+    await recordPayment(ownerId, sub.id, {
+      amount: 100,
+      currency: "CNY",
+      amountBase: 100,
+      paidAt: d("2027-06-15"),
+      periodStart: d("2027-07-01"),
+      periodEnd: d("2028-07-01"),
+      source: "MANUAL",
+    });
+    const fresh = (await getSubscription(ownerId, sub.id))!;
+    const records = await listUsage(sub.id);
+    const v = getUsageVerdict(fresh, records, d("2027-08-10"));
+    if (v?.kind !== "PACK") throw new Error("expect PACK");
+    // 新区间（2027-07-01 起）无确认浪费；B 包已于 2027-01-15 到期焚毁，事件仍可回看
+    expect(v.periodWaste.amount).toBe(0);
+    expect(v.wasteEvents.length).toBeGreaterThanOrEqual(1);
+    expect(v.wasteEvents.some((w) => w.date.getTime() === d("2026-08-01").getTime())).toBe(true);
   });
 
   it("池级口径：forUserId 只切成本份额，余额/浪费/verdictAmount 不按人切", async () => {

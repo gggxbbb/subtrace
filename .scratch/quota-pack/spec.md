@@ -51,7 +51,7 @@ Grilling 产出：决策全文见 ADR-0012 与 CONTEXT.md「额度包 / 发放�
     packs: { grantedAt: Date; quantity: number; expiresAt: Date; source: "AUTO" | "MANUAL" }[];
     snapshots: { date: Date; remaining: number }[];
     subscriptionExpiry: Date | null;   // 停订即焚截断，null = 未到期
-    unitCostOf: (pack) => number;      // AUTO=发放段净额/应发量；MANUAL=0
+    unitCostOf: (pack) => number;      // AUTO=发放段净额/应发量；段内有 AUTO 时 MANUAL=0（赠送包）；手动模式无 AUTO 时 MANUAL 即付费额度，按段净额÷ΣMANUAL 量计价
   }): {
     balanceAt: Date;                   // 最新快照日期（余额时效）
     balance: number;                   // 最新快照校准余额

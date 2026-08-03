@@ -6,10 +6,9 @@ import { Led, inputCls, labelCls } from "@/components/te";
 import { StepBar } from "@/components/StepWizard";
 import { fmtMoney } from "@/lib/format";
 import { setUsageConfigAction, disableUsageAction, purgeUsageAction } from "@/lib/usage/actions";
-
+import type { GrantMode } from "@/lib/usage/service";
 
 type Kind = "COUNT" | "QUOTA" | "SAVINGS";
-type GrantMode = "RESET" | "STACKED";
 
 const KIND_LABEL: Record<Kind, string> = { COUNT: "计数型", QUOTA: "额度型", SAVINGS: "省钱型" };
 const MODE_LABEL: Record<GrantMode, string> = { RESET: "周期重置", STACKED: "包叠加" };

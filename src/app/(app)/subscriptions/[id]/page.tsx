@@ -150,6 +150,7 @@ export default async function SubscriptionDetailPage({
               : null,
             periodWaste: v.periodWaste,
             totalWaste: v.totalWaste,
+            wasteEvents: v.wasteEvents.map((w) => ({ date: iso(w.date), quantity: w.quantity, amount: w.amount })),
             consumptionInferred: v.consumptionInferred,
             verdictAmount: v.verdictAmount,
             costUnknown: v.costUnknown,
@@ -359,7 +360,7 @@ export default async function SubscriptionDetailPage({
               <UsageEntryPanel
                 subscriptionId={sub.id}
                 usageKind={(sub.usageKind as "COUNT" | "QUOTA" | "SAVINGS" | null) ?? null}
-                grantMode={sub.grantMode}
+                grantMode={(sub.grantMode as "RESET" | "STACKED" | null) ?? null}
                 usageUnit={sub.usageUnit}
                 defaultUnitPrice={sub.altUnitPrice}
                 defaultQuotaTotal={sub.quotaTotal}

@@ -2,6 +2,7 @@
 
 import { prisma } from "../db";
 import { isValidCron } from "./job";
+import type { GrantMode } from "../usage/service";
 
 export interface ScriptSubView {
   id: string;
@@ -9,7 +10,7 @@ export interface ScriptSubView {
   script: string | null;
   scriptCron: string | null;
   /** 发放形态：空 = RESET | STACKED（决定脚本返回值契约，ADR-0012） */
-  grantMode: string | null;
+  grantMode: GrantMode | null;
   /** 编辑回显用：env 已配置时不回传内容，只标记 hasEnv */
   hasEnv: boolean;
 }
@@ -26,7 +27,7 @@ export async function listScriptSubs(userId: string): Promise<ScriptSubView[]> {
     name: s.name,
     script: s.script,
     scriptCron: s.scriptCron,
-    grantMode: s.grantMode,
+    grantMode: (s.grantMode as GrantMode | null) ?? null,
     hasEnv: s.scriptEnv !== null && s.scriptEnv !== "",
   }));
 }

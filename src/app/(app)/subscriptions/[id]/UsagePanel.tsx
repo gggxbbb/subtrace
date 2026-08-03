@@ -10,6 +10,7 @@ import {
   addUsageAction,
   deleteUsageAction,
 } from "@/lib/usage/actions";
+import type { GrantMode } from "@/lib/usage/service";
 
 
 export interface UsageRecordRow {
@@ -68,6 +69,7 @@ export type VerdictData =
       nextExpiry: { date: string; quantity: number; projectedBalance: number } | null;
       periodWaste: { quantity: number; amount: number };
       totalWaste: { quantity: number; amount: number };
+      wasteEvents: { date: string; quantity: number; amount: number }[];
       consumptionInferred: number;
       verdictAmount: number;
       costUnknown?: boolean;
@@ -88,7 +90,7 @@ export function UsageEntryPanel({
   subscriptionId: string;
   usageKind: "COUNT" | "QUOTA" | "SAVINGS" | null;
   /** 发放形态：空 = RESET | STACKED（包叠加，ADR-0012） */
-  grantMode: string | null;
+  grantMode: GrantMode | null;
   usageUnit: string | null;
   defaultUnitPrice: number | null;
   defaultQuotaTotal: number | null;
@@ -577,6 +579,22 @@ export function UsageVerdictPanel({
                 推算已消费 {v.consumptionInferred} {usageUnit}
               </div>
             </div>
+            {v.wasteEvents.length > 0 && (
+              <div className="sm:col-span-2">
+                <div className="text-[9px] uppercase text-faint f-mono">浪费明细（已确认，跨区间可回看）</div>
+                <div className="mt-1 space-y-0.5">
+                  {v.wasteEvents.map((w) => (
+                    <div key={w.date} className="flex justify-between text-[10px] tabular-nums f-mono">
+                      <span>{w.date}</span>
+                      <span>
+                        {w.quantity} {usageUnit}
+                        {w.amount > 0 ? ` · −${fmtMoney(w.amount, currency)}` : " · 赠送包"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <>

@@ -51,6 +51,8 @@ export interface UsageBoardRow {
   id: string;
   name: string;
   detail: string;
+  /** 快照陈旧 ≥30 天（STACKED，story 12）：大盘原位变色提示 */
+  stale?: boolean;
   verdictAmount: number;
   /** 覆盖段金额未知（ticket 12）：盈亏不可信，UI 灰显 */
   costUnknown?: boolean;
@@ -151,10 +153,11 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
                 : v.kind === "SAVINGS"
                   ? `已省 ${v.saved.toFixed(2)} − 成本 ${v.cost.toFixed(2)}`
                   : v.kind === "PACK"
-                    ? `余额 ${v.balance} ${sub.usageUnit ?? ""} · 区间浪费 ${v.periodWaste.amount.toFixed(2)}${v.staleDays != null && v.staleDays >= 30 ? " · 快照陈旧" : ""}`
+                    ? `余额 ${v.balance} ${sub.usageUnit ?? ""} · 区间浪费 ${v.periodWaste.amount.toFixed(2)}`
                     : `已用 ${Math.round(v.usageRate * 100)}%（${v.used}/${v.total} ${sub.usageUnit ?? ""}）${v.hit100At ? " · 已用满" : ""}`,
             verdictAmount: v.verdictAmount,
             costUnknown: v.costUnknown,
+            ...(v.kind === "PACK" && v.staleDays != null && v.staleDays >= 30 ? { stale: true } : {}),
           };
         }),
     )

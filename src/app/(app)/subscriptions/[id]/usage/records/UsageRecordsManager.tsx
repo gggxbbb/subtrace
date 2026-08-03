@@ -11,6 +11,7 @@ import {
   deleteUsageAction,
   updateUsageAction,
 } from "@/lib/usage/actions";
+import type { GrantMode } from "@/lib/usage/service";
 
 
 export interface UsageRow {
@@ -43,7 +44,7 @@ export function UsageRecordsManager({
   subscriptionId: string;
   usageKind: "COUNT" | "QUOTA" | "SAVINGS";
   /** 发放形态：空 = RESET | STACKED（包叠加只收剩余快照，ADR-0012） */
-  grantMode: string | null;
+  grantMode: GrantMode | null;
   usageUnit: string | null;
   rows: UsageRow[];
   total: number;

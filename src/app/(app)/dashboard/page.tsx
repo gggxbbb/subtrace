@@ -133,7 +133,10 @@ export default async function DashboardPage() {
               <a key={u.id} href={`/subscriptions/${u.id}`} className="flex items-center justify-between border-b border-line px-4 py-2.5 last:border-0 hover:bg-black/[0.03]">
                 <div className="min-w-0">
                   <div className="truncate text-[13px] font-medium" title={u.name}>{u.name}</div>
-                  <div className="truncate text-[9px] text-faint f-mono">{u.detail}</div>
+                  <div className="truncate text-[9px] text-faint f-mono">
+                    {u.detail}
+                    {u.stale && <span className="font-bold text-destructive"> · 快照陈旧</span>}
+                  </div>
                 </div>
                 {u.costUnknown ? (
                   <span className="shrink-0 text-sm font-bold text-faint f-mono">成本未知</span>
