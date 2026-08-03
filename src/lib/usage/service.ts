@@ -84,12 +84,12 @@ export async function addUsage(
   });
 }
 
-/** 额度型：RESET 录已用量或百分比（百分比按当月总额度折算）；STACKED 只收剩余总量（ADR-0012 混录禁止） */
+/** 额度型：RESET 录已用量或百分比（百分比按当月总额度折算）；STACKED 只收剩余总量（ADR-0012 混录禁止）。source 供脚本任务标记 SCRIPT */
 export async function addQuotaSnapshot(
   actorId: string,
   subscriptionId: string,
   userId: string,
-  input: { date: Date; used?: number; percent?: number; remaining?: number; unitPrice?: number; quotaTotal?: number },
+  input: { date: Date; used?: number; percent?: number; remaining?: number; unitPrice?: number; quotaTotal?: number; source?: string },
 ): Promise<UsageRecord> {
   const sub = await assertUsageAllowed(actorId, subscriptionId);
   if (sub.grantMode === "STACKED") {
@@ -97,7 +97,7 @@ export async function addQuotaSnapshot(
       throw new Error("包叠加形态只收剩余总量 stacked_remaining_required");
     }
     return prisma.usageRecord.create({
-      data: { subscriptionId, userId, date: input.date, quantity: input.remaining, kind: "TOTAL" },
+      data: { subscriptionId, userId, date: input.date, quantity: input.remaining, kind: "TOTAL", source: input.source ?? "MANUAL" },
     });
   }
   if (input.remaining != null) {

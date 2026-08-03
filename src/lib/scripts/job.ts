@@ -4,6 +4,7 @@
 import { Cron } from "croner";
 import { prisma } from "../db";
 import type { JobDef } from "../jobs";
+import { addQuotaSnapshot } from "../usage/service";
 import { runScript } from "./sandbox";
 
 /** 脚本 cron 的时区约定：北京时间（家庭自用场景，ADR-0006） */
@@ -13,7 +14,7 @@ export const scriptJobKey = (subscriptionId: string) => `script:${subscriptionId
 
 import { today } from "../dates";
 
-/** 执行单个订阅的脚本：沙箱运行 → 写 TOTAL 快照。返回摘要消息；失败抛错（runJob 记 FAIL）。 */
+/** 执行单个订阅的脚本：沙箱运行 → 写 TOTAL 快照（RESET=已用 / STACKED=剩余，ADR-0012）。返回摘要消息；失败抛错（runJob 记 FAIL）。 */
 export async function executeScriptJob(subscriptionId: string): Promise<string> {
   const sub = await prisma.subscription.findUnique({
     where: { id: subscriptionId },
@@ -28,23 +29,33 @@ export async function executeScriptJob(subscriptionId: string): Promise<string> 
   } catch {
     throw new Error("脚本 env 配置损坏（非 JSON）");
   }
-  const result = await runScript(sub.script, { env });
+  const stacked = sub.usageKind === "QUOTA" && sub.grantMode === "STACKED";
+  const result = await runScript(sub.script, { env, contract: stacked ? "remaining" : "used" });
   if (!result.ok) {
     const tail = result.logs.length > 0 ? `\n日志: ${result.logs.join("\n")}` : "";
     throw new Error(`${result.error}${tail}`.slice(0, 1500));
+  }
+  const logTail = result.logs.length > 0 ? `；日志 ${result.logs.length} 行` : "";
+  if (stacked) {
+    // 复用 STACKED 快照写入路径（守卫形态一致，source=SCRIPT）
+    await addQuotaSnapshot(sub.ownerId, sub.id, sub.ownerId, {
+      date: today(),
+      remaining: result.remaining!,
+      source: "SCRIPT",
+    });
+    return `已写入剩余快照：剩余 ${result.remaining}${logTail}`;
   }
   await prisma.usageRecord.create({
     data: {
       subscriptionId: sub.id,
       userId: sub.ownerId,
       date: today(),
-      quantity: result.used,
+      quantity: result.used!,
       kind: "TOTAL",
       source: "SCRIPT",
       ...(result.total !== undefined ? { quotaTotal: result.total } : {}),
     },
   });
-  const logTail = result.logs.length > 0 ? `；日志 ${result.logs.length} 行` : "";
   return `已写入快照：已用 ${result.used}${result.total !== undefined ? ` / 总额 ${result.total}` : ""}${logTail}`;
 }
 

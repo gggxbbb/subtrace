@@ -74,6 +74,19 @@ describe("saveScript 守卫", () => {
     views = await listScriptSubs(ownerId);
     expect(views[0].hasEnv).toBe(true); // 未传 env → 保留
   });
+
+  it("QUOTA 任意发放形态可挂脚本（STACKED 放行）；SAVINGS 拒绝", async () => {
+    const sub = await quotaSub();
+    await prisma.subscription.update({ where: { id: sub.id }, data: { grantMode: "STACKED" } });
+    await saveScript(ownerId, sub.id, { script: "return { remaining: 18 };", scriptCron: "0 * * * *" });
+    expect(await resolveScriptJob(scriptJobKey(sub.id))).not.toBeNull();
+    const views = await listScriptSubs(ownerId);
+    expect(views[0].grantMode).toBe("STACKED");
+
+    const sav = await createSubscription(ownerId, { name: "京东Plus", trackingMode: "MANUAL", startDate: d("2026-07-01") });
+    await prisma.subscription.update({ where: { id: sav.id }, data: { usageKind: "SAVINGS" } });
+    await expect(saveScript(ownerId, sav.id, { script: "return 1;", scriptCron: "0 * * * *" })).rejects.toThrow(/quota_only/);
+  });
 });
 
 describe("executeScriptJob", () => {
@@ -107,5 +120,28 @@ describe("executeScriptJob", () => {
     expect(isValidCron("0 */6 * * *")).toBe(true);
     expect(isValidCron("not-a-cron")).toBe(false);
     expect(isValidCron("")).toBe(false);
+  });
+
+  it("STACKED：返回 { remaining } 写 TOTAL 剩余快照（source=SCRIPT）", async () => {
+    const sub = await quotaSub();
+    await prisma.subscription.update({ where: { id: sub.id }, data: { grantMode: "STACKED" } });
+    await saveScript(ownerId, sub.id, { script: "return { remaining: 18 };", scriptCron: "0 * * * *" });
+    const msg = await executeScriptJob(sub.id);
+    expect(msg).toContain("18");
+    const rec = await prisma.usageRecord.findFirstOrThrow({ where: { subscriptionId: sub.id } });
+    expect(rec).toMatchObject({ kind: "TOTAL", source: "SCRIPT", quantity: 18, quotaTotal: null });
+  });
+
+  it("形态不匹配明确报错：STACKED 收 used / RESET 收 remaining，均不写快照", async () => {
+    const stackedSub = await quotaSub("像素蛋糕");
+    await prisma.subscription.update({ where: { id: stackedSub.id }, data: { grantMode: "STACKED" } });
+    await saveScript(ownerId, stackedSub.id, { script: "return { used: 5 };", scriptCron: "0 * * * *" });
+    await expect(executeScriptJob(stackedSub.id)).rejects.toThrow(/remaining.*mismatch|mismatch/);
+
+    const resetSub = await quotaSub("机场2");
+    await saveScript(ownerId, resetSub.id, { script: "return { remaining: 5 };", scriptCron: "0 * * * *" });
+    await expect(executeScriptJob(resetSub.id)).rejects.toThrow(/used.*mismatch|mismatch/);
+
+    expect(await prisma.usageRecord.count()).toBe(0);
   });
 });

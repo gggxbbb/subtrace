@@ -56,6 +56,29 @@ describe("返回值解析", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toContain(msg);
   });
+
+  it("STACKED 契约（contract=remaining）：{remaining} 放行，used/裸数字拒绝", async () => {
+    expect(await runScript("({remaining: 18})", { env: {}, contract: "remaining" })).toEqual({
+      ok: true,
+      remaining: 18,
+      logs: [],
+    });
+    for (const [code, msg] of [
+      ["({used: 5})", "mismatch"],
+      ["42", "remaining"],
+      ["({remaining: -1})", "非负"],
+    ] as const) {
+      const r = await runScript(code, { env: {}, contract: "remaining" });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error).toContain(msg);
+    }
+  });
+
+  it("RESET 契约（默认）：收到 remaining 报形态不匹配", async () => {
+    const r = await runScript("({remaining: 5})", { env: {} });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("mismatch");
+  });
 });
 
 describe("沙箱隔离", () => {

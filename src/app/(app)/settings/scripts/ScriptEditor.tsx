@@ -18,8 +18,18 @@ const PRESETS: { label: string; cron: string }[] = [
   { label: "每天 8 点", cron: "0 8 * * *" },
 ];
 
-const DEFAULT_SCRIPT = `// 可用：fetch(url, init?)（限 5 次/1MB/10s）、console.log、env（下方密钥）
-// 返回 { used, total? }（total 可省略）；示例：
+// 默认模板按发放形态分裂（ADR-0012）：周期重置返回 {used, total?}；包叠加返回 {remaining}
+const defaultScript = (stacked: boolean) =>
+  stacked
+    ? `// 可用：fetch(url, init?)（限 5 次/1MB/10s）、console.log、env（下方密钥）
+// 包叠加形态：返回 { remaining }（额度剩余总量）；示例：
+const res = await fetch("https://example.com/api/quota", {
+  headers: { authorization: \`Bearer \${env.token}\` },
+});
+const data = JSON.parse(res.text);
+return { remaining: data.remaining };`
+    : `// 可用：fetch(url, init?)（限 5 次/1MB/10s）、console.log、env（下方密钥）
+// 周期重置形态：返回 { used, total? }（total 可省略）；示例：
 const res = await fetch("https://example.com/api/usage", {
   headers: { authorization: \`Bearer \${env.token}\` },
 });
@@ -46,7 +56,8 @@ export function ScriptEditor({
   const initial = subs.find((s) => s.id === selectedId) ?? subs[0];
   const [subId, setSubId] = useState(initial?.id ?? "");
   const sub = subs.find((s) => s.id === subId);
-  const [script, setScript] = useState(sub?.script ?? DEFAULT_SCRIPT);
+  const stacked = sub?.grantMode === "STACKED";
+  const [script, setScript] = useState(sub?.script ?? defaultScript(stacked));
   const [cron, setCron] = useState(sub?.scriptCron ?? "0 */6 * * *");
   const [env, setEnv] = useState("");
   const [result, setResult] = useState<string | null>(null);
@@ -55,7 +66,7 @@ export function ScriptEditor({
   const pick = (id: string) => {
     const s = subs.find((x) => x.id === id);
     setSubId(id);
-    setScript(s?.script ?? DEFAULT_SCRIPT);
+    setScript(s?.script ?? defaultScript(s?.grantMode === "STACKED"));
     setCron(s?.scriptCron ?? "0 */6 * * *");
     setEnv("");
     setResult(null);
@@ -70,13 +81,17 @@ export function ScriptEditor({
           <select value={subId} onChange={(e) => pick(e.target.value)} className={inputCls}>
             {subs.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name}{s.script ? "（已启用脚本）" : ""}
+                {s.name}
+                {s.grantMode === "STACKED" ? "（包叠加）" : ""}
+                {s.script ? "（已启用脚本）" : ""}
               </option>
             ))}
           </select>
         </div>
         <div>
-          <label className={labelCls}>脚本（JS，返回 {"{used, total?}"}）</label>
+          <label className={labelCls}>
+            脚本（JS，{stacked ? "返回 {remaining} 剩余总量" : "返回 {used, total?} 已用量"}）
+          </label>
           <textarea
             name="script"
             rows={10}

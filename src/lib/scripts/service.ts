@@ -8,15 +8,17 @@ export interface ScriptSubView {
   name: string;
   script: string | null;
   scriptCron: string | null;
+  /** 发放形态：空 = RESET | STACKED（决定脚本返回值契约，ADR-0012） */
+  grantMode: string | null;
   /** 编辑回显用：env 已配置时不回传内容，只标记 hasEnv */
   hasEnv: boolean;
 }
 
-/** 当前用户可管理脚本的额度型订阅列表 */
+/** 当前用户可管理脚本的额度型订阅列表（QUOTA 任意发放形态，ADR-0012） */
 export async function listScriptSubs(userId: string): Promise<ScriptSubView[]> {
   const subs = await prisma.subscription.findMany({
     where: { ownerId: userId, usageKind: "QUOTA", status: "ACTIVE" },
-    select: { id: true, name: true, script: true, scriptCron: true, scriptEnv: true },
+    select: { id: true, name: true, script: true, scriptCron: true, scriptEnv: true, grantMode: true },
     orderBy: { createdAt: "asc" },
   });
   return subs.map((s) => ({
@@ -24,6 +26,7 @@ export async function listScriptSubs(userId: string): Promise<ScriptSubView[]> {
     name: s.name,
     script: s.script,
     scriptCron: s.scriptCron,
+    grantMode: s.grantMode,
     hasEnv: s.scriptEnv !== null && s.scriptEnv !== "",
   }));
 }
