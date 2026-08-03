@@ -141,7 +141,9 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
                 ? `${v.usage} ${sub.usageUnit ?? ""} × ${v.value > 0 && v.usage > 0 ? (v.value / v.usage).toFixed(2) : sub.altUnitPrice} − ${v.cost.toFixed(2)}`
                 : v.kind === "SAVINGS"
                   ? `已省 ${v.saved.toFixed(2)} − 成本 ${v.cost.toFixed(2)}`
-                  : `已用 ${Math.round(v.usageRate * 100)}%（${v.used}/${v.total} ${sub.usageUnit ?? ""}）${v.hit100At ? " · 已用满" : ""}`,
+                  : v.kind === "PACK"
+                    ? `余额 ${v.balance} ${sub.usageUnit ?? ""} · 区间浪费 ${v.periodWaste.amount.toFixed(2)}${v.staleDays != null && v.staleDays >= 30 ? " · 快照陈旧" : ""}`
+                    : `已用 ${Math.round(v.usageRate * 100)}%（${v.used}/${v.total} ${sub.usageUnit ?? ""}）${v.hit100At ? " · 已用满" : ""}`,
             verdictAmount: v.verdictAmount,
             costUnknown: v.costUnknown,
           };

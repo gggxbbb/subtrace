@@ -5,12 +5,16 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "../auth/session";
 import { dayField } from "../form";
 import {
+  addPack,
   addQuotaSnapshot,
   addSavings,
   addUsage,
+  deletePack,
   deleteUsage,
   setUsageConfig,
+  updatePack,
   updateUsage,
+  type GrantMode,
   type UsageKind,
 } from "./service";
 import { prisma } from "../db";
@@ -19,11 +23,15 @@ import { prisma } from "../db";
 export async function setUsageConfigAction(subscriptionId: string, formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const grantMode = String(formData.get("grantMode") ?? "");
+  const packValidMonths = formData.get("packValidMonths");
   await setUsageConfig(user.id, subscriptionId, {
     usageKind: String(formData.get("usageKind")) as UsageKind,
     usageUnit: String(formData.get("usageUnit") ?? ""),
     altUnitPrice: formData.get("altUnitPrice") ? Number(formData.get("altUnitPrice")) : undefined,
     quotaTotal: formData.get("quotaTotal") ? Number(formData.get("quotaTotal")) : undefined,
+    grantMode: grantMode === "STACKED" ? "STACKED" : (grantMode === "RESET" ? "RESET" : undefined) as GrantMode | undefined,
+    packValidMonths: packValidMonths && String(packValidMonths).trim() !== "" ? Number(packValidMonths) : undefined,
   });
   revalidatePath(`/subscriptions/${subscriptionId}`);
   redirect(`/subscriptions/${subscriptionId}`);
@@ -48,15 +56,51 @@ export async function addQuotaSnapshotAction(subscriptionId: string, formData: F
   if (!user) redirect("/login");
   const percent = formData.get("percent");
   const used = formData.get("used");
+  const remaining = formData.get("remaining");
   const unitPrice = formData.get("unitPrice");
   const quotaTotal = formData.get("quotaTotal");
   await addQuotaSnapshot(user.id, subscriptionId, user.id, {
     date: dayField(formData.get("date")),
     percent: percent && String(percent).trim() !== "" ? Number(percent) : undefined,
     used: used && String(used).trim() !== "" ? Number(used) : undefined,
+    remaining: remaining && String(remaining).trim() !== "" ? Number(remaining) : undefined,
     unitPrice: unitPrice && String(unitPrice).trim() !== "" ? Number(unitPrice) : undefined,
     quotaTotal: quotaTotal && String(quotaTotal).trim() !== "" ? Number(quotaTotal) : undefined,
   });
+  revalidatePath(`/subscriptions/${subscriptionId}`);
+  redirect(`/subscriptions/${subscriptionId}`);
+}
+
+// ===== 额度包（ADR-0012）：手动包增删改（AUTO 只读，由生成器维护） =====
+
+export async function addPackAction(subscriptionId: string, formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await addPack(user.id, subscriptionId, {
+    grantedAt: dayField(formData.get("grantedAt")),
+    quantity: Number(formData.get("quantity")),
+    expiresAt: dayField(formData.get("expiresAt")),
+  });
+  revalidatePath(`/subscriptions/${subscriptionId}`);
+  redirect(`/subscriptions/${subscriptionId}`);
+}
+
+export async function updatePackAction(subscriptionId: string, packId: string, formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await updatePack(user.id, packId, {
+    grantedAt: formData.get("grantedAt") ? dayField(formData.get("grantedAt")) : undefined,
+    quantity: formData.get("quantity") ? Number(formData.get("quantity")) : undefined,
+    expiresAt: formData.get("expiresAt") ? dayField(formData.get("expiresAt")) : undefined,
+  });
+  revalidatePath(`/subscriptions/${subscriptionId}`);
+  redirect(`/subscriptions/${subscriptionId}`);
+}
+
+export async function deletePackAction(subscriptionId: string, packId: string) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await deletePack(user.id, packId);
   revalidatePath(`/subscriptions/${subscriptionId}`);
   redirect(`/subscriptions/${subscriptionId}`);
 }

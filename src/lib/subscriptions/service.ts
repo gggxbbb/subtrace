@@ -7,7 +7,7 @@ import {
   type PaymentRec,
   type SubscriptionDef,
 } from "../cost-engine";
-import type { Payment, Subscription } from "@/generated/prisma/client";
+import type { Payment, QuotaPack, Subscription } from "@/generated/prisma/client";
 import { beneficiaryInclude, type BeneficiaryWithRefs } from "../beneficiaries/service";
 
 export type SubscriptionWithPayments = Subscription & { payments: Payment[] };
@@ -15,6 +15,7 @@ export type SubscriptionWithPayments = Subscription & { payments: Payment[] };
 export type SubscriptionWithRefs = SubscriptionWithPayments & {
   beneficiaries: BeneficiaryWithRefs[];
   owner: { username: string };
+  quotaPacks: QuotaPack[];
 };
 
 export interface SubscriptionInput {
@@ -127,6 +128,7 @@ export async function listSubscriptions(userId: string): Promise<SubscriptionWit
       payments: { orderBy: { periodStart: "asc" } },
       beneficiaries: { include: beneficiaryInclude },
       owner: { select: { username: true } },
+      quotaPacks: { orderBy: { grantedAt: "asc" } },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -143,6 +145,7 @@ export async function getSubscription(
       payments: { orderBy: { periodStart: "asc" } },
       beneficiaries: { include: beneficiaryInclude },
       owner: { select: { username: true } },
+      quotaPacks: { orderBy: { grantedAt: "asc" } },
     },
   });
 }

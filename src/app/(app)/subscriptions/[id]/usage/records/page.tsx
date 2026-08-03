@@ -70,6 +70,7 @@ export default async function UsageRecordsPage({
         <UsageRecordsManager
           subscriptionId={sub.id}
           usageKind={sub.usageKind as "COUNT" | "QUOTA" | "SAVINGS"}
+          grantMode={sub.grantMode}
           usageUnit={sub.usageUnit}
           rows={rows}
           total={all.length}

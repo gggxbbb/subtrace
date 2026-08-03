@@ -27,6 +27,7 @@ import {
   type UsageRecordRow,
   type VerdictData,
 } from "./UsagePanel";
+import { PacksPanel } from "./PacksPanel";
 
 export default async function SubscriptionDetailPage({
   params,
@@ -94,7 +95,9 @@ export default async function SubscriptionDetailPage({
                   ? `${pv.usage} ${sub.usageUnit ?? ""}`
                   : pv.kind === "SAVINGS"
                     ? `已省 ${fmtMoney(pv.saved, cur)}`
-                    : `${Math.round(pv.usageRate * 100)}%`,
+                    : pv.kind === "PACK"
+                      ? `余额 ${pv.balance} ${sub.usageUnit ?? ""}`
+                      : `${Math.round(pv.usageRate * 100)}%`,
               verdictAmount: pv.verdictAmount,
             };
           })
@@ -128,6 +131,24 @@ export default async function SubscriptionDetailPage({
             periodEnd: iso(v.periodEnd),
             cost: v.cost,
             saved: v.saved,
+            verdictAmount: v.verdictAmount,
+            costUnknown: v.costUnknown,
+          }
+      : v.kind === "PACK"
+        ? {
+            kind: "PACK",
+            periodStart: iso(v.periodStart),
+            periodEnd: iso(v.periodEnd),
+            cost: v.cost,
+            balance: v.balance,
+            balanceAt: v.balanceAt ? iso(v.balanceAt) : null,
+            staleDays: v.staleDays,
+            nextExpiry: v.nextExpiry
+              ? { date: iso(v.nextExpiry.date), quantity: v.nextExpiry.quantity, projectedBalance: v.nextExpiry.projectedBalance }
+              : null,
+            periodWaste: v.periodWaste,
+            totalWaste: v.totalWaste,
+            consumptionInferred: v.consumptionInferred,
             verdictAmount: v.verdictAmount,
             costUnknown: v.costUnknown,
           }
@@ -336,6 +357,7 @@ export default async function SubscriptionDetailPage({
               <UsageEntryPanel
                 subscriptionId={sub.id}
                 usageKind={(sub.usageKind as "COUNT" | "QUOTA" | "SAVINGS" | null) ?? null}
+                grantMode={sub.grantMode}
                 usageUnit={sub.usageUnit}
                 defaultUnitPrice={sub.altUnitPrice}
                 defaultQuotaTotal={sub.quotaTotal}
@@ -364,8 +386,24 @@ export default async function SubscriptionDetailPage({
             </Panel>
           </div>
         )}
+        {sub.usageKind === "QUOTA" && sub.grantMode === "STACKED" && (
+          <Panel index="05" title={`额度包 / ${sub.quotaPacks.length}`}>
+            <PacksPanel
+              subscriptionId={sub.id}
+              isOwner={isOwner}
+              usageUnit={sub.usageUnit}
+              packs={sub.quotaPacks.map((p) => ({
+                id: p.id,
+                grantedAt: iso(p.grantedAt),
+                quantity: p.quantity,
+                expiresAt: iso(p.expiresAt),
+                source: p.source,
+              }))}
+            />
+          </Panel>
+        )}
         <div className="grid grid-cols-1 gap-4">
-          <Panel index="05" title="受益实体 / 分摊">
+          <Panel index={sub.usageKind === "QUOTA" && sub.grantMode === "STACKED" ? "06" : "05"} title="受益实体 / 分摊">
             <BeneficiariesPanel
               subscriptionId={sub.id}
               isOwner={isOwner}

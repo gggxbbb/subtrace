@@ -56,12 +56,28 @@ export type VerdictData =
       saved: number;
       verdictAmount: number;
       costUnknown?: boolean;
+    }
+  | {
+      kind: "PACK";
+      periodStart: string;
+      periodEnd: string;
+      cost: number;
+      balance: number;
+      balanceAt: string | null;
+      staleDays: number | null;
+      nextExpiry: { date: string; quantity: number; projectedBalance: number } | null;
+      periodWaste: { quantity: number; amount: number };
+      totalWaste: { quantity: number; amount: number };
+      consumptionInferred: number;
+      verdictAmount: number;
+      costUnknown?: boolean;
     };
 
 /** 用量录入卡：类型/单位可就地设定；本次用量、本次单价、当月总额度逐条可调，默认继承上一条记录 */
 export function UsageEntryPanel({
   subscriptionId,
   usageKind,
+  grantMode,
   usageUnit,
   defaultUnitPrice,
   defaultQuotaTotal,
@@ -71,6 +87,8 @@ export function UsageEntryPanel({
 }: {
   subscriptionId: string;
   usageKind: "COUNT" | "QUOTA" | "SAVINGS" | null;
+  /** 发放形态：空 = RESET | STACKED（包叠加，ADR-0012） */
+  grantMode: string | null;
   usageUnit: string | null;
   defaultUnitPrice: number | null;
   defaultQuotaTotal: number | null;
@@ -81,6 +99,7 @@ export function UsageEntryPanel({
   const today = isoDay(new Date());
   const last = records[records.length - 1];
   const kind: "COUNT" | "QUOTA" | "SAVINGS" = usageKind ?? "COUNT";
+  const stacked = kind === "QUOTA" && grantMode === "STACKED";
   // 从历史提取去重的 用量×单价 元组（最近优先）
   const tuples: { quantity: number; unitPrice: number | null }[] = [];
   for (const r of [...records].reverse()) {
@@ -228,6 +247,34 @@ export function UsageEntryPanel({
           )}
           <div className="text-[9px] uppercase text-faint f-mono">
             单价留空继承上一条记录{pricePlaceholder != null ? `（${pricePlaceholder}）` : "或订阅默认"}
+          </div>
+        </form>
+      ) : stacked ? (
+        <form key="stacked" action={addQuotaSnapshotAction.bind(null, subscriptionId)} className="space-y-2">
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <label className={labelCls}>日期</label>
+              <input name="date" type="date" defaultValue={today} required className={`${inputCls} f-mono`} />
+            </div>
+            <div className="w-32">
+              <label className={labelCls}>剩余总量{usageUnit ? `（${usageUnit}）` : ""}</label>
+              <input
+                name="remaining"
+                type="number"
+                step="any"
+                min="0"
+                placeholder={last?.kind === "TOTAL" ? `${last.quantity}` : "45"}
+                required
+                className={inputCls}
+              />
+            </div>
+            <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
+              校准 →
+            </button>
+          </div>
+          <div className="text-[9px] uppercase text-faint f-mono">
+            照抄产品界面可见的剩余总数；系统按 FEFO 推演拆分消费与到期浪费
+            {last?.kind === "TOTAL" && ` · 上一条：${last.date} 剩余 ${last.quantity} ${usageUnit ?? ""}`}
           </div>
         </form>
       ) : (
@@ -474,6 +521,63 @@ export function UsageVerdictPanel({
               </div>
             </div>
           </>
+        ) : v.kind === "PACK" ? (
+          <>
+            <div>
+              <div className="text-[9px] uppercase text-faint f-mono">余额（最新快照）</div>
+              <div className="text-lg font-bold tabular-nums">
+                {v.balanceAt ? (
+                  <>
+                    {v.balance} <span className="text-[10px] text-faint">{usageUnit}</span>
+                  </>
+                ) : (
+                  <span className="text-sm text-faint">未录入快照</span>
+                )}
+              </div>
+              {v.balanceAt && (
+                <div className={`text-[9px] f-mono ${v.staleDays != null && v.staleDays >= 30 ? "font-bold text-destructive" : "text-faint"}`}>
+                  快照 {v.balanceAt}
+                  {v.staleDays != null && v.staleDays > 0 && ` · 陈旧 ${v.staleDays} 天`}
+                  {v.staleDays != null && v.staleDays >= 30 && "，该校准了"}
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="text-[9px] uppercase text-faint f-mono">到期预警</div>
+              {v.nextExpiry ? (
+                <>
+                  <div className="text-sm font-bold tabular-nums">
+                    {v.nextExpiry.date}
+                    <span className="ml-1 text-[10px] font-normal text-faint">
+                      {v.nextExpiry.quantity} {usageUnit} 到期
+                    </span>
+                  </div>
+                  <div className="text-[9px] text-faint f-mono">
+                    按当前消耗预计剩 {v.nextExpiry.projectedBalance} {usageUnit}
+                  </div>
+                </>
+              ) : (
+                <div className="text-sm text-faint">无存活包</div>
+              )}
+            </div>
+            <div>
+              <div className="text-[9px] uppercase text-faint f-mono">本区间浪费</div>
+              <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.periodWaste.amount <= 0 ? "text-income" : "text-destructive"}`}>
+                {v.periodWaste.amount <= 0 ? fmtMoney(0, currency) : `−${fmtMoney(v.periodWaste.amount, currency)}`}
+                <Led color={v.periodWaste.amount <= 0 ? "#22c55e" : "#ef4444"} />
+              </div>
+              <div className="text-[9px] text-faint f-mono">{v.periodWaste.quantity} {usageUnit} 到期未用</div>
+            </div>
+            <div>
+              <div className="text-[9px] uppercase text-faint f-mono">累计浪费</div>
+              <div className={`text-lg font-bold tabular-nums ${v.totalWaste.amount <= 0 ? "" : "text-destructive"}`}>
+                {v.totalWaste.amount <= 0 ? fmtMoney(0, currency) : `−${fmtMoney(v.totalWaste.amount, currency)}`}
+              </div>
+              <div className="text-[9px] text-faint f-mono">
+                推算已消费 {v.consumptionInferred} {usageUnit}
+              </div>
+            </div>
+          </>
         ) : (
           <>
             <div>
@@ -517,7 +621,9 @@ export function UsageVerdictPanel({
           ? `价值 ${fmtMoney(v.value, currency)} − 成本 ${fmtMoney(v.cost, currency)}`
           : v.kind === "SAVINGS"
             ? `已省 ${fmtMoney(v.saved, currency)} − 成本 ${fmtMoney(v.cost, currency)}`
-            : `未用 ${Math.round((1 - v.usageRate) * 10000) / 100}% × 成本 ${fmtMoney(v.cost, currency)}`}
+            : v.kind === "PACK"
+              ? `区间浪费 −${fmtMoney(v.periodWaste.amount, currency)} · 累计 −${fmtMoney(v.totalWaste.amount, currency)}`
+              : `未用 ${Math.round((1 - v.usageRate) * 10000) / 100}% × 成本 ${fmtMoney(v.cost, currency)}`}
       </div>
       {perUser.length > 0 && (
         <div className="mt-2 border-t border-dashed border-line-strong pt-2">
@@ -543,7 +649,9 @@ export function UsageVerdictPanel({
               <span className="flex items-center gap-2">
                 {v.kind === "SAVINGS"
                   ? `+${fmtMoney(r.quantity, currency)}`
-                  : `${r.kind === "TOTAL" ? `已用 ${r.quantity}` : `+${r.quantity}`} ${usageUnit ?? ""}`}
+                  : v.kind === "PACK"
+                    ? `剩余 ${r.quantity} ${usageUnit ?? ""}`
+                    : `${r.kind === "TOTAL" ? `已用 ${r.quantity}` : `+${r.quantity}`} ${usageUnit ?? ""}`}
                 {r.unitPrice != null && <span className="text-faint">@ {r.unitPrice}</span>}
                 <button
                   onClick={async () => deleteUsageAction(subscriptionId, r.id)}

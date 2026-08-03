@@ -29,6 +29,7 @@ const today = () => isoDay(new Date());
 export function UsageRecordsManager({
   subscriptionId,
   usageKind,
+  grantMode,
   usageUnit,
   rows,
   total,
@@ -41,6 +42,8 @@ export function UsageRecordsManager({
 }: {
   subscriptionId: string;
   usageKind: "COUNT" | "QUOTA" | "SAVINGS";
+  /** 发放形态：空 = RESET | STACKED（包叠加只收剩余快照，ADR-0012） */
+  grantMode: string | null;
   usageUnit: string | null;
   rows: UsageRow[];
   total: number;
@@ -55,6 +58,7 @@ export function UsageRecordsManager({
   const [adding, setAdding] = useState(false);
   const backInput = <input type="hidden" name="back" value={back} />;
   const canTouch = (r: UsageRow) => isOwner || r.userId === currentUserId;
+  const stacked = usageKind === "QUOTA" && grantMode === "STACKED";
 
   return (
     <>
@@ -68,7 +72,7 @@ export function UsageRecordsManager({
             ))}
           </select>
         </div>
-        {usageKind !== "SAVINGS" && (
+        {usageKind !== "SAVINGS" && !stacked && (
           <div>
             <label className={labelCls}>类型</label>
             <select name="kind" defaultValue={filters.kind} className={inputCls}>
@@ -117,7 +121,27 @@ export function UsageRecordsManager({
         </form>
       )}
 
-      {adding && usageKind !== "SAVINGS" && (
+      {adding && stacked && (
+        <form
+          action={addQuotaSnapshotAction.bind(null, subscriptionId)}
+          className="flex items-end gap-2 border border-ink bg-surface p-3"
+        >
+          {backInput}
+          <div>
+            <label className={labelCls}>日期</label>
+            <input name="date" type="date" defaultValue={today()} required className={`${inputCls} f-mono`} />
+          </div>
+          <div>
+            <label className={labelCls}>剩余总量{usageUnit ? `（${usageUnit}）` : ""}</label>
+            <input name="remaining" type="number" step="any" min="0" required className={inputCls} />
+          </div>
+          <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
+            保存 →
+          </button>
+        </form>
+      )}
+
+      {adding && usageKind !== "SAVINGS" && !stacked && (
         <form
           action={(usageKind === "QUOTA" ? addQuotaSnapshotAction : addUsageAction).bind(null, subscriptionId)}
           className="flex items-end gap-2 border border-ink bg-surface p-3"
@@ -168,10 +192,10 @@ export function UsageRecordsManager({
                 <input name="date" type="date" defaultValue={r.date} required className={`${inputCls} f-mono`} />
               </div>
               <div>
-                <label className={labelCls}>{usageKind === "SAVINGS" ? "已省金额" : "数量"}</label>
+                <label className={labelCls}>{usageKind === "SAVINGS" ? "已省金额" : stacked ? "剩余" : "数量"}</label>
                 <input name="quantity" type="number" step="any" min="0" defaultValue={r.quantity} required className={inputCls} />
               </div>
-              {usageKind !== "SAVINGS" && (
+              {usageKind !== "SAVINGS" && !stacked && (
                 <>
                   <div>
                     <label className={labelCls}>单价</label>
@@ -198,7 +222,9 @@ export function UsageRecordsManager({
                 <span className="ml-2">
                   {usageKind === "SAVINGS"
                     ? `+${fmtMoney(r.quantity, currency)}`
-                    : `${r.kind === "TOTAL" ? `已用 ${r.quantity}` : `+${r.quantity}`} ${usageUnit ?? ""}`}
+                    : stacked
+                      ? `剩余 ${r.quantity} ${usageUnit ?? ""}`
+                      : `${r.kind === "TOTAL" ? `已用 ${r.quantity}` : `+${r.quantity}`} ${usageUnit ?? ""}`}
                 </span>
                 {r.unitPrice != null && <span className="ml-1 text-faint">@ {r.unitPrice}</span>}
                 {r.quotaTotal != null && <span className="ml-1 text-faint">/ {r.quotaTotal}</span>}

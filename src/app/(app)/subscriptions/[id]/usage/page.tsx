@@ -30,9 +30,12 @@ export default async function UsageWizardPage({ params }: { params: Promise<{ id
         <UsageWizard
           subscriptionId={sub.id}
           initialKind={(sub.usageKind as "COUNT" | "QUOTA" | "SAVINGS" | null) ?? null}
+          initialGrantMode={(sub.grantMode as "RESET" | "STACKED" | null) ?? null}
+          initialPackValidMonths={sub.packValidMonths}
           initialUnit={sub.usageUnit}
           initialAltUnitPrice={sub.altUnitPrice}
           initialQuotaTotal={sub.quotaTotal}
+          trackingMode={sub.trackingMode}
           recordCount={recordCount}
           currency={user.baseCurrency}
         />

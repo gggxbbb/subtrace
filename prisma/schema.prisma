@@ -97,8 +97,12 @@ model Subscription {
   usageUnit     String?
   /// 替代单价（主币种）：不买订阅按次/按量付费的单价
   altUnitPrice  Float?
-  /// 额度型：周期总额度
+  /// 额度型：周期总额度（STACKED 下读作每周期下发量）
   quotaTotal    Float?
+  /// 发放形态（ADR-0012）：空 = RESET（周期重置）| STACKED（包叠加）；仅 QUOTA 有意义
+  grantMode     String?
+  /// STACKED：包有效期（日历月，锚定下发日）
+  packValidMonths Int?
   /// 用量脚本（ticket 03）：JS 源码；空 = 未启用
   script        String?
   /// cron 表达式（UTC）
@@ -110,6 +114,25 @@ model Subscription {
   payments      Payment[]
   usage         UsageRecord[]
   beneficiaries Beneficiary[]
+  quotaPacks    QuotaPack[]
+}
+
+/// 额度包（ADR-0012）：包叠加形态下一次下发的定量额度。
+/// expiresAt 存「下发 + 有效期」原始值，停订截断在推演时现场计算。
+model QuotaPack {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  /// 下发日
+  grantedAt      DateTime
+  quantity       Float
+  /// 到期日（排他，当天起不可用）
+  expiresAt      DateTime
+  /// AUTO（生成器读时对齐，ticket 03）| MANUAL（手动补录/赠送包）
+  source         String       @default("MANUAL")
+  createdAt      DateTime     @default(now())
+
+  @@index([subscriptionId, grantedAt])
 }
 
 /// 任务运行记录（ADR-0006）：每次周期任务运行落一条，任务大盘数据源

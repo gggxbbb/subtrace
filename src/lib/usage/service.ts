@@ -5,6 +5,8 @@ import {
   actualCostPerUse,
   costSegments,
   coversDate,
+  currentExpiry,
+  dayDiff,
   savingsVerdict,
   usageInPeriod,
   usageValue,
@@ -15,10 +17,13 @@ import {
   toEngineSub,
   type SubscriptionWithPayments,
 } from "../subscriptions/service";
-import type { Beneficiary, UsageRecord } from "@/generated/prisma/client";
+import type { Beneficiary, QuotaPack, UsageRecord } from "@/generated/prisma/client";
 import { shareForViewer } from "../beneficiaries/service";
+import { projectPackLedger, type PackInput, type RemainingSnapshot } from "./pack-ledger";
 
 export type UsageKind = "COUNT" | "QUOTA" | "SAVINGS";
+/** 发放形态（ADR-0012）：空 = RESET | STACKED（包叠加）；仅 QUOTA 有意义 */
+export type GrantMode = "RESET" | "STACKED";
 
 export interface UsageConfigInput {
   usageKind: UsageKind;
@@ -26,6 +31,10 @@ export interface UsageConfigInput {
   usageUnit: string;
   altUnitPrice?: number;
   quotaTotal?: number;
+  /** 仅 QUOTA 可设；空/RESET 落库置空（存量零迁移） */
+  grantMode?: GrantMode;
+  /** STACKED：包有效期（日历月） */
+  packValidMonths?: number;
 }
 
 export async function setUsageConfig(
@@ -33,13 +42,23 @@ export async function setUsageConfig(
   subscriptionId: string,
   input: UsageConfigInput,
 ) {
-  await prisma.subscription.updateMany({
-    where: { id: subscriptionId, ownerId },
+  const sub = await prisma.subscription.findFirst({ where: { id: subscriptionId, ownerId } });
+  if (!sub) throw new Error("订阅不存在 subscription_not_found");
+  const stacked = input.usageKind === "QUOTA" && input.grantMode === "STACKED";
+  // 手动模式 + STACKED：无周期可推导发放计划，清空下发量/有效期，包全部手动录入（ADR-0012）
+  const keepPackFields = stacked && sub.trackingMode === "CYCLE";
+  await prisma.subscription.update({
+    where: { id: subscriptionId },
     data: {
       usageKind: input.usageKind,
       usageUnit: input.usageKind === "SAVINGS" ? null : input.usageUnit,
       altUnitPrice: input.usageKind === "COUNT" ? (input.altUnitPrice ?? null) : null,
-      quotaTotal: input.usageKind === "QUOTA" ? (input.quotaTotal ?? null) : null,
+      quotaTotal:
+        input.usageKind === "QUOTA" && !(stacked && !keepPackFields)
+          ? (input.quotaTotal ?? null)
+          : null,
+      grantMode: stacked ? "STACKED" : null,
+      packValidMonths: keepPackFields ? (input.packValidMonths ?? null) : null,
     },
   });
 }
@@ -51,20 +70,34 @@ export async function addUsage(
   userId: string,
   input: { date: Date; quantity: number; unitPrice?: number },
 ): Promise<UsageRecord> {
-  await assertUsageAllowed(actorId, subscriptionId);
+  const sub = await assertUsageAllowed(actorId, subscriptionId);
+  if (sub.usageKind === "QUOTA" && sub.grantMode === "STACKED") {
+    throw new Error("包叠加形态只收剩余快照 stacked_no_delta");
+  }
   return prisma.usageRecord.create({
     data: { subscriptionId, userId, date: input.date, quantity: input.quantity, unitPrice: input.unitPrice, kind: "DELTA" },
   });
 }
 
-/** 额度型：录入已用量或百分比（百分比按当月总额度折算），单价/总额度可选快照 */
+/** 额度型：RESET 录已用量或百分比（百分比按当月总额度折算）；STACKED 只收剩余总量（ADR-0012 混录禁止） */
 export async function addQuotaSnapshot(
   actorId: string,
   subscriptionId: string,
   userId: string,
-  input: { date: Date; used?: number; percent?: number; unitPrice?: number; quotaTotal?: number },
+  input: { date: Date; used?: number; percent?: number; remaining?: number; unitPrice?: number; quotaTotal?: number },
 ): Promise<UsageRecord> {
   const sub = await assertUsageAllowed(actorId, subscriptionId);
+  if (sub.grantMode === "STACKED") {
+    if (input.remaining == null || input.used != null || input.percent != null) {
+      throw new Error("包叠加形态只收剩余总量 stacked_remaining_required");
+    }
+    return prisma.usageRecord.create({
+      data: { subscriptionId, userId, date: input.date, quantity: input.remaining, kind: "TOTAL" },
+    });
+  }
+  if (input.remaining != null) {
+    throw new Error("周期重置形态录已用量/百分比，不收剩余 reset_used_required");
+  }
   const quotaTotal = input.quotaTotal ?? sub.quotaTotal;
   let quantity = input.used;
   if (quantity == null && input.percent != null) {
@@ -138,6 +171,60 @@ export async function listUsage(subscriptionId: string): Promise<UsageRecord[]> 
   });
 }
 
+// ===== 额度包（ADR-0012）：手动包增删改；AUTO 行由生成器维护（ticket 03），永不手触 =====
+
+export async function listPacks(subscriptionId: string): Promise<QuotaPack[]> {
+  return prisma.quotaPack.findMany({
+    where: { subscriptionId },
+    orderBy: [{ grantedAt: "asc" }, { createdAt: "asc" }],
+  });
+}
+
+/** 手动补录额度包（仅所有者；订阅须为 QUOTA + STACKED） */
+export async function addPack(
+  actorId: string,
+  subscriptionId: string,
+  input: { grantedAt: Date; quantity: number; expiresAt: Date },
+): Promise<QuotaPack> {
+  const sub = await prisma.subscription.findFirst({ where: { id: subscriptionId, ownerId: actorId } });
+  if (!sub) throw new Error("订阅不存在 subscription_not_found");
+  if (sub.usageKind !== "QUOTA" || sub.grantMode !== "STACKED") {
+    throw new Error("非包叠加形态 not_stacked");
+  }
+  return prisma.quotaPack.create({
+    data: {
+      subscriptionId,
+      grantedAt: input.grantedAt,
+      quantity: input.quantity,
+      expiresAt: input.expiresAt,
+      source: "MANUAL",
+    },
+  });
+}
+
+/** 编辑手动包（仅所有者；AUTO 行不可手改——随生成器对账重排） */
+export async function updatePack(
+  actorId: string,
+  packId: string,
+  input: { grantedAt?: Date; quantity?: number; expiresAt?: Date },
+): Promise<void> {
+  await prisma.quotaPack.updateMany({
+    where: { id: packId, source: "MANUAL", subscription: { ownerId: actorId } },
+    data: {
+      ...(input.grantedAt !== undefined && { grantedAt: input.grantedAt }),
+      ...(input.quantity !== undefined && { quantity: input.quantity }),
+      ...(input.expiresAt !== undefined && { expiresAt: input.expiresAt }),
+    },
+  });
+}
+
+/** 删除手动包（仅所有者；AUTO 行不可手删） */
+export async function deletePack(actorId: string, packId: string): Promise<void> {
+  await prisma.quotaPack.deleteMany({
+    where: { id: packId, source: "MANUAL", subscription: { ownerId: actorId } },
+  });
+}
+
 /** 录入权限：所有者或 USER 类受益人（受益人记自己的用量） */
 async function assertUsageAllowed(actorId: string, subscriptionId: string) {
   const sub = await prisma.subscription.findFirst({ where: { id: subscriptionId } });
@@ -203,17 +290,126 @@ export interface SavingsVerdict {
   verdictAmount: number;
 }
 
-export type UsageVerdict = CountVerdict | QuotaVerdict | SavingsVerdict;
+export type UsageVerdict = CountVerdict | QuotaVerdict | SavingsVerdict | PackVerdict;
 
-/** 当前服务区间的盈亏（覆盖 today 的成本段；无覆盖为 null）。
- *  传 forUserId 时按该受益人切片：成本 × 份额，用量只计其本人记录 */
+/** 包叠加盈亏（ADR-0012）：浪费导向，池级口径——余额/浪费不按受益人切片，forUserId 只切成本份额 */
+export interface PackVerdict {
+  kind: "PACK";
+  periodStart: Date;
+  periodEnd: Date;
+  /** 当前服务区间净额（按份额；浪费本身池级不切） */
+  cost: number;
+  /** 覆盖段金额未知（ticket 12） */
+  costUnknown?: boolean;
+  /** 最新快照校准余额（池级） */
+  balance: number;
+  /** 最新快照日期（余额时效）；无快照为 null */
+  balanceAt: Date | null;
+  /** 快照陈旧天数（today − balanceAt）；无快照为 null；≥30 天 UI 变色 */
+  staleDays: number | null;
+  /** 下一到期包预警：projectedBalance = FEFO 模拟余额 */
+  nextExpiry: { date: Date; quantity: number; projectedBalance: number } | null;
+  /** 本区间已确认浪费（数量 + 金额）；verdictAmount = −amount */
+  periodWaste: { quantity: number; amount: number };
+  /** 累计已确认浪费 */
+  totalWaste: { quantity: number; amount: number };
+  /** 累计推算消费（快照校准口径） */
+  consumptionInferred: number;
+  /** = −本区间确认浪费金额（≤0） */
+  verdictAmount: number;
+}
+
+/** 包叠加 verdict 装配：剩余快照 + 包列表 + 订阅到期日 → FEFO 推演 → 浪费口径盈亏。
+ *  订阅已到期（expiry < today）时合成一条到期日 remaining=0 的快照，使停订即焚无需用户操作即显形。 */
+function packVerdict(
+  sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[]; quotaPacks?: QuotaPack[] },
+  records: UsageRecord[],
+  today: Date,
+  forUserId: string | undefined,
+): PackVerdict | null {
+  const engineSub = toEngineSub(sub);
+  const payments = toEnginePayments(sub.payments);
+  const segments = costSegments(engineSub, payments, today);
+  const covering = segments.find((s) => coversDate(s, today));
+  // 已到期：无覆盖段时取最后一段为归因区间（停订浪费确认在到期日 = 段末排他端点，含端点归因）
+  const terminal = !covering && segments.length > 0;
+  const period = covering ?? (terminal ? segments[segments.length - 1] : null);
+  if (!period) return null;
+  const share = forUserId ? shareForViewer(sub.beneficiaries ?? [], sub.ownerId, forUserId) : 1;
+
+  const packs: PackInput[] = (sub.quotaPacks ?? []).map((p) => ({
+    grantedAt: p.grantedAt,
+    quantity: p.quantity,
+    expiresAt: p.expiresAt,
+    source: p.source === "AUTO" ? "AUTO" : "MANUAL",
+  }));
+  // 池级快照（不按受益人切——共享池按人各记一遍即双倍计数）
+  const snapshots: RemainingSnapshot[] = records
+    .filter((r) => r.kind === "TOTAL")
+    .map((r) => ({ date: r.date, remaining: r.quantity }));
+  const expiry = currentExpiry(engineSub, payments, today);
+  if (expiry && dayDiff(today, expiry) < 0) {
+    // 停订即焚：合成到期日 remaining=0 快照，终止日全量浪费立即确认
+    snapshots.push({ date: expiry, remaining: 0 });
+  }
+
+  // 单张成本 = 发放段净额 ÷ 该段应发量。AUTO 段应发量 = 段内 AUTO 总量；
+  // 段内有 AUTO 时 MANUAL 为赠送包（零成本不摊薄），无 AUTO（手动模式）时 MANUAL 即付费额度。
+  const unitCostOf = (pack: PackInput): number => {
+    const seg = segments.find((s) => coversDate(s, pack.grantedAt));
+    if (!seg || seg.amountUnknown || seg.net <= 0) return 0;
+    const inSeg = packs.filter((p) => coversDate(seg, p.grantedAt));
+    const hasAuto = inSeg.some((p) => p.source === "AUTO");
+    const basis = inSeg
+      .filter((p) => (hasAuto ? p.source === "AUTO" : true))
+      .reduce((s, p) => s + p.quantity, 0);
+    if (pack.source === "MANUAL" && hasAuto) return 0;
+    return basis > 0 ? seg.net / basis : 0;
+  };
+
+  const ledger = projectPackLedger({ packs, snapshots, subscriptionExpiry: expiry, unitCostOf });
+  const inPeriod = ledger.waste.filter(
+    (w) =>
+      w.date >= period.start && (terminal ? w.date <= period.end : w.date < period.end),
+  );
+  const periodWaste = {
+    quantity: inPeriod.reduce((s, w) => s + w.quantity, 0),
+    amount: inPeriod.reduce((s, w) => s + w.amount, 0),
+  };
+  return {
+    kind: "PACK",
+    periodStart: period.start,
+    periodEnd: period.end,
+    cost: period.net * share,
+    costUnknown: period.amountUnknown === true,
+    balance: ledger.balance,
+    balanceAt: ledger.balanceAt,
+    staleDays: ledger.balanceAt ? dayDiff(ledger.balanceAt, today) : null,
+    nextExpiry: ledger.nextExpiry,
+    periodWaste,
+    totalWaste: {
+      quantity: ledger.waste.reduce((s, w) => s + w.quantity, 0),
+      amount: ledger.waste.reduce((s, w) => s + w.amount, 0),
+    },
+    consumptionInferred: ledger.consumptionInferred,
+    verdictAmount: -periodWaste.amount + 0, // 避免 -0
+  };
+}
+
+/** 当前服务区间的盈亏（覆盖 today 的成本段；无覆盖为 null——STACKED 例外：
+ *  已到期订阅回落到最后一段归因，停订浪费才能显形）。
+ *  传 forUserId 时按该受益人切片：成本 × 份额，用量只计其本人记录（STACKED 池级例外） */
 export function getUsageVerdict(
-  sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[] },
+  sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[]; quotaPacks?: QuotaPack[] },
   records: UsageRecord[],
   today: Date,
   forUserId?: string,
 ): UsageVerdict | null {
   if (!sub.usageKind) return null;
+  // 包叠加：浪费导向 PackVerdict（ADR-0012），自行处理区间归因（含已到期回落）
+  if (sub.usageKind === "QUOTA" && sub.grantMode === "STACKED") {
+    return packVerdict(sub, records, today, forUserId);
+  }
   const covering = costSegments(toEngineSub(sub), toEnginePayments(sub.payments), today).find((s) =>
     coversDate(s, today),
   );
@@ -224,7 +420,7 @@ export function getUsageVerdict(
   const myRecords = forUserId ? records.filter((r) => r.userId === forUserId) : records;
 
   if (sub.usageKind === "QUOTA") {
-    // 额度型：只看使用率——用到 100% 没有，什么时候用满；浪费 = 未用部分 × 成本
+    // 额度型（周期重置）：只看使用率——用到 100% 没有，什么时候用满；浪费 = 未用部分 × 成本
     const inPeriod = myRecords
       .filter((r) => r.kind === "TOTAL" && r.date >= covering.start && r.date < covering.end)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
