@@ -8,7 +8,7 @@ import {
 import { costOverPeriod, costView, paidInPeriod } from "./subscriptions/cost-view";
 import { DAY_MS, dayStart, fromWall, wallParts } from "./dates";
 import { listPurchases, toEnginePurchase } from "./purchases/service";
-import { getUsageVerdict, listUsage } from "./usage/service";
+import { getUsageVerdict, listPacks, listUsage, reconcileAutoPacks } from "./usage/service";
 
 export interface DashboardRow {
   id: string;
@@ -125,7 +125,16 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   const itemDailyCost = purchases.reduce((s, p) => s + p.dailyCost, 0);
   const totalDailyCost = active.reduce((s, r) => s + r.dailyCost, 0) + itemDailyCost;
 
-  // 用量红黑榜：启用用量追踪的订阅按当前区间盈亏排序（按人切片，ADR-0003）；用量并行拉取
+  // 用量红黑榜：启用用量追踪的订阅按当前区间盈亏排序（按人切片，ADR-0003）；用量并行拉取。
+  // STACKED 先做 AUTO 包读时对账（ADR-0012）并刷新内存中的包列表，verdict 才看得到新生成的包
+  await Promise.all(
+    subs
+      .filter((s) => s.usageKind === "QUOTA" && s.grantMode === "STACKED")
+      .map(async (s) => {
+        await reconcileAutoPacks(s.id, today);
+        s.quotaPacks = await listPacks(s.id);
+      }),
+  );
   const usageBoard: UsageBoardRow[] = (
     await Promise.all(
       subs

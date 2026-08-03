@@ -3,7 +3,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "../db";
 import { addBeneficiary } from "../beneficiaries/service";
-import { createSubscription, getSubscription } from "../subscriptions/service";
+import { createSubscription, getSubscription, recordPayment } from "../subscriptions/service";
 import {
   addPack,
   addQuotaSnapshot,
@@ -14,6 +14,8 @@ import {
   getUsageVerdict,
   listPacks,
   listUsage,
+  nextAutoGrant,
+  reconcileAutoPacks,
   setUsageConfig,
   updatePack,
 } from "./service";
@@ -714,5 +716,170 @@ describe("PackVerdict 装配", () => {
     expect(v.staleDays).toBeNull();
     expect(v.periodWaste.amount).toBe(0);
     expect(v.verdictAmount).toBe(0);
+  });
+});
+
+// ===== AUTO 包生成器（ADR-0012 读时对齐，ticket 03）=====
+
+/** 像素蛋糕周期版：月付 25 元，QUOTA + STACKED，每月 30 张，有效期可配 */
+const cakeCycle = async (opts?: { startDate?: string; validMonths?: number; fixedDays?: number }) => {
+  const sub = await createSubscription(ownerId, {
+    name: "像素蛋糕周期",
+    trackingMode: "CYCLE",
+    ...(opts?.fixedDays
+      ? { cycleKind: "FIXED_DAYS" as const, fixedDays: opts.fixedDays }
+      : { cycleKind: "CALENDAR" as const, cycleUnit: "MONTH" as const, cycleCount: 1 }),
+    listPrice: 25,
+    listCurrency: "CNY",
+    listPriceBase: 25,
+    startDate: d(opts?.startDate ?? "2026-03-01"),
+  });
+  await setUsageConfig(ownerId, sub.id, {
+    usageKind: "QUOTA",
+    usageUnit: "张",
+    grantMode: "STACKED",
+    quotaTotal: 30,
+    packValidMonths: opts?.validMonths ?? 12,
+  });
+  return sub;
+};
+
+const autoGrants = async (subscriptionId: string) =>
+  (await listPacks(subscriptionId))
+    .filter((p) => p.source === "AUTO")
+    .map((p) => [p.grantedAt, p.quantity, p.expiresAt] as const);
+
+describe("AUTO 包生成器（读时对齐）", () => {
+  it("按月补齐到 today：未来包不物化，expiresAt = 下发 + 有效期日历月", async () => {
+    const sub = await cakeCycle({ startDate: "2026-03-01" });
+    await reconcileAutoPacks(sub.id, d("2026-08-03"));
+    expect(await autoGrants(sub.id)).toEqual([
+      [d("2026-03-01"), 30, d("2027-03-01")],
+      [d("2026-04-01"), 30, d("2027-04-01")],
+      [d("2026-05-01"), 30, d("2027-05-01")],
+      [d("2026-06-01"), 30, d("2027-06-01")],
+      [d("2026-07-01"), 30, d("2027-07-01")],
+      [d("2026-08-01"), 30, d("2027-08-01")],
+    ]);
+  });
+
+  it("幂等：重复触发不产生重复包（行 id 不变）", async () => {
+    const sub = await cakeCycle({ startDate: "2026-03-01" });
+    await reconcileAutoPacks(sub.id, d("2026-08-03"));
+    const first = await listPacks(sub.id);
+    await reconcileAutoPacks(sub.id, d("2026-08-03"));
+    await reconcileAutoPacks(sub.id, d("2026-08-03"));
+    const second = await listPacks(sub.id);
+    expect(second.map((p) => p.id)).toEqual(first.map((p) => p.id));
+    // 时间推进后只补新到期的周期
+    await reconcileAutoPacks(sub.id, d("2026-09-15"));
+    expect((await autoGrants(sub.id)).map(([g]) => g)).toContainEqual(d("2026-09-01"));
+    expect(await listPacks(sub.id)).toHaveLength(7);
+  });
+
+  it("锚点改写（录带服务止期的付费记录）后未来包重排，已过去的包不动", async () => {
+    const sub = await cakeCycle({ startDate: "2026-03-01", validMonths: 1 });
+    await reconcileAutoPacks(sub.id, d("2026-08-03"));
+    // 有效期 1 个月：3/1~7/1 包已到期（到期日 ≤ today），8/1 包存活（9/1 到期）
+    await recordPayment(ownerId, sub.id, {
+      amount: 300,
+      currency: "CNY",
+      amountBase: 300,
+      paidAt: d("2026-08-03"),
+      periodStart: d("2026-06-10"),
+      periodEnd: d("2027-06-10"),
+      source: "MANUAL",
+    });
+    await reconcileAutoPacks(sub.id, d("2026-08-03"));
+    const grants = (await autoGrants(sub.id)).map(([g]) => g);
+    // 新计划：首笔前 3/1~6/1（截断到 6/10）+ 付费区间内 6/10、7/10（8/10 未来不物化）
+    // 7/1 包已到期——即使与新计划对不上也不动；8/1 包存活但对不上——删除
+    expect(grants).toEqual([
+      d("2026-03-01"),
+      d("2026-04-01"),
+      d("2026-05-01"),
+      d("2026-06-01"),
+      d("2026-06-10"),
+      d("2026-07-01"),
+      d("2026-07-10"),
+    ]);
+    // 再触发幂等
+    await reconcileAutoPacks(sub.id, d("2026-08-03"));
+    expect((await autoGrants(sub.id)).map(([g]) => g)).toEqual(grants);
+  });
+
+  it("MANUAL 行不受对账影响（即使与计划对不上）", async () => {
+    const sub = await cakeCycle({ startDate: "2026-08-01" });
+    const manual = await addPack(ownerId, sub.id, {
+      grantedAt: d("2026-08-02"),
+      quantity: 5,
+      expiresAt: d("2026-09-02"),
+    });
+    await reconcileAutoPacks(sub.id, d("2026-08-03"));
+    const packs = await listPacks(sub.id);
+    const kept = packs.find((p) => p.id === manual.id);
+    expect(kept).toBeTruthy();
+    expect(kept!.quantity).toBe(5);
+    expect(packs.filter((p) => p.source === "AUTO").map((p) => p.grantedAt)).toEqual([d("2026-08-01")]);
+  });
+
+  it("手动模式订阅跳过生成", async () => {
+    const sub = await cake();
+    await reconcileAutoPacks(sub.id, d("2026-08-03"));
+    expect(await listPacks(sub.id)).toHaveLength(0);
+  });
+
+  it("缺配置（quotaTotal / packValidMonths 为空）不生成", async () => {
+    const sub = await createSubscription(ownerId, {
+      name: "缺配置",
+      trackingMode: "CYCLE",
+      cycleKind: "CALENDAR",
+      cycleUnit: "MONTH",
+      cycleCount: 1,
+      listPrice: 25,
+      listCurrency: "CNY",
+      listPriceBase: 25,
+      startDate: d("2026-03-01"),
+    });
+    await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "张", grantMode: "STACKED" });
+    await reconcileAutoPacks(sub.id, d("2026-08-03"));
+    expect(await listPacks(sub.id)).toHaveLength(0);
+  });
+
+  it("固定天数周期：每 30 天一个包", async () => {
+    const sub = await cakeCycle({ startDate: "2026-07-04", fixedDays: 30 });
+    await reconcileAutoPacks(sub.id, d("2026-08-03"));
+    expect((await autoGrants(sub.id)).map(([g]) => g)).toEqual([d("2026-07-04"), d("2026-08-03")]);
+  });
+
+  it("日历周期月付锚定原始日：1/31 起 → 2/28、3/31、4/30；各包 expiresAt 按自身下发日推", async () => {
+    const sub = await cakeCycle({ startDate: "2026-01-31", validMonths: 1 });
+    await reconcileAutoPacks(sub.id, d("2026-05-01"));
+    expect(await autoGrants(sub.id)).toEqual([
+      [d("2026-01-31"), 30, d("2026-02-28")],
+      [d("2026-02-28"), 30, d("2026-03-28")],
+      [d("2026-03-31"), 30, d("2026-04-30")],
+      [d("2026-04-30"), 30, d("2026-05-30")],
+    ]);
+  });
+
+  it("下期将下发：临时推导第一个 > today 的计划发放日，随锚点改写变化", async () => {
+    const sub = await cakeCycle({ startDate: "2026-03-01" });
+    let fresh = (await getSubscription(ownerId, sub.id))!;
+    expect(nextAutoGrant(fresh, d("2026-08-03"))).toEqual({ date: d("2026-09-01"), quantity: 30 });
+    await recordPayment(ownerId, sub.id, {
+      amount: 300,
+      currency: "CNY",
+      amountBase: 300,
+      paidAt: d("2026-08-03"),
+      periodStart: d("2026-07-20"),
+      periodEnd: d("2027-07-20"),
+      source: "MANUAL",
+    });
+    fresh = (await getSubscription(ownerId, sub.id))!;
+    expect(nextAutoGrant(fresh, d("2026-08-03"))).toEqual({ date: d("2026-08-20"), quantity: 30 });
+    // 手动模式 / 非 STACKED 无下期
+    const manual = await cake();
+    expect(nextAutoGrant((await getSubscription(ownerId, manual.id))!, d("2026-08-03"))).toBeNull();
   });
 });

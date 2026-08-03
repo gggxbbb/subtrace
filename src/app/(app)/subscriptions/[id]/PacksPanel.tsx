@@ -13,17 +13,20 @@ export interface PackRow {
   source: string;
 }
 
-/** 包管理卡（ADR-0012）：手动包增删改 + AUTO 只读列表位（生成器 ticket 03） */
+/** 包管理卡（ADR-0012）：手动包增删改 + AUTO 只读列表（生成器读时对齐，ticket 03） */
 export function PacksPanel({
   subscriptionId,
   packs,
   isOwner,
   usageUnit,
+  nextGrant,
 }: {
   subscriptionId: string;
   packs: PackRow[];
   isOwner: boolean;
   usageUnit: string | null;
+  /** 「下期将下发」临时推导（未来包不物化）；手动模式/缺配置为 null */
+  nextGrant?: { date: string; quantity: number } | null;
 }) {
   const today = isoDay(new Date());
   const [adding, setAdding] = useState(false);
@@ -134,7 +137,7 @@ export function PacksPanel({
         ),
       )}
 
-      {/* AUTO 只读列表位（生成器 ticket 03 接入；手动模式永不生成） */}
+      {/* AUTO 只读列表（生成器读时对齐；手动模式永不生成） */}
       <div className="mt-3 border-t border-dashed border-line-strong pt-2">
         <div className="mb-1 flex items-center gap-1.5 text-[9px] uppercase text-faint f-mono">
           <Led color="#d4d4d4" /> 自动包（随周期生成，只读）
@@ -148,6 +151,12 @@ export function PacksPanel({
               <span>{p.grantedAt} 发 → {p.expiresAt} 到期</span>
             </div>
           ))
+        )}
+        {nextGrant && (
+          <div className="mt-1 flex items-center justify-between border-t border-dashed border-line py-1.5 text-[11px] f-mono text-faint">
+            <span>下期将下发 +{nextGrant.quantity} {usageUnit ?? ""}</span>
+            <span>{nextGrant.date}</span>
+          </div>
         )}
       </div>
     </div>

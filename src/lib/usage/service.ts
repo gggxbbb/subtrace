@@ -3,6 +3,7 @@
 import { prisma } from "../db";
 import {
   actualCostPerUse,
+  advanceCycle,
   costSegments,
   coversDate,
   currentExpiry,
@@ -11,15 +12,19 @@ import {
   usageInPeriod,
   usageValue,
   verdict,
+  type CycleSpec,
+  type PaymentRec,
+  type SubscriptionDef,
 } from "../cost-engine";
 import {
   toEnginePayments,
   toEngineSub,
   type SubscriptionWithPayments,
 } from "../subscriptions/service";
-import type { Beneficiary, QuotaPack, UsageRecord } from "@/generated/prisma/client";
+import type { Beneficiary, QuotaPack, Subscription, UsageRecord } from "@/generated/prisma/client";
 import { shareForViewer } from "../beneficiaries/service";
 import { projectPackLedger, type PackInput, type RemainingSnapshot } from "./pack-ledger";
+import { dayStart } from "../dates";
 
 export type UsageKind = "COUNT" | "QUOTA" | "SAVINGS";
 /** 发放形态（ADR-0012）：空 = RESET | STACKED（包叠加）；仅 QUOTA 有意义 */
@@ -223,6 +228,111 @@ export async function deletePack(actorId: string, packId: string): Promise<void>
   await prisma.quotaPack.deleteMany({
     where: { id: packId, source: "MANUAL", subscription: { ownerId: actorId } },
   });
+}
+
+// ===== AUTO 包生成器（ADR-0012 读时对齐）：推演/展示前对账，未来包不物化 =====
+
+/** 生成前提：周期模式 + QUOTA + STACKED + 下发量/有效期齐全；否则生成器无操作（手动模式/缺配置跳过） */
+function autoPackConfig(sub: Subscription): { cycle: CycleSpec; quantity: number; validMonths: number } | null {
+  if (sub.trackingMode !== "CYCLE") return null;
+  if (sub.usageKind !== "QUOTA" || sub.grantMode !== "STACKED") return null;
+  const cycle = toEngineSub(sub).cycle;
+  const quantity = sub.quotaTotal;
+  const validMonths = sub.packValidMonths;
+  if (!cycle || quantity == null || quantity <= 0 || validMonths == null || validMonths <= 0) return null;
+  return { cycle, quantity, validMonths };
+}
+
+/** 应有发放计划（无界序列，按日归一）：首笔付费前从起始日按周期推进（截断到首笔起期）；
+ *  各付费区间内从区间起期按周期推进；末笔之后从最后止期链式推进——锚点改写（ADR-0001）自然生效。
+ *  与成本段同一份周期推进逻辑（advanceCycle），日历月/年锚定原始日。 */
+function* grantSchedule(
+  sub: SubscriptionDef,
+  payments: PaymentRec[],
+  cycle: CycleSpec,
+): Generator<Date> {
+  const sorted = payments.slice().sort((a, b) => a.periodStart.getTime() - b.periodStart.getTime());
+  // 每段链从其基点以 advanceCycle(base, cycle, n) 推进——月/年锚定原始日（1/31 → 2/28 → 3/31）
+  const walk = function* (base: Date, endExclusive: Date | null): Generator<Date> {
+    const b = dayStart(base);
+    for (let n = 0; ; n++) {
+      const g = n === 0 ? b : advanceCycle(b, cycle, n);
+      if (endExclusive && dayDiff(g, endExclusive) <= 0) return;
+      yield g;
+    }
+  };
+  if (sorted.length === 0) {
+    yield* walk(sub.startDate, null);
+    return;
+  }
+  yield* walk(sub.startDate, dayStart(sorted[0].periodStart));
+  for (const p of sorted) {
+    yield* walk(p.periodStart, dayStart(p.periodEnd));
+  }
+  yield* walk(sorted[sorted.length - 1].periodEnd, null);
+}
+
+/** 读时对账：推导「订阅开始 → today」应有 AUTO 包并与库中对账——缺的补；
+ *  存活但对不上计划（锚点改写/配置变更）的删了按新计划重生成；已到期（expiresAt ≤ today）的包不动
+ * （历史已被快照校准）；MANUAL 行永不触碰。幂等：对账后重复触发无变更。 */
+export async function reconcileAutoPacks(subscriptionId: string, today: Date): Promise<void> {
+  const sub = await prisma.subscription.findUnique({
+    where: { id: subscriptionId },
+    include: { payments: true },
+  });
+  if (!sub) return;
+  const cfg = autoPackConfig(sub);
+  if (!cfg) return;
+  const t = dayStart(today);
+  // 应有包：发放日 ≤ today（未来包不物化）；expiresAt = 下发日 + packValidMonths 日历月（原始值，停订截断在推演时）
+  const expected = new Map<number, { grantedAt: Date; quantity: number; expiresAt: Date }>();
+  const validCycle: CycleSpec = { kind: "calendar", unit: "month", count: cfg.validMonths };
+  for (const g of grantSchedule(toEngineSub(sub), toEnginePayments(sub.payments), cfg.cycle)) {
+    if (dayDiff(t, g) > 0) break;
+    const grantedAt = dayStart(g);
+    expected.set(grantedAt.getTime(), {
+      grantedAt,
+      quantity: cfg.quantity,
+      expiresAt: advanceCycle(grantedAt, validCycle, 1),
+    });
+  }
+  const autos = await prisma.quotaPack.findMany({ where: { subscriptionId, source: "AUTO" } });
+  const stale = autos.filter((p) => {
+    if (dayDiff(t, p.expiresAt) <= 0) return false; // 已到期（含今天到期，排他约定）→ 不动
+    const exp = expected.get(dayStart(p.grantedAt).getTime());
+    return !exp || exp.quantity !== p.quantity || exp.expiresAt.getTime() !== dayStart(p.expiresAt).getTime();
+  });
+  const keptDays = new Set(
+    autos.filter((p) => !stale.includes(p)).map((p) => dayStart(p.grantedAt).getTime()),
+  );
+  const toCreate = [...expected.values()].filter((e) => !keptDays.has(e.grantedAt.getTime()));
+  if (stale.length === 0 && toCreate.length === 0) return;
+  await prisma.$transaction([
+    ...(stale.length > 0
+      ? [prisma.quotaPack.deleteMany({ where: { id: { in: stale.map((p) => p.id) } } })]
+      : []),
+    ...(toCreate.length > 0
+      ? [
+          prisma.quotaPack.createMany({
+            data: toCreate.map((e) => ({ subscriptionId, ...e, source: "AUTO" })),
+          }),
+        ]
+      : []),
+  ]);
+}
+
+/** 「下期将下发」临时推导（未来包不物化，仅展示用）：第一个 > today 的计划发放日 */
+export function nextAutoGrant(
+  sub: SubscriptionWithPayments,
+  today: Date,
+): { date: Date; quantity: number } | null {
+  const cfg = autoPackConfig(sub);
+  if (!cfg) return null;
+  const t = dayStart(today);
+  for (const g of grantSchedule(toEngineSub(sub), toEnginePayments(sub.payments), cfg.cycle)) {
+    if (dayDiff(t, g) > 0) return { date: dayStart(g), quantity: cfg.quantity };
+  }
+  return null;
 }
 
 /** 录入权限：所有者或 USER 类受益人（受益人记自己的用量） */

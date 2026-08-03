@@ -16,7 +16,7 @@ import {
   beneficiaryRows as serviceBeneficiaryRows,
   listBeneficiaryCandidates,
 } from "@/lib/beneficiaries/service";
-import { getUsageVerdict, listUsage } from "@/lib/usage/service";
+import { getUsageVerdict, listUsage, nextAutoGrant, reconcileAutoPacks } from "@/lib/usage/service";
 import { PaymentForm } from "./PaymentForm";
 import { PaymentHistory } from "./PaymentHistory";
 import type { PaymentRow } from "./payment-rows";
@@ -40,10 +40,12 @@ export default async function SubscriptionDetailPage({
   const sp = await searchParams;
   const user = (await getCurrentUser())!;
   const cur = user.baseCurrency;
+  const today = new Date();
+  // AUTO 包读时对齐（ADR-0012）：展示前对账，周期模式 STACKED 以外的订阅内部无操作
+  await reconcileAutoPacks(id, today);
   const sub = await getSubscription(user.id, id);
   if (!sub) notFound();
 
-  const today = new Date();
   const view = costView(sub, user.id, today);
   const expiry = view.expiry;
   const daily = view.dailyRate;
@@ -399,6 +401,10 @@ export default async function SubscriptionDetailPage({
                 expiresAt: iso(p.expiresAt),
                 source: p.source,
               }))}
+              nextGrant={(() => {
+                const g = nextAutoGrant(sub, today);
+                return g ? { date: iso(g.date), quantity: g.quantity } : null;
+              })()}
             />
           </Panel>
         )}
