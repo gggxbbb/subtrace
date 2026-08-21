@@ -96,7 +96,7 @@ describe("executeScriptJob", () => {
     const msg = await executeScriptJob(sub.id);
     expect(msg).toContain("234.5");
     const rec = await prisma.usageRecord.findFirstOrThrow({ where: { subscriptionId: sub.id } });
-    expect(rec).toMatchObject({ kind: "TOTAL", source: "SCRIPT", quantity: 234.5, quotaTotal: 500 });
+    expect(rec).toMatchObject({ kind: "TOTAL", source: "SCRIPT", quantity: 234.5, quotaTotal: 500, semantic: "USED" });
   });
 
   it("脚本失败抛错（含日志），不写快照", async () => {
@@ -122,26 +122,30 @@ describe("executeScriptJob", () => {
     expect(isValidCron("")).toBe(false);
   });
 
-  it("STACKED：返回 { remaining } 写 TOTAL 剩余快照（source=SCRIPT）", async () => {
+  it("STACKED：返回 { remaining } 写 REMAINING 快照（source=SCRIPT）", async () => {
     const sub = await quotaSub();
     await prisma.subscription.update({ where: { id: sub.id }, data: { grantMode: "STACKED" } });
     await saveScript(ownerId, sub.id, { script: "return { remaining: 18 };", scriptCron: "0 * * * *" });
     const msg = await executeScriptJob(sub.id);
     expect(msg).toContain("18");
     const rec = await prisma.usageRecord.findFirstOrThrow({ where: { subscriptionId: sub.id } });
-    expect(rec).toMatchObject({ kind: "TOTAL", source: "SCRIPT", quantity: 18, quotaTotal: null });
+    expect(rec).toMatchObject({ kind: "TOTAL", source: "SCRIPT", quantity: 18, quotaTotal: null, semantic: "REMAINING" });
   });
 
-  it("形态不匹配明确报错：STACKED 收 used / RESET 收 remaining，均不写快照", async () => {
+  it("返回形状自描述：RESET 收 remaining 写 REMAINING；STACKED 收 used 写 USED", async () => {
+    const resetSub = await quotaSub("机场2");
+    await saveScript(ownerId, resetSub.id, { script: "return { remaining: 5 };", scriptCron: "0 * * * *" });
+    const msg = await executeScriptJob(resetSub.id);
+    expect(msg).toContain("5");
+    const resetRec = await prisma.usageRecord.findFirstOrThrow({ where: { subscriptionId: resetSub.id } });
+    expect(resetRec).toMatchObject({ kind: "TOTAL", source: "SCRIPT", quantity: 5, semantic: "REMAINING" });
+
     const stackedSub = await quotaSub("像素蛋糕");
     await prisma.subscription.update({ where: { id: stackedSub.id }, data: { grantMode: "STACKED" } });
     await saveScript(ownerId, stackedSub.id, { script: "return { used: 5 };", scriptCron: "0 * * * *" });
-    await expect(executeScriptJob(stackedSub.id)).rejects.toThrow(/remaining.*mismatch|mismatch/);
-
-    const resetSub = await quotaSub("机场2");
-    await saveScript(ownerId, resetSub.id, { script: "return { remaining: 5 };", scriptCron: "0 * * * *" });
-    await expect(executeScriptJob(resetSub.id)).rejects.toThrow(/used.*mismatch|mismatch/);
-
-    expect(await prisma.usageRecord.count()).toBe(0);
+    const msg2 = await executeScriptJob(stackedSub.id);
+    expect(msg2).toContain("5");
+    const stackedRec = await prisma.usageRecord.findFirstOrThrow({ where: { subscriptionId: stackedSub.id } });
+    expect(stackedRec).toMatchObject({ kind: "TOTAL", source: "SCRIPT", quantity: 5, semantic: "USED" });
   });
 });

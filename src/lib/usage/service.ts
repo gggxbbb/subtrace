@@ -1,30 +1,21 @@
 // 用量与盈亏（ticket 06）：计数型逐条 + 额度型快照，按当前服务区间算盈亏。
 
 import { prisma } from "../db";
-import {
-  actualCostPerUse,
-  advanceCycle,
-  costSegments,
-  coversDate,
-  currentExpiry,
-  dayDiff,
-  savingsVerdict,
-  usageInPeriod,
-  usageValue,
-  type CycleSpec,
-  type PaymentRec,
-  type SubscriptionDef,
-} from "../cost-engine";
+import { advanceCycle, costSegments, coversDate, dayDiff, type CycleSpec, type PaymentRec, type SubscriptionDef } from "../cost-engine";
 import {
   toEnginePayments,
   toEngineSub,
   type SubscriptionWithPayments,
 } from "../subscriptions/service";
 import type { Beneficiary, QuotaPack, Subscription, UsageRecord } from "@/generated/prisma/client";
-import { shareForViewer } from "../beneficiaries/service";
-import { projectPackLedger, type PackInput, type RemainingSnapshot } from "./pack-ledger";
 import { currentUsagePeriod, periodCost } from "./period";
 import { dayStart } from "../dates";
+import { packVerdict, resetVerdict, type PackVerdict, type QuotaVerdict } from "./ledger";
+import { streamVerdict, type CountVerdict, type SavingsVerdict } from "./stream";
+
+export type { CountVerdict, SavingsVerdict } from "./stream";
+export type { QuotaVerdict, PackVerdict, UsageRecordSemantic } from "./ledger";
+export type UsageVerdict = CountVerdict | QuotaVerdict | SavingsVerdict | PackVerdict;
 
 export type UsageKind = "COUNT" | "QUOTA" | "SAVINGS";
 /** 发放形态（ADR-0012）：空 = RESET | STACKED（包叠加）；仅 QUOTA 有意义 */
@@ -94,7 +85,8 @@ export async function addUsage(
   });
 }
 
-/** 额度型：RESET 录已用量或百分比（百分比按当月总额度折算）；STACKED 只收剩余总量（ADR-0012 混录禁止）。source 供脚本任务标记 SCRIPT */
+/** 额度型快照：形态无关的 shape 判定（ADR-0013 D3/D6）——剩余量 → REMAINING；已用量/百分比 → USED。
+ *  语义随记录落库（self-describing），RESET 与 STACKED 均按记录自描述读取。source 供脚本任务标记 SCRIPT */
 export async function addQuotaSnapshot(
   actorId: string,
   subscriptionId: string,
@@ -102,16 +94,13 @@ export async function addQuotaSnapshot(
   input: { date: Date; used?: number; percent?: number; remaining?: number; unitPrice?: number; quotaTotal?: number; source?: string },
 ): Promise<UsageRecord> {
   const sub = await assertUsageAllowed(actorId, subscriptionId);
-  if (sub.grantMode === "STACKED") {
-    if (input.remaining == null || input.used != null || input.percent != null) {
-      throw new Error("包叠加形态只收剩余总量 stacked_remaining_required");
-    }
-    return prisma.usageRecord.create({
-      data: { subscriptionId, userId, date: input.date, quantity: input.remaining, kind: "TOTAL", source: input.source ?? "MANUAL" },
-    });
+  if (input.remaining != null && (input.used != null || input.percent != null)) {
+    throw new Error("剩余与已用量/百分比二选一 quota_snapshot_ambiguous");
   }
   if (input.remaining != null) {
-    throw new Error("周期重置形态录已用量/百分比，不收剩余 reset_used_required");
+    return prisma.usageRecord.create({
+      data: { subscriptionId, userId, date: input.date, quantity: input.remaining, kind: "TOTAL", semantic: "REMAINING", source: input.source ?? "MANUAL" },
+    });
   }
   const quotaTotal = input.quotaTotal ?? sub.quotaTotal;
   let quantity = input.used;
@@ -121,7 +110,7 @@ export async function addQuotaSnapshot(
   }
   if (quantity == null) throw new Error("需要已用量或百分比 usage_required");
   return prisma.usageRecord.create({
-    data: { subscriptionId, userId, date: input.date, quantity, unitPrice: input.unitPrice, quotaTotal, kind: "TOTAL" },
+    data: { subscriptionId, userId, date: input.date, quantity, unitPrice: input.unitPrice, quotaTotal, kind: "TOTAL", semantic: "USED", source: input.source ?? "MANUAL" },
   });
 }
 
@@ -357,168 +346,6 @@ async function assertUsageAllowed(actorId: string, subscriptionId: string) {
   return sub;
 }
 
-export interface CountVerdict {
-  kind: "COUNT";
-  periodStart: Date;
-  periodEnd: Date;
-  /** 当前服务区间净额（全额） */
-  cost: number;
-  /** 覆盖段金额未知（ticket 12）：成本为 0 是「没记」，盈亏不可信 */
-  costUnknown?: boolean;
-  usage: number;
-  /** 用量 × 替代单价（逐条记录级单价） */
-  value: number;
-  verdictAmount: number;
-  costPerUse: number | null;
-}
-
-export interface QuotaVerdict {
-  kind: "QUOTA";
-  periodStart: Date;
-  periodEnd: Date;
-  /** 当前服务区间净额（全额） */
-  cost: number;
-  /** 覆盖段金额未知（ticket 12）：成本为 0 是「没记」，盈亏不可信 */
-  costUnknown?: boolean;
-  /** 最新快照的已用额度 */
-  used: number;
-  /** 最新快照的总额度 */
-  total: number;
-  /** 使用率（0–1，封顶 1） */
-  usageRate: number;
-  /** 区间内首次用满 100% 的快照日期；未用满为 null */
-  hit100At: Date | null;
-  /** 没用满折算的浪费 = cost × (1 − usageRate) */
-  wastedAmount: number;
-  /** 每单位实际成本（如每 GB 成本） */
-  costPerUnit: number | null;
-  /** = −wastedAmount（≤0；用满为 0） */
-  verdictAmount: number;
-}
-
-export interface SavingsVerdict {
-  kind: "SAVINGS";
-  periodStart: Date;
-  periodEnd: Date;
-  /** 当前服务区间净额（按份额） */
-  cost: number;
-  /** 覆盖段金额未知（ticket 12）：成本为 0 是「没记」，盈亏不可信 */
-  costUnknown?: boolean;
-  /** 区间内已省金额合计（主币种，增量求和） */
-  saved: number;
-  /** = saved − cost（正=赚）；回本差额取反即得 */
-  verdictAmount: number;
-}
-
-export type UsageVerdict = CountVerdict | QuotaVerdict | SavingsVerdict | PackVerdict;
-
-/** 包叠加盈亏（ADR-0012）：浪费导向，池级口径——余额/浪费不按受益人切片，forUserId 只切成本份额 */
-export interface PackVerdict {
-  kind: "PACK";
-  periodStart: Date;
-  periodEnd: Date;
-  /** 当前服务区间净额（按份额；浪费本身池级不切） */
-  cost: number;
-  /** 覆盖段金额未知（ticket 12） */
-  costUnknown?: boolean;
-  /** 最新快照校准余额（池级） */
-  balance: number;
-  /** 最新快照日期（余额时效）；无快照为 null */
-  balanceAt: Date | null;
-  /** 快照陈旧天数（today − balanceAt）；无快照为 null；≥30 天 UI 变色 */
-  staleDays: number | null;
-  /** 下一到期包预警：projectedBalance = FEFO 模拟余额 */
-  nextExpiry: { date: Date; quantity: number; projectedBalance: number } | null;
-  /** 本区间已确认浪费（数量 + 金额）；verdictAmount = −amount */
-  periodWaste: { quantity: number; amount: number };
-  /** 累计已确认浪费 */
-  totalWaste: { quantity: number; amount: number };
-  /** 已确认浪费明细（按确认日倒序；事件带日期、不绑区间，续费后历史浪费仍可回看——spec story 23） */
-  wasteEvents: { date: Date; quantity: number; amount: number }[];
-  /** 累计推算消费（快照校准口径） */
-  consumptionInferred: number;
-  /** = −本区间确认浪费金额（≤0） */
-  verdictAmount: number;
-}
-
-/** 包叠加 verdict 装配：剩余快照 + 包列表 + 订阅到期日 → FEFO 推演 → 浪费口径盈亏。
- *  订阅已到期（expiry < today）时合成一条到期日 remaining=0 的快照，使停订即焚无需用户操作即显形。 */
-function packVerdict(
-  sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[]; quotaPacks?: QuotaPack[] },
-  records: UsageRecord[],
-  today: Date,
-  forUserId: string | undefined,
-): PackVerdict | null {
-  const engineSub = toEngineSub(sub);
-  const payments = toEnginePayments(sub.payments);
-  const segments = costSegments(engineSub, payments, today);
-  const covering = segments.find((s) => coversDate(s, today));
-  // 已到期：无覆盖段时取最后一段为归因区间（停订浪费确认在到期日 = 段末排他端点，含端点归因）
-  const terminal = !covering && segments.length > 0;
-  const period = covering ?? (terminal ? segments[segments.length - 1] : null);
-  if (!period) return null;
-  const share = forUserId ? shareForViewer(sub.beneficiaries ?? [], sub.ownerId, forUserId) : 1;
-
-  const packs: PackInput[] = (sub.quotaPacks ?? []).map((p) => ({
-    grantedAt: p.grantedAt,
-    quantity: p.quantity,
-    expiresAt: p.expiresAt,
-    source: p.source === "AUTO" ? "AUTO" : "MANUAL",
-  }));
-  // 池级快照（不按受益人切——共享池按人各记一遍即双倍计数）
-  const snapshots: RemainingSnapshot[] = records
-    .filter((r) => r.kind === "TOTAL")
-    .map((r) => ({ date: r.date, remaining: r.quantity }));
-  const expiry = currentExpiry(engineSub, payments, today);
-  if (expiry && dayDiff(today, expiry) < 0) {
-    // 停订即焚：合成到期日 remaining=0 快照，终止日全量浪费立即确认
-    snapshots.push({ date: expiry, remaining: 0 });
-  }
-
-  // 单张成本 = 发放段净额 ÷ 该段应发量。AUTO 段应发量 = 段内 AUTO 总量；
-  // 段内有 AUTO 时 MANUAL 为赠送包（零成本不摊薄），无 AUTO（手动模式）时 MANUAL 即付费额度。
-  const unitCostOf = (pack: PackInput): number => {
-    const seg = segments.find((s) => coversDate(s, pack.grantedAt));
-    if (!seg || seg.amountUnknown || seg.net <= 0) return 0;
-    const inSeg = packs.filter((p) => coversDate(seg, p.grantedAt));
-    const hasAuto = inSeg.some((p) => p.source === "AUTO");
-    const basis = inSeg
-      .filter((p) => (hasAuto ? p.source === "AUTO" : true))
-      .reduce((s, p) => s + p.quantity, 0);
-    if (pack.source === "MANUAL" && hasAuto) return 0;
-    return basis > 0 ? seg.net / basis : 0;
-  };
-
-  const ledger = projectPackLedger({ packs, snapshots, subscriptionExpiry: expiry, unitCostOf });
-  const inPeriod = ledger.waste.filter(
-    (w) =>
-      w.date >= period.start && (terminal ? w.date <= period.end : w.date < period.end),
-  );
-  const periodWaste = {
-    quantity: inPeriod.reduce((s, w) => s + w.quantity, 0),
-    amount: inPeriod.reduce((s, w) => s + w.amount, 0),
-  };
-  return {
-    kind: "PACK",
-    periodStart: period.start,
-    periodEnd: period.end,
-    cost: period.net * share,
-    costUnknown: period.amountUnknown === true,
-    balance: ledger.balance,
-    balanceAt: ledger.balanceAt,
-    staleDays: ledger.balanceAt ? dayDiff(ledger.balanceAt, today) : null,
-    nextExpiry: ledger.nextExpiry,
-    periodWaste,
-    totalWaste: {
-      quantity: ledger.waste.reduce((s, w) => s + w.quantity, 0),
-      amount: ledger.waste.reduce((s, w) => s + w.amount, 0),
-    },
-    wasteEvents: [...ledger.waste].sort((a, b) => b.date.getTime() - a.date.getTime()),
-    consumptionInferred: ledger.consumptionInferred,
-    verdictAmount: -periodWaste.amount + 0, // 避免 -0
-  };
-}
-
 /** 用量窗口周期（ADR-0013）：显式 usageCycle 优先；否则 QUOTA 回退计费周期；COUNT·SAVINGS 无显式周期则回退成本段 */
 function usageCycleOf(sub: Subscription): { cycle: CycleSpec; anchor: Date } | null {
   if (sub.usageCycleUnit && sub.usageCycleCount) {
@@ -539,8 +366,36 @@ function usageCycleOf(sub: Subscription): { cycle: CycleSpec; anchor: Date } | n
   return null;
 }
 
+/** 当前周期窗口（ADR-0013）：显式 usageCycle 优先；否则 QUOTA 回退计费周期；COUNT·SAVINGS 无显式周期则回退成本段。
+ *  返回 { start, end, net, unknown }；无覆盖段为 null。 */
+function currentVerdictPeriod(
+  sub: SubscriptionWithPayments,
+  today: Date,
+): { start: Date; end: Date; net: number; unknown: boolean } | null {
+  const engineSub = toEngineSub(sub);
+  const payments = toEnginePayments(sub.payments);
+  const segs = costSegments(engineSub, payments, today);
+  const usageCycle = usageCycleOf(sub);
+  if (usageCycle) {
+    const cur = currentUsagePeriod(usageCycle.cycle, usageCycle.anchor, today);
+    if (!cur) return null;
+    const pc = periodCost(segs, cur.start, cur.end);
+    if (!pc.covered) return null;
+    return { start: cur.start, end: cur.end, net: pc.net, unknown: pc.amountUnknown };
+  }
+  const covering = segs.find((s) => coversDate(s, today));
+  if (!covering) return null;
+  return {
+    start: covering.start,
+    end: covering.end,
+    net: covering.net,
+    unknown: covering.amountUnknown === true,
+  };
+}
+
 /** 当前服务区间的盈亏（覆盖 today 的成本段；无覆盖为 null——STACKED 例外：
  *  已到期订阅回落到最后一段归因，停订浪费才能显形）。
+ *  薄分发器（ADR-0013 D1/D3）：QUOTA+STACKED → 账本 FEFO；QUOTA(RESET) → 闭式解；COUNT·SAVINGS → 事件流。
  *  传 forUserId 时按该受益人切片：成本 × 份额，用量只计其本人记录（STACKED 池级例外） */
 export function getUsageVerdict(
   sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[]; quotaPacks?: QuotaPack[] },
@@ -553,109 +408,10 @@ export function getUsageVerdict(
   if (sub.usageKind === "QUOTA" && sub.grantMode === "STACKED") {
     return packVerdict(sub, records, today, forUserId);
   }
-  const engineSub = toEngineSub(sub);
-  const payments = toEnginePayments(sub.payments);
-  const segs = costSegments(engineSub, payments, today);
-  const usageCycle = usageCycleOf(sub);
-  let period: { start: Date; end: Date; net: number; unknown: boolean };
-  if (usageCycle) {
-    const cur = currentUsagePeriod(usageCycle.cycle, usageCycle.anchor, today);
-    if (!cur) return null;
-    const pc = periodCost(segs, cur.start, cur.end);
-    if (!pc.covered) return null;
-    period = { start: cur.start, end: cur.end, net: pc.net, unknown: pc.amountUnknown };
-  } else {
-    const covering = segs.find((s) => coversDate(s, today));
-    if (!covering) return null;
-    period = {
-      start: covering.start,
-      end: covering.end,
-      net: covering.net,
-      unknown: covering.amountUnknown === true,
-    };
-  }
-  const share = forUserId ? shareForViewer(sub.beneficiaries ?? [], sub.ownerId, forUserId) : 1;
-  const costShare = period.net * share;
-  const costUnknown = period.unknown;
-  const myRecords = forUserId ? records.filter((r) => r.userId === forUserId) : records;
-
-  if (sub.usageKind === "QUOTA") {
-    // 额度型（周期重置）：只看使用率——用到 100% 没有，什么时候用满；浪费 = 未用部分 × 成本
-    const inPeriod = myRecords
-      .filter((r) => r.kind === "TOTAL" && r.date >= period.start && r.date < period.end)
-      .sort((a, b) => a.date.getTime() - b.date.getTime());
-    const latest = inPeriod[inPeriod.length - 1];
-    if (!latest) return null;
-    const effectiveTotal = (r: UsageRecord) => r.quotaTotal ?? sub.quotaTotal;
-    const total = effectiveTotal(latest);
-    if (total == null || total <= 0) return null;
-    const used = latest.quantity;
-    const usageRate = Math.min(used / total, 1);
-    const hit = inPeriod.find((r) => {
-      const t = effectiveTotal(r);
-      return t != null && t > 0 && r.quantity >= t;
-    });
-    const wastedAmount = costShare * (1 - usageRate);
-    return {
-      kind: "QUOTA",
-      periodStart: period.start,
-      periodEnd: period.end,
-      cost: costShare,
-      costUnknown,
-      used,
-      total,
-      usageRate,
-      hit100At: hit?.date ?? null,
-      wastedAmount,
-      costPerUnit: used > 0 ? costShare / used : null,
-      verdictAmount: -wastedAmount + 0, // 避免 -0
-    };
-  }
-
-  if (sub.usageKind === "SAVINGS") {
-    // 省钱型：增量求和即已省金额，盈亏 = Σ已省 − 已摊成本（ADR-0011）
-    const saved = myRecords
-      .filter((r) => r.kind === "DELTA" && r.date >= period.start && r.date < period.end)
-      .reduce((s, r) => s + r.quantity, 0);
-    return {
-      kind: "SAVINGS",
-      periodStart: period.start,
-      periodEnd: period.end,
-      cost: costShare,
-      costUnknown,
-      saved,
-      verdictAmount: savingsVerdict(costShare, saved),
-    };
-  }
-
-  if (sub.altUnitPrice == null) return null;
-  const usage = usageInPeriod(
-    myRecords.map((r) => ({ date: r.date, quantity: r.quantity, kind: r.kind as "DELTA" | "TOTAL" })),
-    period.start,
-    period.end,
-  );
-  const value = usageValue(
-    myRecords.map((r) => ({
-      date: r.date,
-      quantity: r.quantity,
-      kind: r.kind as "DELTA" | "TOTAL",
-      unitPrice: r.unitPrice ?? undefined,
-    })),
-    period.start,
-    period.end,
-    sub.altUnitPrice ?? 0,
-  );
-  return {
-    kind: "COUNT",
-    periodStart: period.start,
-    periodEnd: period.end,
-    cost: costShare,
-    costUnknown,
-    usage,
-    value,
-    verdictAmount: value - costShare,
-    costPerUse: actualCostPerUse(costShare, usage),
-  };
+  const period = currentVerdictPeriod(sub, today);
+  if (!period) return null;
+  if (sub.usageKind === "QUOTA") return resetVerdict(sub, records, forUserId, period);
+  return streamVerdict(sub, records, forUserId, period);
 }
 
 /** 编辑用量记录（所有者或记录本人） */

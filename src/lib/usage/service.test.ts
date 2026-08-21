@@ -113,6 +113,7 @@ describe("额度型用量", () => {
     expect(records).toHaveLength(1);
     expect(records[0].quantity).toBe(650);
     expect(records[0].kind).toBe("TOTAL");
+    expect(records[0].semantic).toBe("USED");
   });
 
   it("按已用量直接录入", async () => {
@@ -690,25 +691,39 @@ describe("STACKED 快照录入", () => {
     expect(rec.unitPrice).toBeNull();
   });
 
-  it("拒绝 used 与百分比入参；缺 remaining 拒绝", async () => {
+  it("STACKED 收 used 落库 semantic=USED + quotaTotal；混传二选一拒绝；缺全部拒绝", async () => {
     const sub = await cake();
+    // STACKED 接受 used：语义随记录自描述（ADR-0013 D3），需 quotaTotal 才能折算剩余
+    const used = await addQuotaSnapshot(ownerId, sub.id, ownerId, {
+      date: d("2026-07-15"),
+      used: 10,
+      quotaTotal: 60,
+    });
+    expect(used.semantic).toBe("USED");
+    expect(used.quantity).toBe(10);
+    expect(used.quotaTotal).toBe(60);
+    expect(used.kind).toBe("TOTAL");
+    // remaining 与 used 混传：二选一
     await expect(
-      addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), used: 10 }),
-    ).rejects.toThrow(/stacked_remaining_required/);
+      addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), remaining: 50, used: 10 }),
+    ).rejects.toThrow(/quota_snapshot_ambiguous/);
     await expect(
-      addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), percent: 50 }),
-    ).rejects.toThrow(/stacked_remaining_required/);
+      addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), remaining: 50, percent: 20 }),
+    ).rejects.toThrow(/quota_snapshot_ambiguous/);
+    // 全部缺：usage_required
     await expect(
       addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15") }),
-    ).rejects.toThrow(/stacked_remaining_required/);
+    ).rejects.toThrow(/usage_required/);
   });
 
-  it("RESET 订阅拒绝 remaining 入参（混录禁止）", async () => {
+  it("RESET 收 remaining 落库 semantic=REMAINING（quotaTotal 置空）", async () => {
     const sub = await gym();
     await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "GB", quotaTotal: 1000 });
-    await expect(
-      addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), remaining: 800 }),
-    ).rejects.toThrow(/reset_used_required/);
+    const rec = await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), remaining: 800 });
+    expect(rec.semantic).toBe("REMAINING");
+    expect(rec.quantity).toBe(800);
+    expect(rec.quotaTotal).toBeNull();
+    expect(rec.kind).toBe("TOTAL");
   });
 
   it("STACKED 订阅拒绝 DELTA 增量录入", async () => {
@@ -716,6 +731,57 @@ describe("STACKED 快照录入", () => {
     await expect(
       addUsage(ownerId, sub.id, ownerId, { date: d("2026-07-15"), quantity: 1 }),
     ).rejects.toThrow(/stacked_no_delta/);
+  });
+});
+
+describe("形态切换语义（ADR-0013 记录自描述）", () => {
+  /** 手动模式 100 元 / 2026-07-01 ~ 2027-07-01 的 QUOTA 订阅 */
+  const makeSub = async () => {
+    const sub = await createSubscription(ownerId, {
+      name: "形态切换",
+      trackingMode: "MANUAL",
+      startDate: d("2026-07-01"),
+    });
+    await prisma.payment.create({
+      data: {
+        subscriptionId: sub.id,
+        amount: 100,
+        currency: "CNY",
+        amountBase: 100,
+        paidAt: d("2026-07-01"),
+        periodStart: d("2026-07-01"),
+        periodEnd: d("2027-07-01"),
+        source: "MANUAL",
+      },
+    });
+    return sub;
+  };
+
+  it("RESET 录 USED → 切 STACKED → packVerdict 按 USED 折算 remaining = total − used（不重解读）", async () => {
+    const sub = await makeSub();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "张", quotaTotal: 60 });
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), used: 10, quotaTotal: 60 });
+    // 切 STACKED（手动模式清空 quotaTotal）：快照语义不随形态重解读
+    await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "张", grantMode: "STACKED" });
+    await addPack(ownerId, sub.id, { grantedAt: d("2026-07-01"), quantity: 60, expiresAt: d("2027-07-01") });
+    const v = getUsageVerdict((await getSubscription(ownerId, sub.id))!, await listUsage(sub.id), d("2026-07-20"));
+    if (v?.kind !== "PACK") throw new Error("expect PACK");
+    // USED(quantity=10, total=60) → remaining = 60 − 10 = 50；若误当剩余直读会得 10
+    expect(v.balance).toBe(50);
+    expect(v.balanceAt).toEqual(d("2026-07-15"));
+  });
+
+  it("STACKED 录 REMAINING → 切 RESET → 按 REMAINING 折算 used = total − remaining", async () => {
+    const sub = await makeSub();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "GB", grantMode: "STACKED" });
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), remaining: 200 });
+    // 切回 RESET：REMAINING 折算 used = total − remaining；若误当已用直读会得 200
+    await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "GB", quotaTotal: 1000 });
+    const v = getUsageVerdict((await getSubscription(ownerId, sub.id))!, await listUsage(sub.id), d("2026-07-18"));
+    if (v?.kind !== "QUOTA") throw new Error("expect QUOTA");
+    expect(v.used).toBe(800);
+    expect(v.total).toBe(1000);
+    expect(v.usageRate).toBeCloseTo(0.8);
   });
 });
 

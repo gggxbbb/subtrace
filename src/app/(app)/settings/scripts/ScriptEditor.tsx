@@ -18,23 +18,14 @@ const PRESETS: { label: string; cron: string }[] = [
   { label: "每天 8 点", cron: "0 8 * * *" },
 ];
 
-// 默认模板按发放形态分裂（ADR-0012）：周期重置返回 {used, total?}；包叠加返回 {remaining}
-const defaultScript = (stacked: boolean) =>
-  stacked
-    ? `// 可用：fetch(url, init?)（限 5 次/1MB/10s）、console.log、env（下方密钥）
-// 包叠加形态：返回 { remaining }（额度剩余总量）；示例：
+// 默认模板（ADR-0013）：返回形状自描述——{remaining} → 剩余总量快照；{used, total?} → 已用量快照
+const DEFAULT_SCRIPT = `// 可用：fetch(url, init?)（限 5 次/1MB/10s）、console.log、env（下方密钥）
+// 额度型脚本：返回剩余总量 { remaining } 或已用量 { used, total? } 均可，按返回形状落库；示例：
 const res = await fetch("https://example.com/api/quota", {
   headers: { authorization: \`Bearer \${env.token}\` },
 });
 const data = JSON.parse(res.text);
-return { remaining: data.remaining };`
-    : `// 可用：fetch(url, init?)（限 5 次/1MB/10s）、console.log、env（下方密钥）
-// 周期重置形态：返回 { used, total? }（total 可省略）；示例：
-const res = await fetch("https://example.com/api/usage", {
-  headers: { authorization: \`Bearer \${env.token}\` },
-});
-const data = JSON.parse(res.text);
-return { used: data.used, total: data.total };`;
+return { remaining: data.remaining };`;
 
 export interface ScriptLastRun {
   status: string;
@@ -56,8 +47,7 @@ export function ScriptEditor({
   const initial = subs.find((s) => s.id === selectedId) ?? subs[0];
   const [subId, setSubId] = useState(initial?.id ?? "");
   const sub = subs.find((s) => s.id === subId);
-  const stacked = sub?.grantMode === "STACKED";
-  const [script, setScript] = useState(sub?.script ?? defaultScript(stacked));
+  const [script, setScript] = useState(sub?.script ?? DEFAULT_SCRIPT);
   const [cron, setCron] = useState(sub?.scriptCron ?? "0 */6 * * *");
   const [env, setEnv] = useState("");
   const [result, setResult] = useState<string | null>(null);
@@ -66,7 +56,7 @@ export function ScriptEditor({
   const pick = (id: string) => {
     const s = subs.find((x) => x.id === id);
     setSubId(id);
-    setScript(s?.script ?? defaultScript(s?.grantMode === "STACKED"));
+    setScript(s?.script ?? DEFAULT_SCRIPT);
     setCron(s?.scriptCron ?? "0 */6 * * *");
     setEnv("");
     setResult(null);
@@ -90,7 +80,7 @@ export function ScriptEditor({
         </div>
         <div>
           <label className={labelCls}>
-            脚本（JS，{stacked ? "返回 {remaining} 剩余总量" : "返回 {used, total?} 已用量"}）
+            脚本（JS，额度型：返回 {"{"}remaining{"}"} 剩余总量或 {"{"}used, total?{"}"} 已用量，按返回形状落库）
           </label>
           <textarea
             name="script"

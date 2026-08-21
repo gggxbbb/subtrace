@@ -111,7 +111,7 @@ export function UsageWizard({
           <div className="border border-destructive bg-destructive-band p-3 text-[11px] leading-relaxed text-destructive-strong">
             <strong>注意：</strong>修改字段（单位/单价/总额度）只影响后续计算口径，历史记录保持不变；
             但<strong>切换类型</strong>会让已有的 {recordCount} 条记录按新类型解读（增量 ↔ 快照），历史区间的盈亏可能失真；
-            额度型<strong>切换发放形态</strong>同样会让历史快照按新语义解读（已用 ↔ 剩余）。
+            额度型<strong>切换发放形态</strong>不影响已有记录：每条快照自带语义（已用/剩余），按录入时口径解读。
           </div>
           <div className="flex items-center justify-between">
             <div className="flex gap-2">
@@ -279,8 +279,8 @@ export function UsageWizard({
               ))}
             </div>
             {modeSwitched && (
-              <div className="border border-destructive bg-destructive-band p-3 text-[11px] leading-relaxed text-destructive-strong">
-                <strong>注意：</strong>切换发放形态会让已有的 {recordCount} 条快照按新语义解读（已用 ↔ 剩余），历史盈亏会失真。
+              <div className="border border-ink bg-surface p-3 text-[11px] leading-relaxed text-muted-strong">
+                <strong>注意：</strong>切换发放形态不影响已有记录：每条快照自带语义（已用/剩余），按录入时口径解读。
               </div>
             )}
           </div>

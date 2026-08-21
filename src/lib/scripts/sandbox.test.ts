@@ -57,27 +57,29 @@ describe("返回值解析", () => {
     if (!r.ok) expect(r.error).toContain(msg);
   });
 
-  it("STACKED 契约（contract=remaining）：{remaining} 放行，used/裸数字拒绝", async () => {
-    expect(await runScript("({remaining: 18})", { env: {}, contract: "remaining" })).toEqual({
+  it("单解析器（ADR-0013）：{remaining} / {used, total?} / 裸数字均按形状放行", async () => {
+    expect(await runScript("({remaining: 18})", { env: {} })).toEqual({ ok: true, remaining: 18, logs: [] });
+    expect(await runScript("({used: 234.5, total: 500})", { env: {} })).toEqual({
       ok: true,
-      remaining: 18,
+      used: 234.5,
+      total: 500,
       logs: [],
     });
-    for (const [code, msg] of [
-      ["({used: 5})", "mismatch"],
-      ["42", "remaining"],
-      ["({remaining: -1})", "非负"],
-    ] as const) {
-      const r = await runScript(code, { env: {}, contract: "remaining" });
-      expect(r.ok).toBe(false);
-      if (!r.ok) expect(r.error).toContain(msg);
-    }
+    expect(await runScript("42", { env: {} })).toEqual({ ok: true, used: 42, logs: [] });
   });
 
-  it("RESET 契约（默认）：收到 remaining 报形态不匹配", async () => {
-    const r = await runScript("({remaining: 5})", { env: {} });
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toContain("mismatch");
+  it("混合形状（used+remaining）与非法 remaining 报错；runScript 不带 contract 字段", async () => {
+    const mixed = await runScript("({used: 1, remaining: 2})", { env: {} });
+    expect(mixed.ok).toBe(false);
+    if (!mixed.ok) expect(mixed.error).toContain("mismatch");
+
+    const neg = await runScript("({remaining: -1})", { env: {} });
+    expect(neg.ok).toBe(false);
+    if (!neg.ok) expect(neg.error).toContain("非负");
+
+    // 单解析器按返回形状判定，无需 contract 参数
+    const r = await runScript("({remaining: 3})", { env: {} });
+    expect(r).toEqual({ ok: true, remaining: 3, logs: [] });
   });
 });
 

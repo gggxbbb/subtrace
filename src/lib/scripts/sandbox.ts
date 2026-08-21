@@ -10,8 +10,6 @@ export interface RunScriptOptions {
   env: Record<string, unknown>;
   /** 整体墙钟超时（默认 5000ms），到点 terminate */
   timeoutMs?: number;
-  /** 产出契约（ADR-0012）：used = 周期重置 {used, total?}（默认）；remaining = 包叠加 {remaining} */
-  contract?: "used" | "remaining";
 }
 
 export interface ScriptSuccess {
@@ -40,28 +38,21 @@ interface ParsedUsage {
   total?: number;
 }
 
-function parseUsage(value: unknown, contract: "used" | "remaining"): ParsedUsage | { error: string } {
-  if (contract === "remaining") {
-    // 包叠加：只收 { remaining }（剩余总量）；裸数字与 used 均属形态混淆，拒绝
-    if (value === null || typeof value !== "object") {
-      return { error: `包叠加形态的脚本须返回 {remaining}（剩余总量），实际返回 ${typeof value === "number" ? "裸数字" : typeof value}` };
-    }
-    const { remaining, used } = value as { remaining?: unknown; used?: unknown };
-    if (typeof used === "number") {
-      return { error: "包叠加形态的脚本须返回 {remaining}（剩余总量），收到 used script_contract_mismatch" };
-    }
+function parseUsage(value: unknown): ParsedUsage | { error: string } {
+  // 单解析器（ADR-0013）：按返回形状自描述——{remaining} → 剩余总量；{used, total?}/裸数字 → 已用量
+  const obj = typeof value === "number" ? { used: value } : value;
+  if (obj === null || typeof obj !== "object") {
+    return { error: `脚本须返回 {remaining}（剩余总量）或 {used, total?}（已用量），实际返回 ${typeof value}` };
+  }
+  const { used, total, remaining } = obj as { used?: unknown; total?: unknown; remaining?: unknown };
+  if (typeof remaining === "number" && typeof used === "number") {
+    return { error: "remaining 与 used 二选一，不可同时返回 script_contract_mismatch" };
+  }
+  if (remaining !== undefined) {
     if (typeof remaining !== "number" || !Number.isFinite(remaining) || remaining < 0) {
       return { error: "remaining 必须是非负有限数" };
     }
     return { remaining };
-  }
-  const obj = typeof value === "number" ? { used: value } : value;
-  if (obj === null || typeof obj !== "object") {
-    return { error: `脚本须返回 {used, total?} 或数字，实际返回 ${typeof value}` };
-  }
-  const { used, total, remaining } = obj as { used?: unknown; total?: unknown; remaining?: unknown };
-  if (typeof remaining === "number" && typeof used !== "number") {
-    return { error: "周期重置形态的脚本须返回 {used, total?}（已用量），收到 remaining script_contract_mismatch" };
   }
   if (typeof used !== "number" || !Number.isFinite(used) || used < 0) {
     return { error: "used 必须是非负有限数" };
@@ -194,7 +185,7 @@ export async function runScript(code: string, opts: RunScriptOptions): Promise<S
     })();
     const logs = Array.isArray(outcome.logs) ? outcome.logs.map(String) : [];
     if (!outcome.ok) return { ok: false, error: outcome.error ?? "未知错误", logs };
-    const parsed = parseUsage(outcome.value, opts.contract ?? "used");
+    const parsed = parseUsage(outcome.value);
     if ("error" in parsed) return { ok: false, error: parsed.error, logs };
     return {
       ok: true,

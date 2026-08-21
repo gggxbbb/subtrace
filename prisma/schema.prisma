@@ -216,6 +216,8 @@ model UsageRecord {
   quantity       Float
   /// DELTA（增量，计数型）| TOTAL（累计快照，额度型）
   kind           String       @default("DELTA")
+  /// TOTAL 快照语义（ADR-0013 记录自描述）：USED=已用量 | REMAINING=剩余量；DELTA 为空
+  semantic       String?
   /// 本次单价（主币种快照）；为空用订阅默认替代单价
   unitPrice      Float?
   /// 额度型：当月总额度（快照）；为空用订阅默认

@@ -9,7 +9,7 @@ export interface ScriptSubView {
   name: string;
   script: string | null;
   scriptCron: string | null;
-  /** 发放形态：空 = RESET | STACKED（决定脚本返回值契约，ADR-0012） */
+  /** 发放形态：空 = RESET | STACKED（仅编辑器提示用；脚本返回值契约与形态无关，按返回形状落库，ADR-0013） */
   grantMode: GrantMode | null;
   /** 编辑回显用：env 已配置时不回传内容，只标记 hasEnv */
   hasEnv: boolean;
