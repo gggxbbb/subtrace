@@ -12,6 +12,7 @@ import {
   deletePack,
   deleteUsage,
   getUsageVerdict,
+  getUsageVerdictForPeriod,
   listPacks,
   listUsage,
   nextAutoGrant,
@@ -19,6 +20,7 @@ import {
   setUsageConfig,
   updatePack,
   updateUsage,
+  usagePeriodsOf,
 } from "./service";
 
 const d = (s: string) => new Date(`${s}T00:00:00+08:00`);
@@ -1084,6 +1086,213 @@ describe("AUTO 包生成器（读时对齐）", () => {
     // 手动模式 / 非 STACKED 无下期
     const manual = await cake();
     expect(nextAutoGrant((await getSubscription(ownerId, manual.id))!, d("2026-08-03"))).toBeNull();
+  });
+});
+
+// ===== 历史回看（ticket 04）：周期序列 + 显式周期 verdict =====
+
+/** 年卡历史：99 元 / 2025-07-01 ~ 2026-07-01（过去一整年，供历史窗口回看） */
+const yearlyPast = async () => {
+  const sub = await createSubscription(ownerId, {
+    name: "年卡历史",
+    trackingMode: "MANUAL",
+    startDate: d("2025-07-01"),
+  });
+  await prisma.payment.create({
+    data: {
+      subscriptionId: sub.id,
+      amount: 99,
+      currency: "CNY",
+      amountBase: 99,
+      paidAt: d("2025-07-01"),
+      periodStart: d("2025-07-01"),
+      periodEnd: d("2026-07-01"),
+      source: "MANUAL",
+    },
+  });
+  return sub;
+};
+
+describe("周期序列（usagePeriodsOf）", () => {
+  it("显式 usageCycle：月度窗口序列，截至覆盖 today 的当前窗口", async () => {
+    const sub = await jd(); // 99 元年付 [2026-07-01, 2027-07-01]
+    await setUsageConfig(ownerId, sub.id, {
+      usageKind: "COUNT",
+      usageUnit: "次",
+      altUnitPrice: 30,
+      usageCycleUnit: "MONTH",
+      usageCycleCount: 1,
+      usageCycleAnchor: d("2026-01-01"),
+    });
+    const periods = usagePeriodsOf((await getSubscription(ownerId, sub.id))!, d("2026-07-18"));
+    expect(periods).toHaveLength(7);
+    expect(periods[0]).toEqual({ start: d("2026-01-01"), end: d("2026-02-01") });
+    expect(periods[6]).toEqual({ start: d("2026-07-01"), end: d("2026-08-01") });
+  });
+
+  it("QUOTA 无显式周期：回退计费周期（CYCLE 月付）", async () => {
+    const sub = await createSubscription(ownerId, {
+      name: "月付云盘",
+      trackingMode: "CYCLE",
+      cycleKind: "CALENDAR",
+      cycleUnit: "MONTH",
+      cycleCount: 1,
+      listPrice: 25,
+      listCurrency: "CNY",
+      listPriceBase: 25,
+      startDate: d("2026-07-01"),
+    });
+    await prisma.payment.create({
+      data: {
+        subscriptionId: sub.id,
+        amount: 25,
+        currency: "CNY",
+        amountBase: 25,
+        paidAt: d("2026-07-01"),
+        periodStart: d("2026-07-01"),
+        periodEnd: d("2026-08-01"),
+        source: "MANUAL",
+      },
+    });
+    await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "GB", quotaTotal: 1000 });
+    const periods = usagePeriodsOf((await getSubscription(ownerId, sub.id))!, d("2026-09-10"));
+    expect(periods).toHaveLength(3);
+    expect(periods[0]).toEqual({ start: d("2026-07-01"), end: d("2026-08-01") });
+    expect(periods[2]).toEqual({ start: d("2026-09-01"), end: d("2026-10-01") });
+  });
+
+  it("COUNT 无显式周期：成本段序列", async () => {
+    const sub = await jd();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次", altUnitPrice: 30 });
+    const periods = usagePeriodsOf((await getSubscription(ownerId, sub.id))!, d("2026-07-18"));
+    expect(periods).toEqual([{ start: d("2026-07-01"), end: d("2027-07-01") }]);
+  });
+});
+
+describe("显式周期盈亏（getUsageVerdictForPeriod）", () => {
+  it("RESET 历史月度窗口：periodStart/End = 该窗口，成本按月分摊，浪费按窗口快照", async () => {
+    const sub = await yearlyPast();
+    await setUsageConfig(ownerId, sub.id, {
+      usageKind: "QUOTA",
+      usageUnit: "点数",
+      quotaTotal: 1000,
+      usageCycleUnit: "MONTH",
+      usageCycleCount: 1,
+      usageCycleAnchor: d("2025-07-01"),
+    });
+    // 5 月窗口内 500/1000；6 月窗口（当前）800——不得并入 5 月判定
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-05-15"), used: 500 });
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-06-10"), used: 800 });
+    const fresh = (await getSubscription(ownerId, sub.id))!;
+    const records = await listUsage(sub.id);
+    const v = getUsageVerdictForPeriod(fresh, records, { start: d("2026-05-01"), end: d("2026-06-01") });
+    if (v?.kind !== "QUOTA") throw new Error("expect QUOTA");
+    expect(v.periodStart).toEqual(d("2026-05-01"));
+    expect(v.periodEnd).toEqual(d("2026-06-01"));
+    const mayNet = 99 * (31 / 365); // 5 月 31 天 × 年付日费率
+    expect(v.cost).toBeCloseTo(mayNet);
+    expect(v.used).toBe(500);
+    expect(v.usageRate).toBeCloseTo(0.5);
+    expect(v.wastedAmount).toBeCloseTo(mayNet * 0.5);
+    expect(v.verdictAmount).toBeCloseTo(-mayNet * 0.5);
+  });
+
+  it("COUNT 历史月度窗口：usage/value/cost 取自该窗口", async () => {
+    const sub = await yearlyPast();
+    await setUsageConfig(ownerId, sub.id, {
+      usageKind: "COUNT",
+      usageUnit: "次",
+      altUnitPrice: 30,
+      usageCycleUnit: "MONTH",
+      usageCycleCount: 1,
+      usageCycleAnchor: d("2025-07-01"),
+    });
+    await addUsage(ownerId, sub.id, ownerId, { date: d("2026-05-10"), quantity: 2 });
+    await addUsage(ownerId, sub.id, ownerId, { date: d("2026-05-20"), quantity: 1 });
+    await addUsage(ownerId, sub.id, ownerId, { date: d("2026-06-10"), quantity: 5 });
+    const fresh = (await getSubscription(ownerId, sub.id))!;
+    const records = await listUsage(sub.id);
+    const v = getUsageVerdictForPeriod(fresh, records, { start: d("2026-05-01"), end: d("2026-06-01") });
+    if (v?.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(v.periodStart).toEqual(d("2026-05-01"));
+    expect(v.periodEnd).toEqual(d("2026-06-01"));
+    const mayNet = 99 * (31 / 365);
+    expect(v.usage).toBe(3); // 6/10 的 5 次不在窗口
+    expect(v.value).toBe(90);
+    expect(v.cost).toBeCloseTo(mayNet);
+    expect(v.verdictAmount).toBeCloseTo(90 - mayNet);
+  });
+
+  it("SAVINGS 历史月度窗口：saved/cost 取自该窗口", async () => {
+    const sub = await yearlyPast();
+    await setUsageConfig(ownerId, sub.id, {
+      usageKind: "SAVINGS",
+      usageUnit: "",
+      usageCycleUnit: "MONTH",
+      usageCycleCount: 1,
+      usageCycleAnchor: d("2025-07-01"),
+    });
+    await addSavings(ownerId, sub.id, ownerId, { date: d("2026-05-05"), amount: 6 });
+    await addSavings(ownerId, sub.id, ownerId, { date: d("2026-06-10"), amount: 24 });
+    const fresh = (await getSubscription(ownerId, sub.id))!;
+    const records = await listUsage(sub.id);
+    const v = getUsageVerdictForPeriod(fresh, records, { start: d("2026-05-01"), end: d("2026-06-01") });
+    if (v?.kind !== "SAVINGS") throw new Error("expect SAVINGS");
+    expect(v.saved).toBe(6);
+    expect(v.cost).toBeCloseTo(99 * (31 / 365));
+    expect(v.verdictAmount).toBeCloseTo(6 - 99 * (31 / 365));
+  });
+
+  it("STACKED 历史窗口覆盖：periodWaste 按该窗口归因（止期排他，邻窗不计）", async () => {
+    const sub = await createSubscription(ownerId, {
+      name: "像素蛋糕历史",
+      trackingMode: "MANUAL",
+      startDate: d("2026-01-01"),
+    });
+    await prisma.payment.create({
+      data: {
+        subscriptionId: sub.id,
+        amount: 120,
+        currency: "CNY",
+        amountBase: 120,
+        paidAt: d("2026-01-01"),
+        periodStart: d("2026-01-01"),
+        periodEnd: d("2027-01-01"),
+        source: "MANUAL",
+      },
+    });
+    await setUsageConfig(ownerId, sub.id, {
+      usageKind: "QUOTA",
+      usageUnit: "张",
+      grantMode: "STACKED",
+      usageCycleUnit: "MONTH",
+      usageCycleCount: 1,
+      usageCycleAnchor: d("2026-01-01"),
+    });
+    // X 包 3/1 焚毁 30 张；Y 包 4/1 到期（最新快照 3/15 之后仅预警，不确认浪费）
+    await addPack(ownerId, sub.id, { grantedAt: d("2026-02-01"), quantity: 30, expiresAt: d("2026-03-01") });
+    await addPack(ownerId, sub.id, { grantedAt: d("2026-03-01"), quantity: 30, expiresAt: d("2026-04-01") });
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-02-15"), remaining: 30 }); // 仅 X 包，未消耗
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-03-15"), remaining: 30 }); // 仅 Y 包
+    const fresh = (await getSubscription(ownerId, sub.id))!;
+    const records = await listUsage(sub.id);
+    // 历史窗口序列：1~4 月（截至覆盖 4/10 的当前窗口）
+    const periods = usagePeriodsOf(fresh, d("2026-04-10"));
+    expect(periods).toHaveLength(4);
+    expect(periods[2]).toEqual({ start: d("2026-03-01"), end: d("2026-04-01") });
+    const march = getUsageVerdictForPeriod(fresh, records, periods[2]);
+    if (march?.kind !== "PACK") throw new Error("expect PACK");
+    expect(march.periodStart).toEqual(d("2026-03-01"));
+    expect(march.periodEnd).toEqual(d("2026-04-01"));
+    expect(march.periodWaste.quantity).toBe(30);
+    expect(march.periodWaste.amount).toBeCloseTo(60); // 单张 120/60 = 2
+    expect(march.verdictAmount).toBeCloseTo(-60);
+    expect(march.cost).toBeCloseTo(120 * (31 / 365));
+    // 止期排他：2 月窗口不含 3/1 的浪费
+    const feb = getUsageVerdictForPeriod(fresh, records, periods[1]);
+    if (feb?.kind !== "PACK") throw new Error("expect PACK");
+    expect(feb.periodWaste.quantity).toBe(0);
+    expect(feb.periodWaste.amount).toBe(0);
   });
 });
 

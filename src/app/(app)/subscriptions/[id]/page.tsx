@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { isoDay } from "@/lib/dates";
+import { dayStart, isoDay } from "@/lib/dates";
 import { Kpi, Panel } from "@/components/te";
 import { fmtMoney } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -16,7 +16,16 @@ import {
   beneficiaryRows as serviceBeneficiaryRows,
   listBeneficiaryCandidates,
 } from "@/lib/beneficiaries/service";
-import { getUsageVerdict, listUsage, nextAutoGrant, reconcileAutoPacks } from "@/lib/usage/service";
+import {
+  currentVerdictPeriod,
+  getUsageVerdict,
+  getUsageVerdictForPeriod,
+  listUsage,
+  nextAutoGrant,
+  reconcileAutoPacks,
+  usagePeriodsOf,
+  type UsageVerdict,
+} from "@/lib/usage/service";
 import { PaymentForm } from "./PaymentForm";
 import { PaymentHistory } from "./PaymentHistory";
 import type { PaymentRow } from "./payment-rows";
@@ -28,6 +37,78 @@ import {
   type VerdictData,
 } from "./UsagePanel";
 import { PacksPanel } from "./PacksPanel";
+
+/** UsageVerdict → VerdictData 序列化（详情页 server 端构造；当前与历史窗口共用） */
+function toVerdictData(v: UsageVerdict | null): VerdictData | null {
+  if (!v) return null;
+  if (v.kind === "COUNT") {
+    return {
+      kind: "COUNT",
+      periodStart: isoDay(v.periodStart),
+      periodEnd: isoDay(v.periodEnd),
+      cost: v.cost,
+      usage: v.usage,
+      value: v.value,
+      verdictAmount: v.verdictAmount,
+      costPerUse: v.costPerUse,
+      costUnknown: v.costUnknown,
+    };
+  }
+  if (v.kind === "SAVINGS") {
+    return {
+      kind: "SAVINGS",
+      periodStart: isoDay(v.periodStart),
+      periodEnd: isoDay(v.periodEnd),
+      cost: v.cost,
+      saved: v.saved,
+      verdictAmount: v.verdictAmount,
+      costUnknown: v.costUnknown,
+    };
+  }
+  if (v.kind === "PACK") {
+    return {
+      kind: "PACK",
+      periodStart: isoDay(v.periodStart),
+      periodEnd: isoDay(v.periodEnd),
+      cost: v.cost,
+      balance: v.balance,
+      balanceAt: v.balanceAt ? isoDay(v.balanceAt) : null,
+      staleDays: v.staleDays,
+      nextExpiry: v.nextExpiry
+        ? {
+            date: isoDay(v.nextExpiry.date),
+            quantity: v.nextExpiry.quantity,
+            projectedBalance: v.nextExpiry.projectedBalance,
+          }
+        : null,
+      periodWaste: v.periodWaste,
+      totalWaste: v.totalWaste,
+      wasteEvents: v.wasteEvents.map((w) => ({
+        date: isoDay(w.date),
+        quantity: w.quantity,
+        amount: w.amount,
+      })),
+      consumptionInferred: v.consumptionInferred,
+      verdictAmount: v.verdictAmount,
+      costUnknown: v.costUnknown,
+    };
+  }
+  return {
+    kind: "QUOTA",
+    periodStart: isoDay(v.periodStart),
+    periodEnd: isoDay(v.periodEnd),
+    cost: v.cost,
+    used: v.used,
+    total: v.total,
+    usageRate: v.usageRate,
+    overageRate: v.overageRate,
+    hit100At: v.hit100At ? isoDay(v.hit100At) : null,
+    wastedAmount: v.wastedAmount,
+    costPerUnit: v.costPerUnit,
+    verdictAmount: v.verdictAmount,
+    costUnknown: v.costUnknown,
+  };
+}
 
 export default async function SubscriptionDetailPage({
   params,
@@ -110,65 +191,26 @@ export default async function SubscriptionDetailPage({
     kind: r.kind,
     unitPrice: r.unitPrice,
     quotaTotal: r.quotaTotal,
+    semantic: r.semantic,
   }));
-  const verdictData: VerdictData | null = v
-    ? v.kind === "COUNT"
-      ? {
-          kind: "COUNT",
-          periodStart: iso(v.periodStart),
-          periodEnd: iso(v.periodEnd),
-          cost: v.cost,
-          usage: v.usage,
-          value: v.value,
-          verdictAmount: v.verdictAmount,
-          costPerUse: v.costPerUse,
-          costUnknown: v.costUnknown,
-        }
-      : v.kind === "SAVINGS"
-        ? {
-            kind: "SAVINGS",
-            periodStart: iso(v.periodStart),
-            periodEnd: iso(v.periodEnd),
-            cost: v.cost,
-            saved: v.saved,
-            verdictAmount: v.verdictAmount,
-            costUnknown: v.costUnknown,
-          }
-      : v.kind === "PACK"
-        ? {
-            kind: "PACK",
-            periodStart: iso(v.periodStart),
-            periodEnd: iso(v.periodEnd),
-            cost: v.cost,
-            balance: v.balance,
-            balanceAt: v.balanceAt ? iso(v.balanceAt) : null,
-            staleDays: v.staleDays,
-            nextExpiry: v.nextExpiry
-              ? { date: iso(v.nextExpiry.date), quantity: v.nextExpiry.quantity, projectedBalance: v.nextExpiry.projectedBalance }
-              : null,
-            periodWaste: v.periodWaste,
-            totalWaste: v.totalWaste,
-            wasteEvents: v.wasteEvents.map((w) => ({ date: iso(w.date), quantity: w.quantity, amount: w.amount })),
-            consumptionInferred: v.consumptionInferred,
-            verdictAmount: v.verdictAmount,
-            costUnknown: v.costUnknown,
-          }
-        : {
-            kind: "QUOTA",
-            periodStart: iso(v.periodStart),
-            periodEnd: iso(v.periodEnd),
-            cost: v.cost,
-            used: v.used,
-            total: v.total,
-            usageRate: v.usageRate,
-            overageRate: (v as { overageRate?: number }).overageRate,
-            hit100At: v.hit100At ? iso(v.hit100At) : null,
-            wastedAmount: v.wastedAmount,
-            costPerUnit: v.costPerUnit,
-            verdictAmount: v.verdictAmount,
-            costUnknown: v.costUnknown,
-          }
-    : null;
+  // 历史周期导航（ADR-0013）：周期序列 + 逐窗口盈亏；currentIdx 定位当前周期
+  const curPeriod = currentVerdictPeriod(sub, today);
+  const periods = usagePeriodsOf(sub, today);
+  const periodVerdicts = periods.map((p) => ({
+    start: isoDay(p.start),
+    end: isoDay(p.end),
+    verdict: toVerdictData(getUsageVerdictForPeriod(sub, usageRecords, p, user.id)),
+  }));
+  const currentIdx = Math.max(
+    0,
+    periods.findIndex(
+      (p) => curPeriod !== null && dayStart(p.start).getTime() === dayStart(curPeriod.start).getTime(),
+    ),
+  );
+  // RESET 额度型：当前周期存在但无快照 → 未录入空态（区别于无覆盖区间）
+  const noEntry =
+    v === null && sub.usageKind === "QUOTA" && (sub.grantMode ?? "RESET") === "RESET" && curPeriod !== null;
+  const verdictData = toVerdictData(v);
 
   return (
     <>
@@ -378,7 +420,9 @@ export default async function SubscriptionDetailPage({
               }
             >
               <UsageVerdictPanel
-                verdict={verdictData}
+                verdicts={periodVerdicts}
+                currentIndex={currentIdx}
+                noEntry={noEntry}
                 usageUnit={sub.usageUnit}
                 subscriptionId={sub.id}
                 currency={cur}

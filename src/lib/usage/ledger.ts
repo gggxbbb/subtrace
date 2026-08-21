@@ -10,6 +10,7 @@ import {
   type SubscriptionWithPayments,
 } from "../subscriptions/service";
 import { shareForViewer } from "../beneficiaries/service";
+import { periodCost } from "./period";
 import { projectPackLedger, type PackInput, type RemainingSnapshot } from "./pack-ledger";
 import type { Beneficiary, QuotaPack, UsageRecord } from "@/generated/prisma/client";
 
@@ -126,21 +127,37 @@ export function resetVerdict(
 
 /** 包叠加 verdict 装配：剩余快照 + 包列表 + 订阅到期日 → FEFO 推演 → 浪费口径盈亏。
  *  订阅已到期（expiry < today）时合成一条到期日 remaining=0 的快照，使停订即焚无需用户操作即显形。
- *  快照映射按 semantic 折算：USED 折算 remaining = total − quantity；REMAINING（或 null 防御性兼容存量）原生。 */
+ *  快照映射按 semantic 折算：USED 折算 remaining = total − quantity；REMAINING（或 null 防御性兼容存量）原生。
+ *  periodOverride 传入（历史回看）：直接以该窗口为归因区间（止期排他），跳过覆盖/终止回落；
+ *  净额按窗口与成本段相交日费率分摊。 */
 export function packVerdict(
   sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[]; quotaPacks?: QuotaPack[] },
   records: UsageRecord[],
   today: Date,
   forUserId: string | undefined,
+  periodOverride?: { start: Date; end: Date },
 ): PackVerdict | null {
   const engineSub = toEngineSub(sub);
   const payments = toEnginePayments(sub.payments);
   const segments = costSegments(engineSub, payments, today);
-  const covering = segments.find((s) => coversDate(s, today));
-  // 已到期：无覆盖段时取最后一段为归因区间（停订浪费确认在到期日 = 段末排他端点，含端点归因）
-  const terminal = !covering && segments.length > 0;
-  const period = covering ?? (terminal ? segments[segments.length - 1] : null);
-  if (!period) return null;
+  let terminal = false;
+  let period: { start: Date; end: Date; net: number; amountUnknown: boolean };
+  if (periodOverride) {
+    const pc = periodCost(segments, periodOverride.start, periodOverride.end);
+    period = {
+      start: periodOverride.start,
+      end: periodOverride.end,
+      net: pc.net,
+      amountUnknown: pc.amountUnknown,
+    };
+  } else {
+    const covering = segments.find((s) => coversDate(s, today));
+    // 已到期：无覆盖段时取最后一段为归因区间（停订浪费确认在到期日 = 段末排他端点，含端点归因）
+    terminal = !covering && segments.length > 0;
+    const seg = covering ?? (terminal ? segments[segments.length - 1] : null);
+    if (!seg) return null;
+    period = { start: seg.start, end: seg.end, net: seg.net, amountUnknown: seg.amountUnknown === true };
+  }
   const share = forUserId ? shareForViewer(sub.beneficiaries ?? [], sub.ownerId, forUserId) : 1;
 
   const packs: PackInput[] = (sub.quotaPacks ?? []).map((p) => ({

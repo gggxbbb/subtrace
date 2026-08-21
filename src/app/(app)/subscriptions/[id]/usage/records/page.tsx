@@ -39,6 +39,7 @@ export default async function UsageRecordsPage({
     kind: r.kind,
     unitPrice: r.unitPrice,
     quotaTotal: r.quotaTotal,
+    semantic: r.semantic,
   }));
   if (sp.userId) rows = rows.filter((r) => r.userId === sp.userId);
   if (sp.kind) rows = rows.filter((r) => r.kind === sp.kind);

@@ -8,7 +8,7 @@ import {
   type SubscriptionWithPayments,
 } from "../subscriptions/service";
 import type { Beneficiary, QuotaPack, Subscription, UsageRecord } from "@/generated/prisma/client";
-import { currentUsagePeriod, periodCost } from "./period";
+import { currentUsagePeriod, periodCost, usagePeriods } from "./period";
 import { dayStart, today } from "../dates";
 import { packVerdict, resetVerdict, type PackVerdict, type QuotaVerdict } from "./ledger";
 import { streamVerdict, type CountVerdict, type SavingsVerdict } from "./stream";
@@ -399,7 +399,7 @@ function usageCycleOf(sub: Subscription): { cycle: CycleSpec; anchor: Date } | n
 
 /** 当前周期窗口（ADR-0013）：显式 usageCycle 优先；否则 QUOTA 回退计费周期；COUNT·SAVINGS 无显式周期则回退成本段。
  *  返回 { start, end, net, unknown }；无覆盖段为 null。 */
-function currentVerdictPeriod(
+export function currentVerdictPeriod(
   sub: SubscriptionWithPayments,
   today: Date,
 ): { start: Date; end: Date; net: number; unknown: boolean } | null {
@@ -424,9 +424,55 @@ function currentVerdictPeriod(
   };
 }
 
+/** 周期序列（历史回看导航）：显式 usageCycle → 截至覆盖 today 的周期窗口序列；
+ *  否则（COUNT·SAVINGS 无显式周期 / 无计费周期可回退）→ 成本段序列。 */
+export function usagePeriodsOf(
+  sub: SubscriptionWithPayments,
+  today: Date,
+): { start: Date; end: Date }[] {
+  const usageCycle = usageCycleOf(sub);
+  if (usageCycle) {
+    return [...usagePeriods(usageCycle.cycle, usageCycle.anchor, today)];
+  }
+  return costSegments(toEngineSub(sub), toEnginePayments(sub.payments), today).map((s) => ({
+    start: s.start,
+    end: s.end,
+  }));
+}
+
+/** 薄分发器（ADR-0013 D1/D3）：QUOTA+STACKED → 账本 FEFO；QUOTA(RESET) → 闭式解；COUNT·SAVINGS → 事件流。
+ *  period 缺省时按当前周期窗口装配；传入显式 period 时按该窗口装配（历史回看），净额按与成本段相交日费率分摊。
+ *  传 forUserId 时按该受益人切片：成本 × 份额，用量只计其本人记录（STACKED 池级例外） */
+function dispatchVerdict(
+  sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[]; quotaPacks?: QuotaPack[] },
+  records: UsageRecord[],
+  today: Date,
+  forUserId: string | undefined,
+  period?: { start: Date; end: Date },
+): UsageVerdict | null {
+  if (!sub.usageKind) return null;
+  // 包叠加：浪费导向 PackVerdict（ADR-0012），自行处理区间归因（含已到期回落）
+  if (sub.usageKind === "QUOTA" && sub.grantMode === "STACKED") {
+    return packVerdict(sub, records, today, forUserId, period);
+  }
+  let p: { start: Date; end: Date; net: number; unknown: boolean } | null;
+  if (period) {
+    const pc = periodCost(
+      costSegments(toEngineSub(sub), toEnginePayments(sub.payments), today),
+      period.start,
+      period.end,
+    );
+    p = { start: period.start, end: period.end, net: pc.net, unknown: pc.amountUnknown };
+  } else {
+    p = currentVerdictPeriod(sub, today);
+  }
+  if (!p) return null;
+  if (sub.usageKind === "QUOTA") return resetVerdict(sub, records, forUserId, p);
+  return streamVerdict(sub, records, forUserId, p);
+}
+
 /** 当前服务区间的盈亏（覆盖 today 的成本段；无覆盖为 null——STACKED 例外：
- *  已到期订阅回落到最后一段归因，停订浪费才能显形）。
- *  薄分发器（ADR-0013 D1/D3）：QUOTA+STACKED → 账本 FEFO；QUOTA(RESET) → 闭式解；COUNT·SAVINGS → 事件流。
+ *  已到期订阅回落到最后一段归因，停订浪费才能显形）。= 当前周期窗口 + 分发。
  *  传 forUserId 时按该受益人切片：成本 × 份额，用量只计其本人记录（STACKED 池级例外） */
 export function getUsageVerdict(
   sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[]; quotaPacks?: QuotaPack[] },
@@ -434,15 +480,18 @@ export function getUsageVerdict(
   today: Date,
   forUserId?: string,
 ): UsageVerdict | null {
-  if (!sub.usageKind) return null;
-  // 包叠加：浪费导向 PackVerdict（ADR-0012），自行处理区间归因（含已到期回落）
-  if (sub.usageKind === "QUOTA" && sub.grantMode === "STACKED") {
-    return packVerdict(sub, records, today, forUserId);
-  }
-  const period = currentVerdictPeriod(sub, today);
-  if (!period) return null;
-  if (sub.usageKind === "QUOTA") return resetVerdict(sub, records, forUserId, period);
-  return streamVerdict(sub, records, forUserId, period);
+  return dispatchVerdict(sub, records, today, forUserId);
+}
+
+/** 历史窗口盈亏：按显式 period 装配（RESET/COUNT/SAVINGS 净额按与成本段相交分摊；
+ *  STACKED 以 period 覆盖归因，today 仅用于到期合成快照）。period 由 usagePeriodsOf 提供。 */
+export function getUsageVerdictForPeriod(
+  sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[]; quotaPacks?: QuotaPack[] },
+  records: UsageRecord[],
+  period: { start: Date; end: Date },
+  forUserId?: string,
+): UsageVerdict | null {
+  return dispatchVerdict(sub, records, today(), forUserId, period);
 }
 
 /** 编辑用量记录（所有者或记录本人） */

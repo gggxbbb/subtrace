@@ -20,6 +20,8 @@ export interface UsageRecordRow {
   kind: string;
   unitPrice: number | null;
   quotaTotal: number | null;
+  /** TOTAL 快照语义：USED=已用量 | REMAINING=剩余量；DELTA 为空 */
+  semantic: string | null;
 }
 
 /** 序列化后的盈亏联合（详情页 server 端构造） */
@@ -428,16 +430,246 @@ export function UsageEntryPanel({
   );
 }
 
-/** 盈亏呈现卡：计数型四指标 / 额度型使用率口径 + 历史记录 */
+/** 盈亏网格共用单元：已摊成本 */
+function CostCell({ v, currency }: { v: VerdictData; currency: string }) {
+  return (
+    <div>
+      <div className="text-[9px] uppercase text-faint f-mono">已摊成本</div>
+      <div className="text-lg font-bold tabular-nums">{fmtMoney(v.cost, currency)}</div>
+    </div>
+  );
+}
+
+/** 盈亏网格共用单元：盈亏行（含成本未知降级） */
+function PnlCell({
+  v,
+  currency,
+}: {
+  v: VerdictData & { verdictAmount: number; costUnknown?: boolean };
+  currency: string;
+}) {
+  return (
+    <div>
+      <div className="text-[9px] uppercase text-faint f-mono">盈亏</div>
+      {v.costUnknown ? (
+        <div className="text-lg font-bold text-faint">未知</div>
+      ) : (
+        <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.verdictAmount >= 0 ? "text-income" : "text-destructive"}`}>
+          {v.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(v.verdictAmount), currency)}
+          <Led color={v.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
+        </div>
+      )}
+      {v.costUnknown && (
+        <div className="text-[9px] text-faint f-mono">成本未记录，盈亏不可信</div>
+      )}
+    </div>
+  );
+}
+
+/** 流式引擎（COUNT/SAVINGS）盈亏网格：已摊成本 + 计数/省钱口径 */
+function StreamVerdict({
+  v,
+  usageUnit,
+  currency,
+}: {
+  v: Extract<VerdictData, { kind: "COUNT" | "SAVINGS" }>;
+  usageUnit: string | null;
+  currency: string;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <CostCell v={v} currency={currency} />
+      {v.kind === "COUNT" ? (
+        <>
+          <div>
+            <div className="text-[9px] uppercase text-faint f-mono">用量</div>
+            <div className="text-lg font-bold tabular-nums">
+              {v.usage} <span className="text-[10px] text-faint">{usageUnit}</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-[9px] uppercase text-faint f-mono">每次实际成本</div>
+            <div className="text-lg font-bold tabular-nums">
+              {v.costPerUse != null ? fmtMoney(v.costPerUse, currency) : "—"}
+            </div>
+          </div>
+          <PnlCell v={v} currency={currency} />
+        </>
+      ) : (
+        <>
+          <div>
+            <div className="text-[9px] uppercase text-faint f-mono">已省金额</div>
+            <div className="text-lg font-bold tabular-nums">{fmtMoney(v.saved, currency)}</div>
+          </div>
+          <PnlCell v={v} currency={currency} />
+          <div>
+            <div className="text-[9px] uppercase text-faint f-mono">回本差额</div>
+            <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.verdictAmount >= 0 ? "text-income" : ""}`}>
+              {v.verdictAmount >= 0 ? (
+                <>
+                  已净省 {fmtMoney(v.saved - v.cost, currency)}
+                  <Led color="#22c55e" />
+                </>
+              ) : (
+                <>
+                  还差 {fmtMoney(v.cost - v.saved, currency)}
+                  <Led color="var(--accent)" />
+                </>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** 账本引擎（QUOTA/PACK）盈亏网格：已摊成本 + 额度/包口径 */
+function LedgerVerdict({
+  v,
+  usageUnit,
+  currency,
+}: {
+  v: Extract<VerdictData, { kind: "QUOTA" | "PACK" }>;
+  usageUnit: string | null;
+  currency: string;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <CostCell v={v} currency={currency} />
+      {v.kind === "PACK" ? (
+        <>
+          <div>
+            <div className="text-[9px] uppercase text-faint f-mono">余额（最新快照）</div>
+            <div className="text-lg font-bold tabular-nums">
+              {v.balanceAt ? (
+                <>
+                  {v.balance} <span className="text-[10px] text-faint">{usageUnit}</span>
+                </>
+              ) : (
+                <span className="text-sm text-faint">未录入快照</span>
+              )}
+            </div>
+            {v.balanceAt && (
+              <div className={`text-[9px] f-mono ${v.staleDays != null && v.staleDays >= 30 ? "font-bold text-destructive" : "text-faint"}`}>
+                快照 {v.balanceAt}
+                {v.staleDays != null && v.staleDays > 0 && ` · 陈旧 ${v.staleDays} 天`}
+                {v.staleDays != null && v.staleDays >= 30 && "，该校准了"}
+              </div>
+            )}
+          </div>
+          <div>
+            <div className="text-[9px] uppercase text-faint f-mono">到期预警</div>
+            {v.nextExpiry ? (
+              <>
+                <div className="text-sm font-bold tabular-nums">
+                  {v.nextExpiry.date}
+                  <span className="ml-1 text-[10px] font-normal text-faint">
+                    {v.nextExpiry.quantity} {usageUnit} 到期
+                  </span>
+                </div>
+                <div className="text-[9px] text-faint f-mono">
+                  按当前消耗预计剩 {v.nextExpiry.projectedBalance} {usageUnit}
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-faint">无存活包</div>
+            )}
+          </div>
+          <div>
+            <div className="text-[9px] uppercase text-faint f-mono">本区间浪费</div>
+            <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.periodWaste.amount <= 0 ? "text-income" : "text-destructive"}`}>
+              {v.periodWaste.amount <= 0 ? fmtMoney(0, currency) : `−${fmtMoney(v.periodWaste.amount, currency)}`}
+              <Led color={v.periodWaste.amount <= 0 ? "#22c55e" : "#ef4444"} />
+            </div>
+            <div className="text-[9px] text-faint f-mono">{v.periodWaste.quantity} {usageUnit} 到期未用</div>
+          </div>
+          <div>
+            <div className="text-[9px] uppercase text-faint f-mono">累计浪费</div>
+            <div className={`text-lg font-bold tabular-nums ${v.totalWaste.amount <= 0 ? "" : "text-destructive"}`}>
+              {v.totalWaste.amount <= 0 ? fmtMoney(0, currency) : `−${fmtMoney(v.totalWaste.amount, currency)}`}
+            </div>
+            <div className="text-[9px] text-faint f-mono">
+              推算已消费 {v.consumptionInferred} {usageUnit}
+            </div>
+          </div>
+          {v.wasteEvents.length > 0 && (
+            <div className="sm:col-span-2">
+              <div className="text-[9px] uppercase text-faint f-mono">浪费明细（已确认，跨区间可回看）</div>
+              <div className="mt-1 space-y-0.5">
+                {v.wasteEvents.map((w) => (
+                  <div key={w.date} className="flex justify-between text-[10px] tabular-nums f-mono">
+                    <span>{w.date}</span>
+                    <span>
+                      {w.quantity} {usageUnit}
+                      {w.amount > 0 ? ` · −${fmtMoney(w.amount, currency)}` : " · 赠送包"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <div>
+            <div className="text-[9px] uppercase text-faint f-mono">使用率</div>
+            <div className="text-lg font-bold tabular-nums">
+              {Math.round(v.usageRate * 10000) / 100}%
+              {v.overageRate != null && v.overageRate > 0 && (
+                <span className="ml-1 rounded bg-destructive-band px-1.5 py-0.5 align-middle text-[10px] font-semibold text-destructive-strong f-mono">
+                  超额 {Math.round(v.overageRate * 100)}%
+                </span>
+              )}
+              <span className="ml-1 text-[10px] font-normal text-faint">
+                {v.used}/{v.total} {usageUnit}
+              </span>
+            </div>
+          </div>
+          <div>
+            <div className="text-[9px] uppercase text-faint f-mono">用满 100%</div>
+            <div className="flex items-center gap-1.5 text-lg font-bold tabular-nums">
+              {v.hit100At ? (
+                <>
+                  <span className="text-sm">{v.hit100At}</span>
+                  <Led color="#22c55e" />
+                </>
+              ) : (
+                <>
+                  <span className="text-sm text-faint">未用满</span>
+                  <Led color="#ef4444" />
+                </>
+              )}
+            </div>
+          </div>
+          <div>
+            <div className="text-[9px] uppercase text-faint f-mono">浪费</div>
+            <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.wastedAmount <= 0 ? "text-income" : "text-destructive"}`}>
+              {v.wastedAmount <= 0 ? fmtMoney(0, currency) : `−${fmtMoney(v.wastedAmount, currency)}`}
+              <Led color={v.wastedAmount <= 0 ? "#22c55e" : "#ef4444"} />
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** 盈亏呈现卡：周期导航 + 流式/账本两套引擎渲染 + 历史回看 */
 export function UsageVerdictPanel({
-  verdict: v,
+  verdicts,
+  currentIndex,
+  noEntry = false,
   usageUnit,
   subscriptionId,
   records,
   perUser = [],
   currency,
 }: {
-  verdict: VerdictData | null;
+  verdicts: { start: string; end: string; verdict: VerdictData | null }[];
+  currentIndex: number;
+  /** RESET 额度型：当前周期存在但无快照（未录入，区别于无覆盖区间） */
+  noEntry?: boolean;
   usageUnit: string | null;
   subscriptionId: string;
   records: UsageRecordRow[];
@@ -445,250 +677,116 @@ export function UsageVerdictPanel({
   perUser?: { name: string; usageLabel: string; verdictAmount: number }[];
   currency: string;
 }) {
-  if (!v) {
-    return (
-      <div className="px-4 py-6 text-center text-[11px] uppercase text-faint f-mono">
-        当前无覆盖的服务区间
-      </div>
-    );
-  }
+  const last = Math.max(0, verdicts.length - 1);
+  const [idx, setIdx] = useState(Math.max(0, Math.min(currentIndex, last)));
+  const v = verdicts[idx]?.verdict ?? null;
+  const navBtn =
+    "flex h-6 w-6 items-center justify-center border border-ink bg-surface text-[12px] leading-none f-mono hover:bg-ink hover:text-surface disabled:pointer-events-none disabled:opacity-30";
   return (
     <div className="px-4 py-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <div className="text-[9px] uppercase text-faint f-mono">已摊成本</div>
-          <div className="text-lg font-bold tabular-nums">{fmtMoney(v.cost, currency)}</div>
-        </div>
-        {v.kind === "COUNT" ? (
-          <>
-            <div>
-              <div className="text-[9px] uppercase text-faint f-mono">用量</div>
-              <div className="text-lg font-bold tabular-nums">
-                {v.usage} <span className="text-[10px] text-faint">{usageUnit}</span>
-              </div>
-            </div>
-            <div>
-              <div className="text-[9px] uppercase text-faint f-mono">每次实际成本</div>
-              <div className="text-lg font-bold tabular-nums">
-                {v.costPerUse != null ? fmtMoney(v.costPerUse, currency) : "—"}
-              </div>
-            </div>
-            <div>
-              <div className="text-[9px] uppercase text-faint f-mono">盈亏</div>
-              {v.costUnknown ? (
-                <div className="text-lg font-bold text-faint">未知</div>
-              ) : (
-                <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.verdictAmount >= 0 ? "text-income" : "text-destructive"}`}>
-                  {v.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(v.verdictAmount), currency)}
-                  <Led color={v.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
-                </div>
-              )}
-              {v.costUnknown && (
-                <div className="text-[9px] text-faint f-mono">成本未记录，盈亏不可信</div>
-              )}
-            </div>
-          </>
-        ) : v.kind === "SAVINGS" ? (
-          <>
-            <div>
-              <div className="text-[9px] uppercase text-faint f-mono">已省金额</div>
-              <div className="text-lg font-bold tabular-nums">{fmtMoney(v.saved, currency)}</div>
-            </div>
-            <div>
-              <div className="text-[9px] uppercase text-faint f-mono">盈亏</div>
-              {v.costUnknown ? (
-                <div className="text-lg font-bold text-faint">未知</div>
-              ) : (
-                <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.verdictAmount >= 0 ? "text-income" : "text-destructive"}`}>
-                  {v.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(v.verdictAmount), currency)}
-                  <Led color={v.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
-                </div>
-              )}
-              {v.costUnknown && (
-                <div className="text-[9px] text-faint f-mono">成本未记录，盈亏不可信</div>
-              )}
-            </div>
-            <div>
-              <div className="text-[9px] uppercase text-faint f-mono">回本差额</div>
-              <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.verdictAmount >= 0 ? "text-income" : ""}`}>
-                {v.verdictAmount >= 0 ? (
-                  <>
-                    已净省 {fmtMoney(v.saved - v.cost, currency)}
-                    <Led color="#22c55e" />
-                  </>
-                ) : (
-                  <>
-                    还差 {fmtMoney(v.cost - v.saved, currency)}
-                    <Led color="var(--accent)" />
-                  </>
-                )}
-              </div>
-            </div>
-          </>
-        ) : v.kind === "PACK" ? (
-          <>
-            <div>
-              <div className="text-[9px] uppercase text-faint f-mono">余额（最新快照）</div>
-              <div className="text-lg font-bold tabular-nums">
-                {v.balanceAt ? (
-                  <>
-                    {v.balance} <span className="text-[10px] text-faint">{usageUnit}</span>
-                  </>
-                ) : (
-                  <span className="text-sm text-faint">未录入快照</span>
-                )}
-              </div>
-              {v.balanceAt && (
-                <div className={`text-[9px] f-mono ${v.staleDays != null && v.staleDays >= 30 ? "font-bold text-destructive" : "text-faint"}`}>
-                  快照 {v.balanceAt}
-                  {v.staleDays != null && v.staleDays > 0 && ` · 陈旧 ${v.staleDays} 天`}
-                  {v.staleDays != null && v.staleDays >= 30 && "，该校准了"}
-                </div>
-              )}
-            </div>
-            <div>
-              <div className="text-[9px] uppercase text-faint f-mono">到期预警</div>
-              {v.nextExpiry ? (
-                <>
-                  <div className="text-sm font-bold tabular-nums">
-                    {v.nextExpiry.date}
-                    <span className="ml-1 text-[10px] font-normal text-faint">
-                      {v.nextExpiry.quantity} {usageUnit} 到期
-                    </span>
-                  </div>
-                  <div className="text-[9px] text-faint f-mono">
-                    按当前消耗预计剩 {v.nextExpiry.projectedBalance} {usageUnit}
-                  </div>
-                </>
-              ) : (
-                <div className="text-sm text-faint">无存活包</div>
-              )}
-            </div>
-            <div>
-              <div className="text-[9px] uppercase text-faint f-mono">本区间浪费</div>
-              <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.periodWaste.amount <= 0 ? "text-income" : "text-destructive"}`}>
-                {v.periodWaste.amount <= 0 ? fmtMoney(0, currency) : `−${fmtMoney(v.periodWaste.amount, currency)}`}
-                <Led color={v.periodWaste.amount <= 0 ? "#22c55e" : "#ef4444"} />
-              </div>
-              <div className="text-[9px] text-faint f-mono">{v.periodWaste.quantity} {usageUnit} 到期未用</div>
-            </div>
-            <div>
-              <div className="text-[9px] uppercase text-faint f-mono">累计浪费</div>
-              <div className={`text-lg font-bold tabular-nums ${v.totalWaste.amount <= 0 ? "" : "text-destructive"}`}>
-                {v.totalWaste.amount <= 0 ? fmtMoney(0, currency) : `−${fmtMoney(v.totalWaste.amount, currency)}`}
-              </div>
-              <div className="text-[9px] text-faint f-mono">
-                推算已消费 {v.consumptionInferred} {usageUnit}
-              </div>
-            </div>
-            {v.wasteEvents.length > 0 && (
-              <div className="sm:col-span-2">
-                <div className="text-[9px] uppercase text-faint f-mono">浪费明细（已确认，跨区间可回看）</div>
-                <div className="mt-1 space-y-0.5">
-                  {v.wasteEvents.map((w) => (
-                    <div key={w.date} className="flex justify-between text-[10px] tabular-nums f-mono">
-                      <span>{w.date}</span>
-                      <span>
-                        {w.quantity} {usageUnit}
-                        {w.amount > 0 ? ` · −${fmtMoney(w.amount, currency)}` : " · 赠送包"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+      {verdicts.length > 0 && (
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            aria-label="上一周期"
+            onClick={() => setIdx((i) => Math.max(0, i - 1))}
+            disabled={idx <= 0}
+            className={navBtn}
+          >
+            ‹
+          </button>
+          <div className="flex items-center gap-2 text-[10px] uppercase f-mono text-muted">
+            <span className="tabular-nums">
+              {verdicts[idx] ? `${verdicts[idx].start} ~ ${verdicts[idx].end}` : "—"}
+            </span>
+            {idx !== currentIndex && (
+              <button
+                type="button"
+                onClick={() => setIdx(currentIndex)}
+                className="border border-ink bg-surface px-2 py-0.5 text-[9px] uppercase tracking-wider hover:bg-ink hover:text-surface"
+              >
+                回到当前
+              </button>
             )}
-          </>
-        ) : (
-          <>
-            <div>
-              <div className="text-[9px] uppercase text-faint f-mono">使用率</div>
-              <div className="text-lg font-bold tabular-nums">
-                {Math.round(v.usageRate * 10000) / 100}%
-                {v.overageRate != null && v.overageRate > 0 && (
-                  <span className="ml-1 rounded bg-destructive-band px-1.5 py-0.5 align-middle text-[10px] font-semibold text-destructive-strong f-mono">
-                    超额 {Math.round(v.overageRate * 100)}%
-                  </span>
-                )}
-                <span className="ml-1 text-[10px] font-normal text-faint">
-                  {v.used}/{v.total} {usageUnit}
-                </span>
-              </div>
-            </div>
-            <div>
-              <div className="text-[9px] uppercase text-faint f-mono">用满 100%</div>
-              <div className="flex items-center gap-1.5 text-lg font-bold tabular-nums">
-                {v.hit100At ? (
-                  <>
-                    <span className="text-sm">{v.hit100At}</span>
-                    <Led color="#22c55e" />
-                  </>
-                ) : (
-                  <>
-                    <span className="text-sm text-faint">未用满</span>
-                    <Led color="#ef4444" />
-                  </>
-                )}
-              </div>
-            </div>
-            <div>
-              <div className="text-[9px] uppercase text-faint f-mono">浪费</div>
-              <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.wastedAmount <= 0 ? "text-income" : "text-destructive"}`}>
-                {v.wastedAmount <= 0 ? fmtMoney(0, currency) : `−${fmtMoney(v.wastedAmount, currency)}`}
-                <Led color={v.wastedAmount <= 0 ? "#22c55e" : "#ef4444"} />
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-      <div className="mt-3 border-t border-dashed border-line-strong pt-1.5 text-[9px] uppercase text-faint f-mono">
-        {v.periodStart} → {v.periodEnd} ·{" "}
-        {v.kind === "COUNT"
-          ? `价值 ${fmtMoney(v.value, currency)} − 成本 ${fmtMoney(v.cost, currency)}`
-          : v.kind === "SAVINGS"
-            ? `已省 ${fmtMoney(v.saved, currency)} − 成本 ${fmtMoney(v.cost, currency)}`
-            : v.kind === "PACK"
-              ? `区间浪费 −${fmtMoney(v.periodWaste.amount, currency)} · 累计 −${fmtMoney(v.totalWaste.amount, currency)}`
-              : `未用 ${Math.round((1 - v.usageRate) * 10000) / 100}% × 成本 ${fmtMoney(v.cost, currency)}`}
-      </div>
-      {perUser.length > 0 && (
-        <div className="mt-2 border-t border-dashed border-line-strong pt-2">
-          <div className="mb-1 text-[9px] uppercase text-faint f-mono">各受益人</div>
-          {perUser.map((u) => (
-            <div key={u.name} className="flex items-center justify-between py-1 text-[11px] f-mono">
-              <span>{u.name}</span>
-              <span className="flex items-center gap-2">
-                <span className="text-muted">{u.usageLabel}</span>
-                <span className={u.verdictAmount >= 0 ? "text-income" : "text-destructive"}>
-                  {u.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(u.verdictAmount), currency)}
-                </span>
-              </span>
-            </div>
-          ))}
+          </div>
+          <button
+            type="button"
+            aria-label="下一周期"
+            onClick={() => setIdx((i) => Math.min(last, i + 1))}
+            disabled={idx >= last}
+            className={navBtn}
+          >
+            ›
+          </button>
         </div>
       )}
-      {records.length > 0 && (
-        <div className="mt-2 border-t border-dashed border-line-strong pt-2">
-          {[...records].reverse().slice(0, 10).map((r) => (
-            <div key={r.id} className="group flex items-center justify-between py-1 text-[11px] f-mono">
-              <span className="text-muted">{r.date}</span>
-              <span className="flex items-center gap-2">
-                {v.kind === "SAVINGS"
-                  ? `+${fmtMoney(r.quantity, currency)}`
-                  : v.kind === "PACK"
-                    ? `剩余 ${r.quantity} ${usageUnit ?? ""}`
-                    : `${r.kind === "TOTAL" ? `已用 ${r.quantity}` : `+${r.quantity}`} ${usageUnit ?? ""}`}
-                {r.unitPrice != null && <span className="text-faint">@ {r.unitPrice}</span>}
-                <button
-                  onClick={async () => deleteUsageAction(subscriptionId, r.id)}
-                  className="invisible text-destructive group-hover:visible"
-                >
-                  ×
-                </button>
-              </span>
-            </div>
-          ))}
+      {noEntry && idx === currentIndex ? (
+        <div className="py-6 text-center text-[11px] uppercase text-faint f-mono">
+          本周期未录入用量快照
         </div>
+      ) : !v ? (
+        <div className="py-6 text-center text-[11px] uppercase text-faint f-mono">
+          当前无覆盖的服务区间
+        </div>
+      ) : (
+        <>
+          {v.kind === "COUNT" || v.kind === "SAVINGS" ? (
+            <StreamVerdict v={v} usageUnit={usageUnit} currency={currency} />
+          ) : (
+            <LedgerVerdict v={v} usageUnit={usageUnit} currency={currency} />
+          )}
+          <div className="mt-3 border-t border-dashed border-line-strong pt-1.5 text-[9px] uppercase text-faint f-mono">
+            {v.periodStart} → {v.periodEnd} ·{" "}
+            {v.kind === "COUNT"
+              ? `价值 ${fmtMoney(v.value, currency)} − 成本 ${fmtMoney(v.cost, currency)}`
+              : v.kind === "SAVINGS"
+                ? `已省 ${fmtMoney(v.saved, currency)} − 成本 ${fmtMoney(v.cost, currency)}`
+                : v.kind === "PACK"
+                  ? `区间浪费 −${fmtMoney(v.periodWaste.amount, currency)} · 累计 −${fmtMoney(v.totalWaste.amount, currency)}`
+                  : `未用 ${Math.round((1 - v.usageRate) * 10000) / 100}% × 成本 ${fmtMoney(v.cost, currency)}`}
+          </div>
+          {perUser.length > 0 && (
+            <div className="mt-2 border-t border-dashed border-line-strong pt-2">
+              <div className="mb-1 text-[9px] uppercase text-faint f-mono">各受益人</div>
+              {perUser.map((u) => (
+                <div key={u.name} className="flex items-center justify-between py-1 text-[11px] f-mono">
+                  <span>{u.name}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-muted">{u.usageLabel}</span>
+                    <span className={u.verdictAmount >= 0 ? "text-income" : "text-destructive"}>
+                      {u.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(u.verdictAmount), currency)}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {records.length > 0 && (
+            <div className="mt-2 border-t border-dashed border-line-strong pt-2">
+              {[...records].reverse().slice(0, 10).map((r) => (
+                <div key={r.id} className="group flex items-center justify-between py-1 text-[11px] f-mono">
+                  <span className="text-muted">{r.date}</span>
+                  <span className="flex items-center gap-2">
+                    {v.kind === "SAVINGS"
+                      ? `+${fmtMoney(r.quantity, currency)}`
+                      : v.kind === "PACK"
+                        ? `剩余 ${r.quantity} ${usageUnit ?? ""}`
+                        : `${r.kind === "TOTAL" ? `已用 ${r.quantity}` : `+${r.quantity}`} ${usageUnit ?? ""}`}
+                    {r.unitPrice != null && <span className="text-faint">@ {r.unitPrice}</span>}
+                    <button
+                      onClick={async () => deleteUsageAction(subscriptionId, r.id)}
+                      className="invisible text-destructive group-hover:visible"
+                    >
+                      ×
+                    </button>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
+

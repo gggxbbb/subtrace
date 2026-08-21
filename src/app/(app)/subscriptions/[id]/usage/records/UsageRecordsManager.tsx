@@ -23,6 +23,8 @@ export interface UsageRow {
   kind: string;
   unitPrice: number | null;
   quotaTotal: number | null;
+  /** TOTAL 快照语义：USED=已用量 | REMAINING=剩余量；DELTA 为空 */
+  semantic: string | null;
 }
 
 const today = () => isoDay(new Date());
@@ -227,6 +229,11 @@ export function UsageRecordsManager({
                       ? `剩余 ${r.quantity} ${usageUnit ?? ""}`
                       : `${r.kind === "TOTAL" ? `已用 ${r.quantity}` : `+${r.quantity}`} ${usageUnit ?? ""}`}
                 </span>
+                {!stacked && r.kind === "TOTAL" && r.semantic && (
+                  <span className="ml-1 f-mono text-faint">
+                    （{r.semantic === "REMAINING" ? "剩余" : "已用"}）
+                  </span>
+                )}
                 {r.unitPrice != null && <span className="ml-1 text-faint">@ {r.unitPrice}</span>}
                 {r.quotaTotal != null && <span className="ml-1 text-faint">/ {r.quotaTotal}</span>}
               </div>
