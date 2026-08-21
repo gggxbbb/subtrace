@@ -1,4 +1,5 @@
-// 用量与盈亏（ticket 06）：计数型逐条 + 额度型快照，按当前服务区间算盈亏。
+// 用量与盈亏服务（ADR-0013）：写路径守卫 + verdict 薄分发器；
+// 引擎在 ledger.ts（额度：RESET 闭式解 / STACKED FEFO）与 stream.ts（事件流：COUNT/SAVINGS）。
 
 import { prisma } from "../db";
 import { advanceCycle, costSegments, coversDate, currentExpiry, dayDiff, type CycleSpec, type PaymentRec, type SubscriptionDef } from "../cost-engine";
@@ -13,8 +14,6 @@ import { dayStart, today } from "../dates";
 import { packVerdict, resetVerdict, type PackVerdict, type QuotaVerdict } from "./ledger";
 import { streamVerdict, type CountVerdict, type SavingsVerdict } from "./stream";
 
-export type { CountVerdict, SavingsVerdict } from "./stream";
-export type { QuotaVerdict, PackVerdict, UsageRecordSemantic } from "./ledger";
 export type UsageVerdict = CountVerdict | QuotaVerdict | SavingsVerdict | PackVerdict;
 
 export type UsageKind = "COUNT" | "QUOTA" | "SAVINGS";
@@ -397,24 +396,37 @@ function usageCycleOf(sub: Subscription): { cycle: CycleSpec; anchor: Date } | n
   return null;
 }
 
+/** 窗口净额：与 [start, end) 相交的成本段按日费率分摊（ADR-0013 D2）。窗口装配的唯一实现。 */
+function windowCost(
+  sub: SubscriptionWithPayments,
+  today: Date,
+  start: Date,
+  end: Date,
+): { net: number; amountUnknown: boolean; covered: boolean } {
+  return periodCost(
+    costSegments(toEngineSub(sub), toEnginePayments(sub.payments), today),
+    start,
+    end,
+  );
+}
+
 /** 当前周期窗口（ADR-0013）：显式 usageCycle 优先；否则 QUOTA 回退计费周期；COUNT·SAVINGS 无显式周期则回退成本段。
  *  返回 { start, end, net, unknown }；无覆盖段为 null。 */
 export function currentVerdictPeriod(
   sub: SubscriptionWithPayments,
   today: Date,
 ): { start: Date; end: Date; net: number; unknown: boolean } | null {
-  const engineSub = toEngineSub(sub);
-  const payments = toEnginePayments(sub.payments);
-  const segs = costSegments(engineSub, payments, today);
   const usageCycle = usageCycleOf(sub);
   if (usageCycle) {
     const cur = currentUsagePeriod(usageCycle.cycle, usageCycle.anchor, today);
     if (!cur) return null;
-    const pc = periodCost(segs, cur.start, cur.end);
+    const pc = windowCost(sub, today, cur.start, cur.end);
     if (!pc.covered) return null;
     return { start: cur.start, end: cur.end, net: pc.net, unknown: pc.amountUnknown };
   }
-  const covering = segs.find((s) => coversDate(s, today));
+  const covering = costSegments(toEngineSub(sub), toEnginePayments(sub.payments), today).find((s) =>
+    coversDate(s, today),
+  );
   if (!covering) return null;
   return {
     start: covering.start,
@@ -442,6 +454,7 @@ export function usagePeriodsOf(
 
 /** 薄分发器（ADR-0013 D1/D3）：QUOTA+STACKED → 账本 FEFO；QUOTA(RESET) → 闭式解；COUNT·SAVINGS → 事件流。
  *  period 缺省时按当前周期窗口装配；传入显式 period 时按该窗口装配（历史回看），净额按与成本段相交日费率分摊。
+ *  terminal（STACKED 历史末窗）：该窗口是订阅最后一段，到期日焚毁含端点归因（段序列无后续窗口承接）。
  *  传 forUserId 时按该受益人切片：成本 × 份额，用量只计其本人记录（STACKED 池级例外） */
 function dispatchVerdict(
   sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[]; quotaPacks?: QuotaPack[] },
@@ -449,19 +462,16 @@ function dispatchVerdict(
   today: Date,
   forUserId: string | undefined,
   period?: { start: Date; end: Date },
+  terminal?: boolean,
 ): UsageVerdict | null {
   if (!sub.usageKind) return null;
   // 包叠加：浪费导向 PackVerdict（ADR-0012），自行处理区间归因（含已到期回落）
   if (sub.usageKind === "QUOTA" && sub.grantMode === "STACKED") {
-    return packVerdict(sub, records, today, forUserId, period);
+    return packVerdict(sub, records, today, forUserId, period, terminal);
   }
   let p: { start: Date; end: Date; net: number; unknown: boolean } | null;
   if (period) {
-    const pc = periodCost(
-      costSegments(toEngineSub(sub), toEnginePayments(sub.payments), today),
-      period.start,
-      period.end,
-    );
+    const pc = windowCost(sub, today, period.start, period.end);
     p = { start: period.start, end: period.end, net: pc.net, unknown: pc.amountUnknown };
   } else {
     p = currentVerdictPeriod(sub, today);
@@ -484,14 +494,17 @@ export function getUsageVerdict(
 }
 
 /** 历史窗口盈亏：按显式 period 装配（RESET/COUNT/SAVINGS 净额按与成本段相交分摊；
- *  STACKED 以 period 覆盖归因，today 仅用于到期合成快照）。period 由 usagePeriodsOf 提供。 */
+ *  STACKED 以 period 覆盖归因；today 仅用于到期合成快照；terminal = 订阅末窗含端点归因）。
+ *  period 由 usagePeriodsOf 提供。读路径显式传 today（与 getUsageVerdict 同款测试缝）。 */
 export function getUsageVerdictForPeriod(
   sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[]; quotaPacks?: QuotaPack[] },
   records: UsageRecord[],
   period: { start: Date; end: Date },
+  today: Date,
   forUserId?: string,
+  terminal?: boolean,
 ): UsageVerdict | null {
-  return dispatchVerdict(sub, records, today(), forUserId, period);
+  return dispatchVerdict(sub, records, today, forUserId, period, terminal);
 }
 
 /** 编辑用量记录（所有者或记录本人） */

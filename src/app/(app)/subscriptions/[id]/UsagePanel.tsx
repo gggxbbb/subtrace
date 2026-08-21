@@ -10,7 +10,6 @@ import {
   addUsageAction,
   deleteUsageAction,
 } from "@/lib/usage/actions";
-import type { GrantMode } from "@/lib/usage/service";
 
 
 export interface UsageRecordRow {
@@ -83,7 +82,6 @@ export type VerdictData =
 export function UsageEntryPanel({
   subscriptionId,
   usageKind,
-  grantMode,
   usageUnit,
   defaultUnitPrice,
   defaultQuotaTotal,
@@ -93,8 +91,6 @@ export function UsageEntryPanel({
 }: {
   subscriptionId: string;
   usageKind: "COUNT" | "QUOTA" | "SAVINGS" | null;
-  /** 发放形态：空 = RESET | STACKED（包叠加，ADR-0012） */
-  grantMode: GrantMode | null;
   usageUnit: string | null;
   defaultUnitPrice: number | null;
   defaultQuotaTotal: number | null;
@@ -105,7 +101,6 @@ export function UsageEntryPanel({
   const today = isoDay(new Date());
   const last = records[records.length - 1];
   const kind: "COUNT" | "QUOTA" | "SAVINGS" = usageKind ?? "COUNT";
-  const stacked = kind === "QUOTA" && grantMode === "STACKED";
   // 从历史提取去重的 用量×单价 元组（最近优先）
   const tuples: { quantity: number; unitPrice: number | null }[] = [];
   for (const r of [...records].reverse()) {
@@ -118,15 +113,11 @@ export function UsageEntryPanel({
   const pricePlaceholder =
     last?.unitPrice ?? defaultUnitPrice ?? undefined;
 
-  // 额度型：总额继承上一条；第二行四值联动（使用到额度 = 快照值，本次 = 与上一条的差）
+  // 额度型：总额度继承上一条；三姿势（剩余/已用/百分比）直接录入，语义随记录落库（ADR-0013）
   const lastTotal = last?.quotaTotal ?? defaultQuotaTotal ?? 0;
   const lastUsed = last?.kind === "TOTAL" ? last.quantity : 0;
   const [qTotal, setQTotal] = useState<number>(lastTotal);
-  const [qUsedTo, setQUsedTo] = useState<number>(lastUsed);
   const r2 = (n: number) => Math.round(n * 100) / 100;
-  const qDelta = r2(qUsedTo - lastUsed);
-  const qUsedToPct = qTotal > 0 ? r2((qUsedTo / qTotal) * 100) : 0;
-  const qDeltaPct = qTotal > 0 ? r2((qDelta / qTotal) * 100) : 0;
 
   // 回本提示：计数型按参考单价还差多少用量回本；额度型看距用满还差多少
   const refPrice = last?.unitPrice ?? defaultUnitPrice;
@@ -255,34 +246,6 @@ export function UsageEntryPanel({
             单价留空继承上一条记录{pricePlaceholder != null ? `（${pricePlaceholder}）` : "或订阅默认"}
           </div>
         </form>
-      ) : stacked ? (
-        <form key="stacked" action={addQuotaSnapshotAction.bind(null, subscriptionId)} className="space-y-2">
-          <div className="flex items-end gap-2">
-            <div className="flex-1">
-              <label className={labelCls}>日期</label>
-              <input name="date" type="date" defaultValue={today} required className={`${inputCls} f-mono`} />
-            </div>
-            <div className="w-32">
-              <label className={labelCls}>剩余总量{usageUnit ? `（${usageUnit}）` : ""}</label>
-              <input
-                name="remaining"
-                type="number"
-                step="any"
-                min="0"
-                placeholder={last?.kind === "TOTAL" ? `${last.quantity}` : "45"}
-                required
-                className={inputCls}
-              />
-            </div>
-            <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
-              校准 →
-            </button>
-          </div>
-          <div className="text-[9px] uppercase text-faint f-mono">
-            照抄产品界面可见的剩余总数；系统按 FEFO 推演拆分消费与到期浪费
-            {last?.kind === "TOTAL" && ` · 上一条：${last.date} 剩余 ${last.quantity} ${usageUnit ?? ""}`}
-          </div>
-        </form>
       ) : (
         <form key="quota" action={addQuotaSnapshotAction.bind(null, subscriptionId)} className="space-y-2">
           <div className="flex items-end gap-2">
@@ -291,7 +254,7 @@ export function UsageEntryPanel({
               <input name="date" type="date" defaultValue={today} required className={`${inputCls} f-mono`} />
             </div>
             <div className="w-28">
-              <label className={labelCls}>当月总额度</label>
+              <label className={labelCls}>总额度{usageUnit ? `（${usageUnit}）` : ""}</label>
               <input
                 name="quotaTotal"
                 type="number"
@@ -299,60 +262,52 @@ export function UsageEntryPanel({
                 min="1"
                 value={qTotal || ""}
                 onChange={(e) => setQTotal(parseFloat(e.target.value) || 0)}
-                required
                 className={inputCls}
               />
             </div>
+            <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
+              记录 →
+            </button>
           </div>
           <div className="flex items-end gap-2">
             <div>
-              <label className={labelCls}>本次额度</label>
+              <label className={labelCls}>剩余总量</label>
               <input
+                name="remaining"
                 type="number"
                 step="any"
-                value={qDelta}
-                onChange={(e) => setQUsedTo(r2(lastUsed + (parseFloat(e.target.value) || 0)))}
+                min="0"
+                placeholder={last?.kind === "TOTAL" ? `${last.quantity}` : "45"}
                 className={`${inputCls} w-24`}
               />
             </div>
             <div>
-              <label className={labelCls}>本次 %</label>
-              <input
-                type="number"
-                step="any"
-                value={qDeltaPct}
-                onChange={(e) => setQUsedTo(r2(lastUsed + (qTotal * (parseFloat(e.target.value) || 0)) / 100))}
-                className={`${inputCls} w-20`}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>使用到额度</label>
+              <label className={labelCls}>已用量</label>
               <input
                 name="used"
                 type="number"
                 step="any"
                 min="0"
-                value={qUsedTo}
-                onChange={(e) => setQUsedTo(parseFloat(e.target.value) || 0)}
+                placeholder={lastUsed ? `${lastUsed}` : "650"}
                 className={`${inputCls} w-24`}
               />
             </div>
             <div>
-              <label className={labelCls}>使用到 %</label>
+              <label className={labelCls}>使用 %</label>
               <input
+                name="percent"
                 type="number"
                 step="any"
-                value={qUsedToPct}
-                onChange={(e) => setQUsedTo(r2((qTotal * (parseFloat(e.target.value) || 0)) / 100))}
+                min="0"
+                placeholder="80"
                 className={`${inputCls} w-20`}
               />
             </div>
-            <button className="bg-ink px-3 py-1.5 text-[11px] font-semibold uppercase text-surface hover:bg-ink-hover">
-              更新 →
-            </button>
           </div>
           <div className="text-[9px] uppercase text-faint f-mono">
-            提交的是「使用到额度」快照；四个数值联动，改任意一个其余自动算
+            三选一填一个：剩余总量 / 已用量 / 使用百分比，语义随记录落库（ADR-0013）
+            {last?.kind === "TOTAL" &&
+              ` · 上一条：${last.date} ${last.semantic === "REMAINING" ? "剩余" : "已用"} ${last.quantity} ${usageUnit ?? ""}`}
           </div>
         </form>
       )}
@@ -769,7 +724,7 @@ export function UsageVerdictPanel({
                   <span className="flex items-center gap-2">
                     {v.kind === "SAVINGS"
                       ? `+${fmtMoney(r.quantity, currency)}`
-                      : v.kind === "PACK"
+                      : v.kind === "PACK" || (r.kind === "TOTAL" && r.semantic === "REMAINING")
                         ? `剩余 ${r.quantity} ${usageUnit ?? ""}`
                         : `${r.kind === "TOTAL" ? `已用 ${r.quantity}` : `+${r.quantity}`} ${usageUnit ?? ""}`}
                     {r.unitPrice != null && <span className="text-faint">@ {r.unitPrice}</span>}

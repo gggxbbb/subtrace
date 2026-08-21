@@ -127,23 +127,26 @@ export function resetVerdict(
 
 /** 包叠加 verdict 装配：剩余快照 + 包列表 + 订阅到期日 → FEFO 推演 → 浪费口径盈亏。
  *  订阅已到期（expiry < today）时合成一条到期日 remaining=0 的快照，使停订即焚无需用户操作即显形。
- *  快照映射按 semantic 折算：USED 折算 remaining = total − quantity；REMAINING（或 null 防御性兼容存量）原生。
+ * 快照映射按 semantic 折算：USED 折算 remaining = total − quantity；REMAINING（或 null 防御性兼容存量）原生。
  *  periodOverride 传入（历史回看）：直接以该窗口为归因区间（止期排他），跳过覆盖/终止回落；
- *  净额按窗口与成本段相交日费率分摊。 */
+ *  净额按窗口与成本段相交日费率分摊。terminal = 订阅末窗（段序列无后续窗口承接到期日焚毁）→ 含端点归因。 */
 export function packVerdict(
   sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[]; quotaPacks?: QuotaPack[] },
   records: UsageRecord[],
   today: Date,
   forUserId: string | undefined,
   periodOverride?: { start: Date; end: Date },
+  terminal?: boolean,
 ): PackVerdict | null {
   const engineSub = toEngineSub(sub);
   const payments = toEnginePayments(sub.payments);
   const segments = costSegments(engineSub, payments, today);
-  let terminal = false;
+  const expiry = currentExpiry(engineSub, payments, today);
+  let terminalAttribution = false;
   let period: { start: Date; end: Date; net: number; amountUnknown: boolean };
   if (periodOverride) {
     const pc = periodCost(segments, periodOverride.start, periodOverride.end);
+    terminalAttribution = terminal === true;
     period = {
       start: periodOverride.start,
       end: periodOverride.end,
@@ -153,8 +156,8 @@ export function packVerdict(
   } else {
     const covering = segments.find((s) => coversDate(s, today));
     // 已到期：无覆盖段时取最后一段为归因区间（停订浪费确认在到期日 = 段末排他端点，含端点归因）
-    terminal = !covering && segments.length > 0;
-    const seg = covering ?? (terminal ? segments[segments.length - 1] : null);
+    terminalAttribution = !covering && segments.length > 0;
+    const seg = covering ?? (terminalAttribution ? segments[segments.length - 1] : null);
     if (!seg) return null;
     period = { start: seg.start, end: seg.end, net: seg.net, amountUnknown: seg.amountUnknown === true };
   }
@@ -177,12 +180,10 @@ export function packVerdict(
     // REMAINING（或 null semantic，防御性兼容存量）：quantity 即剩余
     return [{ date: r.date, remaining: r.quantity }];
   });
-  const expiry = currentExpiry(engineSub, payments, today);
   if (expiry && dayDiff(today, expiry) < 0) {
     // 停订即焚：合成到期日 remaining=0 快照，终止日全量浪费立即确认
     snapshots.push({ date: expiry, remaining: 0 });
   }
-
   // 单张成本 = 发放段净额 ÷ 该段应发量。AUTO 段应发量 = 段内 AUTO 总量；
   // 段内有 AUTO 时 MANUAL 为赠送包（零成本不摊薄），无 AUTO（手动模式）时 MANUAL 即付费额度。
   const unitCostOf = (pack: PackInput): number => {
@@ -200,7 +201,8 @@ export function packVerdict(
   const ledger = projectPackLedger({ packs, snapshots, subscriptionExpiry: expiry, unitCostOf });
   const inPeriod = ledger.waste.filter(
     (w) =>
-      w.date >= period.start && (terminal ? w.date <= period.end : w.date < period.end),
+      w.date >= period.start &&
+      (terminalAttribution ? w.date <= period.end : w.date < period.end),
   );
   const periodWaste = {
     quantity: inPeriod.reduce((s, w) => s + w.quantity, 0),

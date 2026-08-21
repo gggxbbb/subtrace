@@ -1185,7 +1185,7 @@ describe("显式周期盈亏（getUsageVerdictForPeriod）", () => {
     await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-06-10"), used: 800 });
     const fresh = (await getSubscription(ownerId, sub.id))!;
     const records = await listUsage(sub.id);
-    const v = getUsageVerdictForPeriod(fresh, records, { start: d("2026-05-01"), end: d("2026-06-01") });
+    const v = getUsageVerdictForPeriod(fresh, records, { start: d("2026-05-01"), end: d("2026-06-01") }, d("2026-08-21"));
     if (v?.kind !== "QUOTA") throw new Error("expect QUOTA");
     expect(v.periodStart).toEqual(d("2026-05-01"));
     expect(v.periodEnd).toEqual(d("2026-06-01"));
@@ -1212,7 +1212,7 @@ describe("显式周期盈亏（getUsageVerdictForPeriod）", () => {
     await addUsage(ownerId, sub.id, ownerId, { date: d("2026-06-10"), quantity: 5 });
     const fresh = (await getSubscription(ownerId, sub.id))!;
     const records = await listUsage(sub.id);
-    const v = getUsageVerdictForPeriod(fresh, records, { start: d("2026-05-01"), end: d("2026-06-01") });
+    const v = getUsageVerdictForPeriod(fresh, records, { start: d("2026-05-01"), end: d("2026-06-01") }, d("2026-08-21"));
     if (v?.kind !== "COUNT") throw new Error("expect COUNT");
     expect(v.periodStart).toEqual(d("2026-05-01"));
     expect(v.periodEnd).toEqual(d("2026-06-01"));
@@ -1236,7 +1236,7 @@ describe("显式周期盈亏（getUsageVerdictForPeriod）", () => {
     await addSavings(ownerId, sub.id, ownerId, { date: d("2026-06-10"), amount: 24 });
     const fresh = (await getSubscription(ownerId, sub.id))!;
     const records = await listUsage(sub.id);
-    const v = getUsageVerdictForPeriod(fresh, records, { start: d("2026-05-01"), end: d("2026-06-01") });
+    const v = getUsageVerdictForPeriod(fresh, records, { start: d("2026-05-01"), end: d("2026-06-01") }, d("2026-08-21"));
     if (v?.kind !== "SAVINGS") throw new Error("expect SAVINGS");
     expect(v.saved).toBe(6);
     expect(v.cost).toBeCloseTo(99 * (31 / 365));
@@ -1280,7 +1280,7 @@ describe("显式周期盈亏（getUsageVerdictForPeriod）", () => {
     const periods = usagePeriodsOf(fresh, d("2026-04-10"));
     expect(periods).toHaveLength(4);
     expect(periods[2]).toEqual({ start: d("2026-03-01"), end: d("2026-04-01") });
-    const march = getUsageVerdictForPeriod(fresh, records, periods[2]);
+    const march = getUsageVerdictForPeriod(fresh, records, periods[2], d("2026-04-10"));
     if (march?.kind !== "PACK") throw new Error("expect PACK");
     expect(march.periodStart).toEqual(d("2026-03-01"));
     expect(march.periodEnd).toEqual(d("2026-04-01"));
@@ -1289,10 +1289,51 @@ describe("显式周期盈亏（getUsageVerdictForPeriod）", () => {
     expect(march.verdictAmount).toBeCloseTo(-60);
     expect(march.cost).toBeCloseTo(120 * (31 / 365));
     // 止期排他：2 月窗口不含 3/1 的浪费
-    const feb = getUsageVerdictForPeriod(fresh, records, periods[1]);
+    const feb = getUsageVerdictForPeriod(fresh, records, periods[1], d("2026-04-10"));
     if (feb?.kind !== "PACK") throw new Error("expect PACK");
     expect(feb.periodWaste.quantity).toBe(0);
     expect(feb.periodWaste.amount).toBe(0);
+  });
+
+  it("STACKED 过期订阅：历史末窗含到期日焚毁（含端点归因）", async () => {
+    const sub = await createSubscription(ownerId, {
+      name: "像素蛋糕停订",
+      trackingMode: "MANUAL",
+      startDate: d("2026-01-01"),
+    });
+    await prisma.payment.create({
+      data: {
+        subscriptionId: sub.id,
+        amount: 120,
+        currency: "CNY",
+        amountBase: 120,
+        paidAt: d("2026-01-01"),
+        periodStart: d("2026-01-01"),
+        periodEnd: d("2026-03-01"),
+        source: "MANUAL",
+      },
+    });
+    await setUsageConfig(ownerId, sub.id, {
+      usageKind: "QUOTA",
+      usageUnit: "张",
+      grantMode: "STACKED",
+    });
+    // X 包 4/1 到期（晚于订阅 3/1 到期）→ 有效到期日截断为 3/1，停订即焚于 3/1
+    await addPack(ownerId, sub.id, { grantedAt: d("2026-01-01"), quantity: 30, expiresAt: d("2026-04-01") });
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-01-15"), remaining: 30 });
+    const fresh = (await getSubscription(ownerId, sub.id))!;
+    const records = await listUsage(sub.id);
+    // 手动模式 + 无显式 usageCycle → 周期序列 = 成本段序列：[1/1, 3/1)
+    const periods = usagePeriodsOf(fresh, d("2026-03-15"));
+    expect(periods).toHaveLength(1);
+    const last = getUsageVerdictForPeriod(fresh, records, periods[0], d("2026-03-15"), undefined, true);
+    if (last?.kind !== "PACK") throw new Error("expect PACK");
+    expect(last.periodWaste.quantity).toBe(30); // 3/1 到期日全量焚毁，含端点归因
+    expect(last.periodWaste.amount).toBeCloseTo(120); // 单张 120/30 = 4
+    // 对照：不含端点归因时该窗计 0（正是 review 捕获的缺口）
+    const plain = getUsageVerdictForPeriod(fresh, records, periods[0], d("2026-03-15"));
+    if (plain?.kind !== "PACK") throw new Error("expect PACK");
+    expect(plain.periodWaste.quantity).toBe(0);
   });
 });
 

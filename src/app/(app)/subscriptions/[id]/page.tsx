@@ -170,15 +170,14 @@ export default async function SubscriptionDetailPage({
           .filter((b) => b.kind === "USER")
           .map((b) => {
             const pv = getUsageVerdict(sub, usageRecords, today, b.userId!);
-            if (!pv) return null;
+            // QUOTA 池级已在条件排除；此处显式窄化类型（TS 无法从外层 !QUOTA 推断）
+            if (!pv || pv.kind === "QUOTA" || pv.kind === "PACK") return null;
             return {
               name: b.user?.username ?? "?",
               usageLabel:
                 pv.kind === "COUNT"
                   ? `${pv.usage} ${sub.usageUnit ?? ""}`
-                  : pv.kind === "SAVINGS"
-                    ? `已省 ${fmtMoney(pv.saved, cur)}`
-                    : "",
+                  : `已省 ${fmtMoney(pv.saved, cur)}`,
               verdictAmount: pv.verdictAmount,
             };
           })
@@ -196,10 +195,12 @@ export default async function SubscriptionDetailPage({
   // 历史周期导航（ADR-0013）：周期序列 + 逐窗口盈亏；currentIdx 定位当前周期
   const curPeriod = currentVerdictPeriod(sub, today);
   const periods = usagePeriodsOf(sub, today);
-  const periodVerdicts = periods.map((p) => ({
+  const periodVerdicts = periods.map((p, idx) => ({
     start: isoDay(p.start),
     end: isoDay(p.end),
-    verdict: toVerdictData(getUsageVerdictForPeriod(sub, usageRecords, p, user.id)),
+    verdict: toVerdictData(
+      getUsageVerdictForPeriod(sub, usageRecords, p, today, user.id, idx === periods.length - 1),
+    ),
   }));
   const currentIdx = Math.max(
     0,
@@ -401,7 +402,6 @@ export default async function SubscriptionDetailPage({
               <UsageEntryPanel
                 subscriptionId={sub.id}
                 usageKind={(sub.usageKind as "COUNT" | "QUOTA" | "SAVINGS" | null) ?? null}
-                grantMode={(sub.grantMode as "RESET" | "STACKED" | null) ?? null}
                 usageUnit={sub.usageUnit}
                 defaultUnitPrice={sub.altUnitPrice}
                 defaultQuotaTotal={sub.quotaTotal}
