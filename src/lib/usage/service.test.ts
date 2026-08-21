@@ -154,6 +154,98 @@ describe("额度型用量", () => {
   });
 });
 
+describe("用量重置周期（ADR-0013）", () => {
+  it("QUOTA 显式月周期 + 年付：浪费按月度窗口折算，前 11 个月快照不并入当前窗口", async () => {
+    const sub = await jd(); // 99 元年付 [2026-07-01, 2027-07-01]
+    await setUsageConfig(ownerId, sub.id, {
+      usageKind: "QUOTA",
+      usageUnit: "点数",
+      quotaTotal: 1000,
+      usageCycleUnit: "MONTH",
+      usageCycleCount: 1,
+      usageCycleAnchor: d("2026-01-01"),
+    });
+    // 年初已录满（年付段内、当前月窗口外）——月窗口下不并入本次判定
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-03-15"), used: 1000 });
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), used: 800 });
+    const v = getUsageVerdict((await getSubscription(ownerId, sub.id))!, await listUsage(sub.id), d("2026-07-18"));
+    if (v!.kind !== "QUOTA") throw new Error("expect QUOTA");
+    // 窗口 = 当前月度窗口，而非年付成本段
+    expect(v!.periodStart).toEqual(d("2026-07-01"));
+    expect(v!.periodEnd).toEqual(d("2026-08-01"));
+    // 用当前窗口内最新快照（800/1000），3 月的 1000 不并入
+    expect(v!.used).toBe(800);
+    expect(v!.usageRate).toBeCloseTo(0.8);
+    // 成本 = 年付段按日费率分摊到月窗口；浪费 = 月成本 × (1 − 使用率)
+    const segDays = (d("2027-07-01").getTime() - d("2026-07-01").getTime()) / 86400000;
+    const overlapDays = (d("2026-08-01").getTime() - d("2026-07-01").getTime()) / 86400000;
+    const monthNet = 99 * (overlapDays / segDays);
+    expect(v!.cost).toBeCloseTo(monthNet);
+    expect(v!.wastedAmount).toBeCloseTo(monthNet * 0.2);
+    expect(v!.verdictAmount).toBeCloseTo(-monthNet * 0.2);
+  });
+
+  it("QUOTA 无显式周期：回退计费周期（与改造前一致）", async () => {
+    const sub = await createSubscription(ownerId, {
+      name: "月付云盘",
+      trackingMode: "CYCLE",
+      cycleKind: "CALENDAR",
+      cycleUnit: "MONTH",
+      cycleCount: 1,
+      listPrice: 25,
+      listCurrency: "CNY",
+      listPriceBase: 25,
+      startDate: d("2026-07-01"),
+    });
+    await prisma.payment.create({
+      data: {
+        subscriptionId: sub.id,
+        amount: 25,
+        currency: "CNY",
+        amountBase: 25,
+        paidAt: d("2026-07-01"),
+        periodStart: d("2026-07-01"),
+        periodEnd: d("2026-08-01"),
+        source: "MANUAL",
+      },
+    });
+    await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "GB", quotaTotal: 1000 });
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), used: 800 });
+    const v = getUsageVerdict((await getSubscription(ownerId, sub.id))!, await listUsage(sub.id), d("2026-07-18"));
+    if (v!.kind !== "QUOTA") throw new Error("expect QUOTA");
+    expect(v!.periodStart).toEqual(d("2026-07-01"));
+    expect(v!.periodEnd).toEqual(d("2026-08-01"));
+    expect(v!.cost).toBeCloseTo(25);
+    expect(v!.usageRate).toBeCloseTo(0.8);
+    expect(v!.wastedAmount).toBeCloseTo(25 * 0.2);
+  });
+
+  it("COUNT 显式周期：成本按周期窗口日费率分摊", async () => {
+    const sub = await jd(); // 99 元年付 [2026-07-01, 2027-07-01]
+    await setUsageConfig(ownerId, sub.id, {
+      usageKind: "COUNT",
+      usageUnit: "次",
+      altUnitPrice: 30,
+      usageCycleUnit: "MONTH",
+      usageCycleCount: 1,
+      usageCycleAnchor: d("2026-01-01"),
+    });
+    await addUsage(ownerId, sub.id, ownerId, { date: d("2026-07-10"), quantity: 1 });
+    await addUsage(ownerId, sub.id, ownerId, { date: d("2026-07-20"), quantity: 2 });
+    const v = getUsageVerdict((await getSubscription(ownerId, sub.id))!, await listUsage(sub.id), d("2026-07-25"));
+    if (v!.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(v!.periodStart).toEqual(d("2026-07-01"));
+    expect(v!.periodEnd).toEqual(d("2026-08-01"));
+    const segDays = (d("2027-07-01").getTime() - d("2026-07-01").getTime()) / 86400000;
+    const overlapDays = (d("2026-08-01").getTime() - d("2026-07-01").getTime()) / 86400000;
+    const monthNet = 99 * (overlapDays / segDays);
+    expect(v!.cost).toBeCloseTo(monthNet);
+    expect(v!.usage).toBe(3);
+    expect(v!.value).toBe(90);
+    expect(v!.verdictAmount).toBeCloseTo(90 - monthNet);
+  });
+});
+
 describe("记录级单价", () => {
   it("不同记录不同本次单价：30×1 + 40×1 + 默认 30×1 = 100", async () => {
     const sub = await gym();

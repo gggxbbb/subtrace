@@ -11,7 +11,6 @@ import {
   savingsVerdict,
   usageInPeriod,
   usageValue,
-  verdict,
   type CycleSpec,
   type PaymentRec,
   type SubscriptionDef,
@@ -24,11 +23,14 @@ import {
 import type { Beneficiary, QuotaPack, Subscription, UsageRecord } from "@/generated/prisma/client";
 import { shareForViewer } from "../beneficiaries/service";
 import { projectPackLedger, type PackInput, type RemainingSnapshot } from "./pack-ledger";
+import { currentUsagePeriod, periodCost } from "./period";
 import { dayStart } from "../dates";
 
 export type UsageKind = "COUNT" | "QUOTA" | "SAVINGS";
 /** 发放形态（ADR-0012）：空 = RESET | STACKED（包叠加）；仅 QUOTA 有意义 */
 export type GrantMode = "RESET" | "STACKED";
+/** 独立用量周期单位（ADR-0013）：DAY | WEEK | MONTH | YEAR */
+export type UsageCycleUnit = "DAY" | "WEEK" | "MONTH" | "YEAR";
 
 export interface UsageConfigInput {
   usageKind: UsageKind;
@@ -40,6 +42,11 @@ export interface UsageConfigInput {
   grantMode?: GrantMode;
   /** STACKED：包有效期（日历月） */
   packValidMonths?: number;
+  /** 用量周期（ADR-0013）：独立于计费周期；空 = QUOTA 回退计费周期 / COUNT·SAVINGS 回退成本段 */
+  usageCycleUnit?: UsageCycleUnit;
+  usageCycleCount?: number;
+  /** 用量周期锚定日；空 = 订阅锚定日期（anchorDate ?? startDate） */
+  usageCycleAnchor?: Date;
 }
 
 export async function setUsageConfig(
@@ -64,6 +71,9 @@ export async function setUsageConfig(
           : null,
       grantMode: stacked ? "STACKED" : null,
       packValidMonths: keepPackFields ? (input.packValidMonths ?? null) : null,
+      usageCycleUnit: input.usageCycleUnit ?? null,
+      usageCycleCount: input.usageCycleCount ?? null,
+      usageCycleAnchor: input.usageCycleAnchor ?? null,
     },
   });
 }
@@ -509,6 +519,26 @@ function packVerdict(
   };
 }
 
+/** 用量窗口周期（ADR-0013）：显式 usageCycle 优先；否则 QUOTA 回退计费周期；COUNT·SAVINGS 无显式周期则回退成本段 */
+function usageCycleOf(sub: Subscription): { cycle: CycleSpec; anchor: Date } | null {
+  if (sub.usageCycleUnit && sub.usageCycleCount) {
+    return {
+      cycle: {
+        kind: "calendar",
+        unit: sub.usageCycleUnit.toLowerCase() as "day" | "week" | "month" | "year",
+        count: sub.usageCycleCount,
+      },
+      anchor: sub.usageCycleAnchor ?? sub.anchorDate ?? sub.startDate,
+    };
+  }
+  if (sub.usageKind === "QUOTA") {
+    const cycle = toEngineSub(sub).cycle;
+    if (!cycle) return null;
+    return { cycle, anchor: sub.anchorDate ?? sub.startDate };
+  }
+  return null;
+}
+
 /** 当前服务区间的盈亏（覆盖 today 的成本段；无覆盖为 null——STACKED 例外：
  *  已到期订阅回落到最后一段归因，停订浪费才能显形）。
  *  传 forUserId 时按该受益人切片：成本 × 份额，用量只计其本人记录（STACKED 池级例外） */
@@ -523,19 +553,36 @@ export function getUsageVerdict(
   if (sub.usageKind === "QUOTA" && sub.grantMode === "STACKED") {
     return packVerdict(sub, records, today, forUserId);
   }
-  const covering = costSegments(toEngineSub(sub), toEnginePayments(sub.payments), today).find((s) =>
-    coversDate(s, today),
-  );
-  if (!covering) return null;
+  const engineSub = toEngineSub(sub);
+  const payments = toEnginePayments(sub.payments);
+  const segs = costSegments(engineSub, payments, today);
+  const usageCycle = usageCycleOf(sub);
+  let period: { start: Date; end: Date; net: number; unknown: boolean };
+  if (usageCycle) {
+    const cur = currentUsagePeriod(usageCycle.cycle, usageCycle.anchor, today);
+    if (!cur) return null;
+    const pc = periodCost(segs, cur.start, cur.end);
+    if (!pc.covered) return null;
+    period = { start: cur.start, end: cur.end, net: pc.net, unknown: pc.amountUnknown };
+  } else {
+    const covering = segs.find((s) => coversDate(s, today));
+    if (!covering) return null;
+    period = {
+      start: covering.start,
+      end: covering.end,
+      net: covering.net,
+      unknown: covering.amountUnknown === true,
+    };
+  }
   const share = forUserId ? shareForViewer(sub.beneficiaries ?? [], sub.ownerId, forUserId) : 1;
-  const costShare = covering.net * share;
-  const costUnknown = covering.amountUnknown === true;
+  const costShare = period.net * share;
+  const costUnknown = period.unknown;
   const myRecords = forUserId ? records.filter((r) => r.userId === forUserId) : records;
 
   if (sub.usageKind === "QUOTA") {
     // 额度型（周期重置）：只看使用率——用到 100% 没有，什么时候用满；浪费 = 未用部分 × 成本
     const inPeriod = myRecords
-      .filter((r) => r.kind === "TOTAL" && r.date >= covering.start && r.date < covering.end)
+      .filter((r) => r.kind === "TOTAL" && r.date >= period.start && r.date < period.end)
       .sort((a, b) => a.date.getTime() - b.date.getTime());
     const latest = inPeriod[inPeriod.length - 1];
     if (!latest) return null;
@@ -551,8 +598,8 @@ export function getUsageVerdict(
     const wastedAmount = costShare * (1 - usageRate);
     return {
       kind: "QUOTA",
-      periodStart: covering.start,
-      periodEnd: covering.end,
+      periodStart: period.start,
+      periodEnd: period.end,
       cost: costShare,
       costUnknown,
       used,
@@ -568,12 +615,12 @@ export function getUsageVerdict(
   if (sub.usageKind === "SAVINGS") {
     // 省钱型：增量求和即已省金额，盈亏 = Σ已省 − 已摊成本（ADR-0011）
     const saved = myRecords
-      .filter((r) => r.kind === "DELTA" && r.date >= covering.start && r.date < covering.end)
+      .filter((r) => r.kind === "DELTA" && r.date >= period.start && r.date < period.end)
       .reduce((s, r) => s + r.quantity, 0);
     return {
       kind: "SAVINGS",
-      periodStart: covering.start,
-      periodEnd: covering.end,
+      periodStart: period.start,
+      periodEnd: period.end,
       cost: costShare,
       costUnknown,
       saved,
@@ -584,8 +631,8 @@ export function getUsageVerdict(
   if (sub.altUnitPrice == null) return null;
   const usage = usageInPeriod(
     myRecords.map((r) => ({ date: r.date, quantity: r.quantity, kind: r.kind as "DELTA" | "TOTAL" })),
-    covering.start,
-    covering.end,
+    period.start,
+    period.end,
   );
   const value = usageValue(
     myRecords.map((r) => ({
@@ -594,14 +641,14 @@ export function getUsageVerdict(
       kind: r.kind as "DELTA" | "TOTAL",
       unitPrice: r.unitPrice ?? undefined,
     })),
-    covering.start,
-    covering.end,
+    period.start,
+    period.end,
     sub.altUnitPrice ?? 0,
   );
   return {
     kind: "COUNT",
-    periodStart: covering.start,
-    periodEnd: covering.end,
+    periodStart: period.start,
+    periodEnd: period.end,
     cost: costShare,
     costUnknown,
     usage,

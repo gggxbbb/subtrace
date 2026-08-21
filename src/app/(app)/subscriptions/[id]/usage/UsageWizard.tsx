@@ -6,9 +6,11 @@ import { Led, inputCls, labelCls } from "@/components/te";
 import { StepBar } from "@/components/StepWizard";
 import { fmtMoney } from "@/lib/format";
 import { setUsageConfigAction, disableUsageAction, purgeUsageAction } from "@/lib/usage/actions";
-import type { GrantMode } from "@/lib/usage/service";
+import type { GrantMode, UsageCycleUnit } from "@/lib/usage/service";
 
 type Kind = "COUNT" | "QUOTA" | "SAVINGS";
+/** 向导内的周期单位：QUARTER 是 UI 专属快捷选项（= MONTH + 每周期数 3），提交时映射回 MONTH */
+type WizardCycleUnit = UsageCycleUnit | "QUARTER";
 
 const KIND_LABEL: Record<Kind, string> = { COUNT: "计数型", QUOTA: "额度型", SAVINGS: "省钱型" };
 const MODE_LABEL: Record<GrantMode, string> = { RESET: "周期重置", STACKED: "包叠加" };
@@ -22,6 +24,9 @@ export function UsageWizard({
   initialUnit,
   initialAltUnitPrice,
   initialQuotaTotal,
+  initialUsageCycleUnit,
+  initialUsageCycleCount,
+  initialUsageCycleAnchor,
   trackingMode,
   recordCount,
   currency,
@@ -34,6 +39,10 @@ export function UsageWizard({
   initialUnit: string | null;
   initialAltUnitPrice: number | null;
   initialQuotaTotal: number | null;
+  /** 独立用量周期（ADR-0013）：空 = 跟随计费周期 */
+  initialUsageCycleUnit: UsageCycleUnit | null;
+  initialUsageCycleCount: number | null;
+  initialUsageCycleAnchor: string | null;
   /** CYCLE | MANUAL：手动模式 + STACKED 无发放计划可推导，引导改周期模式 */
   trackingMode: string;
   /** 已有用量记录条数（用于重设警告） */
@@ -51,6 +60,15 @@ export function UsageWizard({
   const [unit, setUnit] = useState(initialUnit ?? "");
   const [altUnitPrice, setAltUnitPrice] = useState(initialAltUnitPrice?.toString() ?? "");
   const [quotaTotal, setQuotaTotal] = useState(initialQuotaTotal?.toString() ?? "");
+  // 独立用量周期（ADR-0013）：已有周期则回显 CUSTOM 及其字段，否则跟随计费周期
+  const [usageCycleMode, setUsageCycleMode] = useState<"FOLLOW" | "CUSTOM">(
+    initialUsageCycleUnit && initialUsageCycleCount ? "CUSTOM" : "FOLLOW",
+  );
+  const [usageCycleUnit, setUsageCycleUnit] = useState<WizardCycleUnit>(
+    (initialUsageCycleUnit as WizardCycleUnit | null) ?? "MONTH",
+  );
+  const [usageCycleCount, setUsageCycleCount] = useState(initialUsageCycleCount?.toString() ?? "1");
+  const [usageCycleAnchor, setUsageCycleAnchor] = useState(initialUsageCycleAnchor ?? "");
 
   // 额度型多一步发放形态选择（周期重置 / 包叠加）
   const steps = kind === "QUOTA" ? ["概念", "类型", "形态", "字段", "确认"] : ["概念", "类型", "字段", "确认"];
@@ -278,92 +296,167 @@ export function UsageWizard({
                 会员期重置后重新累计即可。
               </div>
             ) : (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelCls}>用量单位</label>
-                <input
-                  value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
-                  placeholder={kind === "COUNT" ? "次 / 小时 / 节" : "GB / 点数 / 条"}
-                  className={inputCls}
-                />
-                <p className="mt-1 text-[10px] leading-relaxed text-faint">
-                  展示用，比如“9 次”“800 GB”。
-                </p>
-              </div>
-              {kind === "COUNT" ? (
+            <>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={labelCls}>替代单价（市场价）</label>
+                  <label className={labelCls}>用量单位</label>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={altUnitPrice}
-                    onChange={(e) => setAltUnitPrice(e.target.value)}
-                    placeholder="30"
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
+                    placeholder={kind === "COUNT" ? "次 / 小时 / 节" : "GB / 点数 / 条"}
                     className={inputCls}
                   />
                   <p className="mt-1 text-[10px] leading-relaxed text-faint">
-                    不买这个订阅、按次单买要花多少钱一次（如健身房单次卡 ¥30）。
-                    盈亏 = 次数 × 这个价 − 已摊成本。每次录入时还能临时改“本次单价”（涨价、不同项目）。
+                    展示用，比如“9 次”“800 GB”。
                   </p>
                 </div>
-              ) : stackedManual ? (
-                <div className="border border-ink p-4 text-[11px] leading-relaxed text-muted-strong">
-                  手动模式没有周期可推导发放计划，<strong>额度包需在详情页全部手动录入</strong>（下发日 / 数量 / 到期日）。
-                  若产品按月自动下发，建议改用周期模式——系统会自动生成发放计划，你只需不定期抄一次剩余总量。
-                </div>
-              ) : grantMode === "STACKED" ? (
-                <>
+                {kind === "COUNT" ? (
                   <div>
-                    <label className={labelCls}>每周期下发量</label>
+                    <label className={labelCls}>替代单价（市场价）</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={altUnitPrice}
+                      onChange={(e) => setAltUnitPrice(e.target.value)}
+                      placeholder="30"
+                      className={inputCls}
+                    />
+                    <p className="mt-1 text-[10px] leading-relaxed text-faint">
+                      不买这个订阅、按次单买要花多少钱一次（如健身房单次卡 ¥30）。
+                      盈亏 = 次数 × 这个价 − 已摊成本。每次录入时还能临时改“本次单价”（涨价、不同项目）。
+                    </p>
+                  </div>
+                ) : stackedManual ? (
+                  <div className="border border-ink p-4 text-[11px] leading-relaxed text-muted-strong">
+                    手动模式没有周期可推导发放计划，<strong>额度包需在详情页全部手动录入</strong>（下发日 / 数量 / 到期日）。
+                    若产品按月自动下发，建议改用周期模式——系统会自动生成发放计划，你只需不定期抄一次剩余总量。
+                  </div>
+                ) : grantMode === "STACKED" ? (
+                  <>
+                    <div>
+                      <label className={labelCls}>每周期下发量</label>
+                      <input
+                        type="number"
+                        step="any"
+                        min="1"
+                        value={quotaTotal}
+                        onChange={(e) => setQuotaTotal(e.target.value)}
+                        placeholder="30"
+                        className={inputCls}
+                      />
+                      <p className="mt-1 text-[10px] leading-relaxed text-faint">
+                        每个周期下发一个包的数量（如像素蛋糕每月 30 张）。
+                      </p>
+                    </div>
+                    <div>
+                      <label className={labelCls}>包有效期（月）</label>
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        value={packValidMonths}
+                        onChange={(e) => setPackValidMonths(e.target.value)}
+                        placeholder="12"
+                        className={inputCls}
+                      />
+                      <p className="mt-1 text-[10px] leading-relaxed text-faint">
+                        每个包从下发日起几个月有效（如 12 = 一年）。到期日排他，当天起不可用。
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <label className={labelCls}>每月总额度</label>
                     <input
                       type="number"
                       step="any"
                       min="1"
                       value={quotaTotal}
                       onChange={(e) => setQuotaTotal(e.target.value)}
-                      placeholder="30"
+                      placeholder="1000"
                       className={inputCls}
                     />
                     <p className="mt-1 text-[10px] leading-relaxed text-faint">
-                      每个周期下发一个包的数量（如像素蛋糕每月 30 张）。
+                      套餐每月给的总量（如 1000 GB）。录入时每次还能改（运营商偷偷加量减量都接得住）。
                     </p>
                   </div>
-                  <div>
-                    <label className={labelCls}>包有效期（月）</label>
-                    <input
-                      type="number"
-                      step="1"
-                      min="1"
-                      value={packValidMonths}
-                      onChange={(e) => setPackValidMonths(e.target.value)}
-                      placeholder="12"
-                      className={inputCls}
-                    />
-                    <p className="mt-1 text-[10px] leading-relaxed text-faint">
-                      每个包从下发日起几个月有效（如 12 = 一年）。到期日排他，当天起不可用。
-                    </p>
+                )}
+              </div>
+              {kind === "QUOTA" && (
+                <div className="border border-ink p-4">
+                  <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase f-mono">
+                    <Led color="#0ea5e9" /> 用量周期
                   </div>
-                </>
-              ) : (
-                <div>
-                  <label className={labelCls}>每月总额度</label>
-                  <input
-                    type="number"
-                    step="any"
-                    min="1"
-                    value={quotaTotal}
-                    onChange={(e) => setQuotaTotal(e.target.value)}
-                    placeholder="1000"
-                    className={inputCls}
-                  />
-                  <p className="mt-1 text-[10px] leading-relaxed text-faint">
-                    套餐每月给的总量（如 1000 GB）。录入时每次还能改（运营商偷偷加量减量都接得住）。
-                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelCls}>周期模式</label>
+                      <select
+                        value={usageCycleMode}
+                        onChange={(e) => setUsageCycleMode(e.target.value as "FOLLOW" | "CUSTOM")}
+                        className={inputCls}
+                      >
+                        <option value="FOLLOW">跟随计费周期（默认）</option>
+                        <option value="CUSTOM">独立周期</option>
+                      </select>
+                      <p className="mt-1 text-[10px] leading-relaxed text-faint">
+                        额度默认随订阅计费周期重置；若套餐按独立周期重置（如季度包、年包），选「独立周期」。
+                      </p>
+                    </div>
+                  </div>
+                  {usageCycleMode === "CUSTOM" && (
+                    <div className="mt-4 grid grid-cols-3 gap-4">
+                      <div>
+                        <label className={labelCls}>周期单位</label>
+                        <select
+                          value={usageCycleUnit}
+                          onChange={(e) => {
+                            const v = e.target.value as typeof usageCycleUnit;
+                            setUsageCycleUnit(v);
+                            // 季 = MONTH + 每周期数 3
+                            if (v === "QUARTER") setUsageCycleCount("3");
+                          }}
+                          className={inputCls}
+                        >
+                          <option value="DAY">天</option>
+                          <option value="WEEK">周</option>
+                          <option value="MONTH">月</option>
+                          <option value="QUARTER">季</option>
+                          <option value="YEAR">年</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelCls}>每周期数</label>
+                        <input
+                          type="number"
+                          step="1"
+                          min="1"
+                          value={usageCycleCount}
+                          onChange={(e) => setUsageCycleCount(e.target.value)}
+                          placeholder="1"
+                          className={inputCls}
+                        />
+                        <p className="mt-1 text-[10px] leading-relaxed text-faint">
+                          如「季」= 月 × 3。
+                        </p>
+                      </div>
+                      <div>
+                        <label className={labelCls}>锚定日</label>
+                        <input
+                          type="date"
+                          value={usageCycleAnchor}
+                          onChange={(e) => setUsageCycleAnchor(e.target.value)}
+                          className={inputCls}
+                        />
+                        <p className="mt-1 text-[10px] leading-relaxed text-faint">
+                          可选；留空则跟随订阅锚定日期。
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+            </>
             )}
           </div>
         )}
@@ -409,6 +502,24 @@ export function UsageWizard({
               {kind === "QUOTA" && <input type="hidden" name="grantMode" value={grantMode} />}
               {kind === "QUOTA" && !stackedManual && <input type="hidden" name="quotaTotal" value={quotaTotal} />}
               {stackedCycle && <input type="hidden" name="packValidMonths" value={packValidMonths} />}
+              {kind === "QUOTA" && usageCycleMode === "FOLLOW" && (
+                <input type="hidden" name="usageCycleUnit" value="" />
+              )}
+              {kind === "QUOTA" && usageCycleMode === "CUSTOM" && (
+                <>
+                  <input
+                    type="hidden"
+                    name="usageCycleUnit"
+                    value={usageCycleUnit === "QUARTER" ? "MONTH" : usageCycleUnit}
+                  />
+                  <input
+                    type="hidden"
+                    name="usageCycleCount"
+                    value={usageCycleUnit === "QUARTER" ? "3" : usageCycleCount}
+                  />
+                  <input type="hidden" name="usageCycleAnchor" value={usageCycleAnchor} />
+                </>
+              )}
               <button className="w-full bg-ink py-2.5 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover">
                 启用用量跟踪 →
               </button>

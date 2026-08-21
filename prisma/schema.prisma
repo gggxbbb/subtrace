@@ -103,6 +103,11 @@ model Subscription {
   grantMode     String?
   /// STACKED：包有效期（日历月，锚定下发日）
   packValidMonths Int?
+  /// 用量重置周期：独立于计费周期（ADR-0013）；空 = QUOTA 回退计费周期 / COUNT·SAVINGS 回退成本段
+  usageCycleUnit   String?
+  usageCycleCount  Int?
+  /// 用量周期锚定日；空 = 订阅锚定日期（anchorDate ?? startDate）
+  usageCycleAnchor DateTime?
   /// 用量脚本（ticket 03）：JS 源码；空 = 未启用
   script        String?
   /// cron 表达式（UTC）

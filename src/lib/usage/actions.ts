@@ -15,6 +15,7 @@ import {
   updatePack,
   updateUsage,
   type GrantMode,
+  type UsageCycleUnit,
   type UsageKind,
 } from "./service";
 import { prisma } from "../db";
@@ -25,6 +26,9 @@ export async function setUsageConfigAction(subscriptionId: string, formData: For
   if (!user) redirect("/login");
   const grantMode = String(formData.get("grantMode") ?? "");
   const packValidMonths = formData.get("packValidMonths");
+  const usageCycleUnit = formData.get("usageCycleUnit");
+  const usageCycleCount = formData.get("usageCycleCount");
+  const usageCycleAnchor = formData.get("usageCycleAnchor");
   await setUsageConfig(user.id, subscriptionId, {
     usageKind: String(formData.get("usageKind")) as UsageKind,
     usageUnit: String(formData.get("usageUnit") ?? ""),
@@ -32,6 +36,15 @@ export async function setUsageConfigAction(subscriptionId: string, formData: For
     quotaTotal: formData.get("quotaTotal") ? Number(formData.get("quotaTotal")) : undefined,
     grantMode: grantMode === "STACKED" ? "STACKED" : (grantMode === "RESET" ? "RESET" : undefined) as GrantMode | undefined,
     packValidMonths: packValidMonths && String(packValidMonths).trim() !== "" ? Number(packValidMonths) : undefined,
+    // 独立用量周期（ADR-0013）：FOLLOW / 空 = 跟随计费周期
+    usageCycleUnit:
+      usageCycleUnit && String(usageCycleUnit).trim() !== "" && String(usageCycleUnit) !== "FOLLOW"
+        ? (String(usageCycleUnit) as UsageCycleUnit)
+        : undefined,
+    usageCycleCount:
+      usageCycleCount && String(usageCycleCount).trim() !== "" ? Number(usageCycleCount) : undefined,
+    usageCycleAnchor:
+      usageCycleAnchor && String(usageCycleAnchor).trim() !== "" ? dayField(usageCycleAnchor) : undefined,
   });
   revalidatePath(`/subscriptions/${subscriptionId}`);
   redirect(`/subscriptions/${subscriptionId}`);
