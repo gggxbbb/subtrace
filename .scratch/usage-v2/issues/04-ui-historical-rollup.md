@@ -1,7 +1,7 @@
 # 04 — UI 渲染器收敛 + 历史逐周期回看
 
 Type: task
-Status: needs-triage
+Status: resolved
 Blocked by: 03
 
 ## What to build

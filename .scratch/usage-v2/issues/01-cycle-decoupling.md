@@ -1,7 +1,7 @@
 # 01 — 周期解耦：usageCycle + 按周期分摊成本
 
 Type: task
-Status: ready-for-agent
+Status: resolved
 Blocked by: None
 
 ## What to build

@@ -1,7 +1,7 @@
 # 03 — 单一池规则 + 录入守卫补全
 
 Type: task
-Status: needs-triage
+Status: resolved
 Blocked by: 02
 
 ## What to build

@@ -1,7 +1,7 @@
 # 02 — 记录语义自描述 + 引擎收口（ledger/stream）
 
 Type: task
-Status: needs-triage
+Status: resolved
 Blocked by: 01
 
 ## What to build
