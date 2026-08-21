@@ -20,7 +20,7 @@ import { getUsageVerdict, listUsage, nextAutoGrant, reconcileAutoPacks } from "@
 import { PaymentForm } from "./PaymentForm";
 import { PaymentHistory } from "./PaymentHistory";
 import type { PaymentRow } from "./payment-rows";
-import { BeneficiariesPanel, type BeneficiaryRow } from "./BeneficiariesPanel";
+import { BeneficiariesPanel } from "./BeneficiariesPanel";
 import {
   UsageEntryPanel,
   UsageVerdictPanel,
@@ -84,7 +84,7 @@ export default async function SubscriptionDetailPage({
   const v = sub.usageKind ? getUsageVerdict(sub, usageRecords, today, user.id) : null;
   // 所有者视角：各受益人对比（谁在用、谁纯亏）
   const perUserVerdicts: { name: string; usageLabel: string; verdictAmount: number }[] =
-    isOwner && sub.usageKind && sub.beneficiaries.length > 0
+    isOwner && sub.usageKind && sub.usageKind !== "QUOTA" && sub.beneficiaries.length > 0
       ? sub.beneficiaries
           .filter((b) => b.kind === "USER")
           .map((b) => {
@@ -97,9 +97,7 @@ export default async function SubscriptionDetailPage({
                   ? `${pv.usage} ${sub.usageUnit ?? ""}`
                   : pv.kind === "SAVINGS"
                     ? `已省 ${fmtMoney(pv.saved, cur)}`
-                    : pv.kind === "PACK"
-                      ? `余额 ${pv.balance} ${sub.usageUnit ?? ""}`
-                      : `${Math.round(pv.usageRate * 100)}%`,
+                    : "",
               verdictAmount: pv.verdictAmount,
             };
           })
@@ -163,6 +161,7 @@ export default async function SubscriptionDetailPage({
             used: v.used,
             total: v.total,
             usageRate: v.usageRate,
+            overageRate: (v as { overageRate?: number }).overageRate,
             hit100At: v.hit100At ? iso(v.hit100At) : null,
             wastedAmount: v.wastedAmount,
             costPerUnit: v.costPerUnit,

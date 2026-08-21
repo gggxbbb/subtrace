@@ -30,6 +30,8 @@ export interface QuotaVerdict {
   total: number;
   /** 使用率（0–1，封顶 1） */
   usageRate: number;
+  /** 超额率（used/total − 1；>0 时存在，未超额为 undefined） */
+  overageRate?: number;
   /** 区间内首次用满 100% 的快照日期；未用满为 null */
   hit100At: Date | null;
   /** 没用满折算的浪费 = cost × (1 − usageRate) */
@@ -70,8 +72,10 @@ export interface PackVerdict {
 }
 
 /**
- * RESET 闭式解：浪费 = 周期分摊成本 × (1 − used/total)；记录按 semantic 读（USED 原生 /
- * REMAINING 折算 used = total − quantity）。总以周期内日期最新的有效快照为口径。
+ * RESET 闭式解（单一池，ADR-0013 D4）：浪费 = 周期分摊成本 × (1 − used/total)；记录按 semantic 读
+ * （USED 原生 / REMAINING 折算 used = total − quantity）。池级口径——所有快照参与判定，不按 forUserId
+ * 过滤；forUserId 仅把成本切成其份额（受益人的 verdict 看到池使用率，成本 × 份额）。
+ * 总以周期内日期最新的有效快照为口径；超额（used > total）时 usageRate 封顶 1、overageRate 暴露超额。
  */
 export function resetVerdict(
   sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[] },
@@ -81,8 +85,7 @@ export function resetVerdict(
 ): QuotaVerdict | null {
   const share = forUserId ? shareForViewer(sub.beneficiaries ?? [], sub.ownerId, forUserId) : 1;
   const costShare = period.net * share;
-  const myRecords = forUserId ? records.filter((r) => r.userId === forUserId) : records;
-  const inPeriod = myRecords
+  const inPeriod = records
     .filter((r) => r.kind === "TOTAL" && r.date >= period.start && r.date < period.end)
     .sort((a, b) => a.date.getTime() - b.date.getTime());
   // 语义折算：USED 原生；REMAINING = total − quantity；total 无效（≤0）跳过
@@ -96,7 +99,8 @@ export function resetVerdict(
   const total = latest.quotaTotal ?? sub.quotaTotal;
   if (total == null || total <= 0) return null;
   const used = usedOf(latest)!;
-  const usageRate = Math.min(used / total, 1);
+  const rawRate = used / total;
+  const usageRate = Math.min(rawRate, 1);
   const hit = inPeriod.find((r) => {
     const u = usedOf(r);
     const t = r.quotaTotal ?? sub.quotaTotal;
@@ -112,6 +116,7 @@ export function resetVerdict(
     used,
     total,
     usageRate,
+    overageRate: rawRate > 1 ? rawRate - 1 : undefined,
     hit100At: hit?.date ?? null,
     wastedAmount,
     costPerUnit: used > 0 ? costShare / used : null,

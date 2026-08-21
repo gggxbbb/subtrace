@@ -43,6 +43,8 @@ export type VerdictData =
       used: number;
       total: number;
       usageRate: number;
+      /** 超额使用率（0–1，超出 100% 的部分）；0/缺省 = 未超额 */
+      overageRate?: number;
       hit100At: string | null;
       wastedAmount: number;
       costPerUnit: number | null;
@@ -602,6 +604,11 @@ export function UsageVerdictPanel({
               <div className="text-[9px] uppercase text-faint f-mono">使用率</div>
               <div className="text-lg font-bold tabular-nums">
                 {Math.round(v.usageRate * 10000) / 100}%
+                {v.overageRate != null && v.overageRate > 0 && (
+                  <span className="ml-1 rounded bg-destructive-band px-1.5 py-0.5 align-middle text-[10px] font-semibold text-destructive-strong f-mono">
+                    超额 {Math.round(v.overageRate * 100)}%
+                  </span>
+                )}
                 <span className="ml-1 text-[10px] font-normal text-faint">
                   {v.used}/{v.total} {usageUnit}
                 </span>

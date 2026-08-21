@@ -18,6 +18,7 @@ import {
   reconcileAutoPacks,
   setUsageConfig,
   updatePack,
+  updateUsage,
 } from "./service";
 
 const d = (s: string) => new Date(`${s}T00:00:00+08:00`);
@@ -288,22 +289,39 @@ describe("共享订阅：按受益人各自盈亏", () => {
     expect(vOther!.verdictAmount).toBeCloseTo(90 - 217 / 2);
   });
 
-  it("额度型：快照按人独立，浪费按份额折算", async () => {
+  it("额度型：快照池级口径（单一池，ADR-0013 D4），forUserId 只切成本份额", async () => {
     const sub = await gym();
-    const { addBeneficiary } = await import("../beneficiaries/service");
     await addBeneficiary(ownerId, sub.id, { kind: "USER", userId: otherId });
     await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "GB", quotaTotal: 1000 });
     await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), used: 1000 });
-    await addQuotaSnapshot(ownerId, sub.id, otherId, { date: d("2026-07-15"), used: 500 });
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-18"), used: 500 });
     const fresh = (await getSubscription(ownerId, sub.id))!;
     const records = await listUsage(sub.id);
     const vOwner = getUsageVerdict(fresh, records, d("2026-07-18"), ownerId);
     const vOther = getUsageVerdict(fresh, records, d("2026-07-18"), otherId);
     if (vOwner!.kind !== "QUOTA" || vOther!.kind !== "QUOTA") throw new Error();
-    expect(vOwner!.usageRate).toBe(1);
-    expect(vOwner!.wastedAmount).toBe(0);
+    // 池级：受益人看到与所有者同一使用率/浪费（共享池不按人各记一遍）
+    expect(vOther!.usageRate).toBeCloseTo(vOwner!.usageRate);
     expect(vOther!.usageRate).toBeCloseTo(0.5);
+    expect(vOther!.used).toBe(500);
+    // 成本按份额切：各摊 217/2
+    expect(vOwner!.cost).toBeCloseTo(217 / 2);
+    expect(vOther!.cost).toBeCloseTo(217 / 2);
+    expect(vOwner!.wastedAmount).toBeCloseTo((217 / 2) * 0.5);
     expect(vOther!.wastedAmount).toBeCloseTo((217 / 2) * 0.5);
+  });
+
+  it("池快照仅所有者可录：受益人被拒；流式形态仍按人记录", async () => {
+    const sub = await gym();
+    await addBeneficiary(ownerId, sub.id, { kind: "USER", userId: otherId });
+    await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "GB", quotaTotal: 1000 });
+    await expect(
+      addQuotaSnapshot(otherId, sub.id, otherId, { date: d("2026-07-15"), used: 500 }),
+    ).rejects.toThrow(/quota_owner_only/);
+    // 流式形态（COUNT）：受益人仍可记录自己的用量
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次", altUnitPrice: 30 });
+    await addUsage(otherId, sub.id, otherId, { date: d("2026-07-15"), quantity: 1 });
+    expect(await listUsage(sub.id)).toHaveLength(1);
   });
 });
 
@@ -409,22 +427,22 @@ describe("省钱型配置与录入（ADR-0011）", () => {
   it("新服务区间累计基准重置（会员期平台计数归零场景）", async () => {
     const sub = await jd();
     await setUsageConfig(ownerId, sub.id, { usageKind: "SAVINGS", usageUnit: "" });
-    await addSavings(ownerId, sub.id, ownerId, { date: d("2026-08-01"), amount: 80 });
-    // 续费新区间：2027-07-01 ~ 2028-07-01
+    await addSavings(ownerId, sub.id, ownerId, { date: d("2026-06-01"), amount: 80 });
+    // 续费新区间：2026-07-01 ~ 2027-07-01
     await prisma.payment.create({
       data: {
         subscriptionId: sub.id,
         amount: 99,
         currency: "CNY",
         amountBase: 99,
-        paidAt: d("2027-07-01"),
-        periodStart: d("2027-07-01"),
-        periodEnd: d("2028-07-01"),
+        paidAt: d("2026-07-01"),
+        periodStart: d("2026-07-01"),
+        periodEnd: d("2027-07-01"),
         source: "MANUAL",
       },
     });
     // 新会员年平台已省重新累计到 15——不与上一区间的 80 求差
-    const rec = await addSavings(ownerId, sub.id, ownerId, { date: d("2027-08-01"), cumulative: 15 });
+    const rec = await addSavings(ownerId, sub.id, ownerId, { date: d("2026-08-01"), cumulative: 15 });
     expect(rec.quantity).toBe(15);
   });
 });
@@ -1066,5 +1084,122 @@ describe("AUTO 包生成器（读时对齐）", () => {
     // 手动模式 / 非 STACKED 无下期
     const manual = await cake();
     expect(nextAutoGrant((await getSubscription(ownerId, manual.id))!, d("2026-08-03"))).toBeNull();
+  });
+});
+
+describe("录入守卫（ticket 03）", () => {
+  const inDays = (n: number) => new Date(Date.now() + n * 86_400_000);
+
+  it("快照：已用量与百分比混传拒绝（二选一）", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "GB", quotaTotal: 1000 });
+    await expect(
+      addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), used: 800, percent: 65 }),
+    ).rejects.toThrow(/quota_used_percent_ambiguous/);
+  });
+
+  it("快照：负已用量 / 负百分比拒绝", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "GB", quotaTotal: 1000 });
+    await expect(
+      addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), used: -1 }),
+    ).rejects.toThrow(/quota_used_negative/);
+    await expect(
+      addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), percent: -10 }),
+    ).rejects.toThrow(/quota_percent_negative/);
+  });
+
+  it("快照：percent 超 100% 接受——usageRate 封顶 1，overageRate 暴露超额", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "GB", quotaTotal: 1000 });
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), percent: 150 });
+    const v = getUsageVerdict((await getSubscription(ownerId, sub.id))!, await listUsage(sub.id), d("2026-07-18"));
+    if (v?.kind !== "QUOTA") throw new Error("expect QUOTA");
+    expect(v.used).toBe(1500);
+    expect(v.usageRate).toBe(1);
+    expect(v.overageRate).toBeCloseTo(0.5);
+    expect(v.wastedAmount).toBe(0);
+    expect(v.verdictAmount).toBe(0);
+    expect(v.hit100At).toEqual(d("2026-07-15"));
+  });
+
+  it("未超额时 overageRate 为 undefined", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "GB", quotaTotal: 1000 });
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), used: 800 });
+    const v = getUsageVerdict((await getSubscription(ownerId, sub.id))!, await listUsage(sub.id), d("2026-07-18"));
+    if (v?.kind !== "QUOTA") throw new Error("expect QUOTA");
+    expect(v.overageRate).toBeUndefined();
+  });
+
+  it("未来日期拒绝：快照/用量/省钱/包", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "GB", quotaTotal: 1000 });
+    await expect(
+      addQuotaSnapshot(ownerId, sub.id, ownerId, { date: inDays(3), used: 100 }),
+    ).rejects.toThrow(/future_date/);
+    await expect(
+      addUsage(ownerId, sub.id, ownerId, { date: inDays(3), quantity: 1 }),
+    ).rejects.toThrow(/future_date/);
+    const savingsSub = await jd();
+    await setUsageConfig(ownerId, savingsSub.id, { usageKind: "SAVINGS", usageUnit: "" });
+    await expect(
+      addSavings(ownerId, savingsSub.id, ownerId, { date: inDays(3), amount: 6 }),
+    ).rejects.toThrow(/future_date/);
+    const stack = await cake();
+    await expect(
+      addPack(ownerId, stack.id, { grantedAt: inDays(3), quantity: 30, expiresAt: inDays(33) }),
+    ).rejects.toThrow(/future_date/);
+  });
+
+  it("用量：负数量拒绝", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次", altUnitPrice: 30 });
+    await expect(
+      addUsage(ownerId, sub.id, ownerId, { date: d("2026-07-15"), quantity: -1 }),
+    ).rejects.toThrow(/usage_negative/);
+  });
+
+  it("省钱：负金额拒绝", async () => {
+    const sub = await jd();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "SAVINGS", usageUnit: "" });
+    await expect(
+      addSavings(ownerId, sub.id, ownerId, { date: d("2026-07-15"), amount: -6 }),
+    ).rejects.toThrow(/savings_negative/);
+  });
+
+  it("包：发放日晚于到期日拒绝", async () => {
+    const sub = await cake();
+    await expect(
+      addPack(ownerId, sub.id, { grantedAt: d("2026-07-10"), quantity: 30, expiresAt: d("2026-07-01") }),
+    ).rejects.toThrow(/pack_invalid_range/);
+  });
+
+  it("包：发放日晚于订阅到期拒绝", async () => {
+    const sub = await cake(); // 订阅 2027-07-01 到期
+    await expect(
+      addPack(ownerId, sub.id, { grantedAt: d("2027-08-01"), quantity: 30, expiresAt: d("2027-09-01") }),
+    ).rejects.toThrow(/pack_after_expiry/);
+  });
+
+  it("updateUsage：COUNT/SAVINGS 记录不可改总额度，QUOTA 记录不可改单价", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次", altUnitPrice: 30 });
+    const rec = await addUsage(ownerId, sub.id, ownerId, { date: d("2026-07-05"), quantity: 1 });
+    await expect(updateUsage(ownerId, rec.id, { quotaTotal: 500 })).rejects.toThrow(
+      /quota_total_not_allowed/,
+    );
+    // 计数记录改数量仍可
+    await updateUsage(ownerId, rec.id, { quantity: 2 });
+    const qSub = await gym();
+    await setUsageConfig(ownerId, qSub.id, { usageKind: "QUOTA", usageUnit: "GB", quotaTotal: 1000 });
+    const qrec = await addQuotaSnapshot(ownerId, qSub.id, ownerId, { date: d("2026-07-15"), used: 800 });
+    await expect(updateUsage(ownerId, qrec.id, { unitPrice: 3 })).rejects.toThrow(/unit_price_not_allowed/);
+    // 额度记录改总量仍可
+    await updateUsage(ownerId, qrec.id, { quotaTotal: 1200 });
+    const savingsSub = await jd();
+    await setUsageConfig(ownerId, savingsSub.id, { usageKind: "SAVINGS", usageUnit: "" });
+    const srec = await addSavings(ownerId, savingsSub.id, ownerId, { date: d("2026-07-05"), amount: 6 });
+    await expect(updateUsage(ownerId, srec.id, { quotaTotal: 1 })).rejects.toThrow(/quota_total_not_allowed/);
   });
 });

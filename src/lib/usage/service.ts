@@ -1,7 +1,7 @@
 // 用量与盈亏（ticket 06）：计数型逐条 + 额度型快照，按当前服务区间算盈亏。
 
 import { prisma } from "../db";
-import { advanceCycle, costSegments, coversDate, dayDiff, type CycleSpec, type PaymentRec, type SubscriptionDef } from "../cost-engine";
+import { advanceCycle, costSegments, coversDate, currentExpiry, dayDiff, type CycleSpec, type PaymentRec, type SubscriptionDef } from "../cost-engine";
 import {
   toEnginePayments,
   toEngineSub,
@@ -9,7 +9,7 @@ import {
 } from "../subscriptions/service";
 import type { Beneficiary, QuotaPack, Subscription, UsageRecord } from "@/generated/prisma/client";
 import { currentUsagePeriod, periodCost } from "./period";
-import { dayStart } from "../dates";
+import { dayStart, today } from "../dates";
 import { packVerdict, resetVerdict, type PackVerdict, type QuotaVerdict } from "./ledger";
 import { streamVerdict, type CountVerdict, type SavingsVerdict } from "./stream";
 
@@ -77,6 +77,8 @@ export async function addUsage(
   input: { date: Date; quantity: number; unitPrice?: number },
 ): Promise<UsageRecord> {
   const sub = await assertUsageAllowed(actorId, subscriptionId);
+  if (input.quantity < 0) throw new Error("用量不能为负 usage_negative");
+  if (dayDiff(today(), input.date) > 0) throw new Error("不能录入未来日期 future_date");
   if (sub.usageKind === "QUOTA" && sub.grantMode === "STACKED") {
     throw new Error("包叠加形态只收剩余快照 stacked_no_delta");
   }
@@ -94,6 +96,20 @@ export async function addQuotaSnapshot(
   input: { date: Date; used?: number; percent?: number; remaining?: number; unitPrice?: number; quotaTotal?: number; source?: string },
 ): Promise<UsageRecord> {
   const sub = await assertUsageAllowed(actorId, subscriptionId);
+  // 单一池规则（ADR-0013 D4）：额度快照仅所有者可录；流式形态（COUNT/SAVINGS）仍按人各自记录
+  if (sub.usageKind === "QUOTA" && actorId !== sub.ownerId) {
+    throw new Error("额度池快照仅所有者可录 quota_owner_only");
+  }
+  if (input.used != null && input.percent != null) {
+    throw new Error("已用量与百分比二选一 quota_used_percent_ambiguous");
+  }
+  if (input.used != null && input.used < 0) {
+    throw new Error("已用量不能为负 quota_used_negative");
+  }
+  if (input.percent != null && input.percent < 0) {
+    throw new Error("百分比不能为负 quota_percent_negative");
+  }
+  if (dayDiff(today(), input.date) > 0) throw new Error("不能录入未来日期 future_date");
   if (input.remaining != null && (input.used != null || input.percent != null)) {
     throw new Error("剩余与已用量/百分比二选一 quota_snapshot_ambiguous");
   }
@@ -122,6 +138,8 @@ export async function addSavings(
   input: { date: Date; amount?: number; cumulative?: number },
 ): Promise<UsageRecord> {
   const sub = await assertUsageAllowed(actorId, subscriptionId);
+  if (input.amount != null && input.amount < 0) throw new Error("已省金额不能为负 savings_negative");
+  if (dayDiff(today(), input.date) > 0) throw new Error("不能录入未来日期 future_date");
   if (sub.usageKind !== "SAVINGS") throw new Error("非省钱型订阅 not_savings_kind");
   if (input.amount != null && input.cumulative != null) {
     throw new Error("增量与累计值二选一 savings_ambiguous");
@@ -190,10 +208,23 @@ export async function addPack(
   subscriptionId: string,
   input: { grantedAt: Date; quantity: number; expiresAt: Date },
 ): Promise<QuotaPack> {
-  const sub = await prisma.subscription.findFirst({ where: { id: subscriptionId, ownerId: actorId } });
+  const sub = await prisma.subscription.findFirst({
+    where: { id: subscriptionId, ownerId: actorId },
+    include: { payments: true },
+  });
   if (!sub) throw new Error("订阅不存在 subscription_not_found");
   if (sub.usageKind !== "QUOTA" || sub.grantMode !== "STACKED") {
     throw new Error("非包叠加形态 not_stacked");
+  }
+  if (dayDiff(input.expiresAt, input.grantedAt) > 0) {
+    throw new Error("发放日不能晚于到期日 pack_invalid_range");
+  }
+  const expiry = currentExpiry(toEngineSub(sub), toEnginePayments(sub.payments), today());
+  if (expiry && dayDiff(expiry, input.grantedAt) > 0) {
+    throw new Error("发放日不能晚于订阅到期 pack_after_expiry");
+  }
+  if (dayDiff(today(), input.grantedAt) > 0) {
+    throw new Error("不能录入未来日期 future_date");
   }
   return prisma.quotaPack.create({
     data: {
@@ -424,6 +455,14 @@ export async function updateUsage(
     where: { id: usageId, OR: [{ subscription: { ownerId: actorId } }, { userId: actorId }] },
   });
   if (!rec) throw new Error("记录不存在 usage_not_found");
+  const sub = await prisma.subscription.findFirst({ where: { id: rec.subscriptionId } });
+  if (!sub) throw new Error("记录不存在 usage_not_found");
+  if ((sub.usageKind === "COUNT" || sub.usageKind === "SAVINGS") && input.quotaTotal !== undefined) {
+    throw new Error("计数/省钱记录不可改总额度 quota_total_not_allowed");
+  }
+  if (sub.usageKind === "QUOTA" && input.unitPrice !== undefined) {
+    throw new Error("额度快照的单价无意义 unit_price_not_allowed");
+  }
   await prisma.usageRecord.update({
     where: { id: usageId },
     data: {
