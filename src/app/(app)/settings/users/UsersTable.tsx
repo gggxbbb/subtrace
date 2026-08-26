@@ -40,7 +40,7 @@ export function UsersTable({ users }: { users: UserRow[] }) {
           {error}
         </div>
       )}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto no-scrollbar">
       <table className="w-full min-w-[520px] text-[13px]">
         <thead>
           <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-muted f-mono">

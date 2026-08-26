@@ -14,6 +14,15 @@
   font-family: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
 
+/* 横向滚动容器不渲染原生滚动条（触摸板/Shift+滚轮/触屏滑动不受影响） */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* 语义色 token（dark-mode 01）：浅色值 = 原硬编码值；.dark 下翻转（暖黑镜像，spec 色板）。
    此后组件只写语义类（bg-base/bg-surface/text-ink/border-line…），不写 hex。 */
 :root {

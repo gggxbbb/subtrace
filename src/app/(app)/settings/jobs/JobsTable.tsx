@@ -18,7 +18,7 @@ export function JobsTable({ jobs }: { jobs: JobRow[] }) {
   const [pending, start] = useTransition();
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto no-scrollbar">
     <table className="w-full min-w-[560px] text-[13px]">
       <thead>
         <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-muted f-mono">

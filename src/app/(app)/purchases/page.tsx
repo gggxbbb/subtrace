@@ -67,7 +67,7 @@ function PurchaseCards({ rows, cur }: { rows: Row[]; cur: string }) {
 
 function PurchaseTable({ rows, cur }: { rows: Row[]; cur: string }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto no-scrollbar">
     <table className="w-full min-w-[680px] text-[13px]">
       <thead>
         <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-muted f-mono">

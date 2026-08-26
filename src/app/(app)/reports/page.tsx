@@ -159,7 +159,7 @@ export default async function ReportsPage({
         </div>
 
         <Panel index="03" title={`明细 / ${r.items.length}`}>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto no-scrollbar">
           <table className="w-full min-w-[560px] text-[13px]">
             <thead>
               <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-muted f-mono">

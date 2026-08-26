@@ -215,7 +215,7 @@ export default async function DashboardPage({
         </Panel>
 
         <Panel index={pn(7)} title="订阅明细" action="管理" href="/subscriptions">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto no-scrollbar">
           <table className="w-full min-w-[640px] text-[13px]">
             <thead>
               <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-muted f-mono">

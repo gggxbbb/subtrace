@@ -356,8 +356,9 @@ function UsageHeatmap({
     kind === "SAVINGS" ? fmtMoney(v, currency) : `${Math.round(v * 100) / 100} ${usageUnit ?? "次"}`;
   return (
     <div>
-      <div className="overflow-x-auto">
-        <div className="flex w-max gap-[3px]">
+      {/* dir=rtl 让初始滚动位置锚在右端（今天所在列）；内层复位 ltr 保持周列时间顺序 */}
+      <div dir="rtl" className="overflow-x-auto no-scrollbar">
+        <div dir="ltr" className="flex w-max gap-[3px]">
           <div className="flex flex-col gap-[3px]">
             {["一", "", "", "四", "", "", "日"].map((w, i) => (
               <div key={i} className="flex h-2.5 w-3 items-center text-[8px] leading-none text-faint f-mono">

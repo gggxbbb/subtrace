@@ -77,7 +77,7 @@ function StatusPill({ s }: { s: Row }) {
 
 function SubscriptionTable({ rows, cur, back }: { rows: Row[]; cur: string; back: string }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto no-scrollbar">
     <table className="w-full min-w-[640px] text-[13px]">
       <thead>
         <tr className="border-b border-ink text-left text-[9px] uppercase tracking-[0.15em] text-muted f-mono">
