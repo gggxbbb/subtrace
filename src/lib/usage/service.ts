@@ -86,6 +86,18 @@ export async function addUsage(
   });
 }
 
+/** 快捷录入（ui-wave-a ticket 02）：仅计数型；日期恒为北京墙钟今日；写录入者本人名下。
+ *  单价缺省走现有继承链（记录空 → 订阅替代单价，见 verdict 装配）。 */
+export async function quickAddUsage(
+  actorId: string,
+  subscriptionId: string,
+  input: { quantity: number; unitPrice?: number },
+): Promise<UsageRecord> {
+  const sub = await assertUsageAllowed(actorId, subscriptionId);
+  if (sub.usageKind !== "COUNT") throw new Error("快捷录入仅支持计数型 quick_count_only");
+  return addUsage(actorId, subscriptionId, actorId, { date: today(), ...input });
+}
+
 /** 额度型快照：形态无关的 shape 判定（ADR-0013 D3/D6）——剩余量 → REMAINING；已用量/百分比 → USED。
  *  语义随记录落库（self-describing），RESET 与 STACKED 均按记录自描述读取。source 供脚本任务标记 SCRIPT */
 export async function addQuotaSnapshot(

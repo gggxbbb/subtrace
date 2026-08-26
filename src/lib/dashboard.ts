@@ -6,9 +6,12 @@ import {
   type SubscriptionWithPayments,
 } from "./subscriptions/service";
 import { costOverPeriod, costView, paidInPeriod } from "./subscriptions/cost-view";
-import { DAY_MS, dayStart, fromWall, wallParts } from "./dates";
+import { DAY_MS, dayStart, fromWall, wallParts, isoDay } from "./dates";
 import { listPurchases, toEnginePurchase } from "./purchases/service";
-import { getUsageVerdict, listPacks, listUsage, reconcileAutoPacks } from "./usage/service";
+import { getUsageVerdict, listPacks, listUsage, reconcileAutoPacks, type UsageVerdict } from "./usage/service";
+import { pendingQuickLog } from "./usage/pending";
+import type { UsageRecord } from "@/generated/prisma/client";
+import { usageTuples, type UsageTuple } from "./usage/tuples";
 
 export interface DashboardRow {
   id: string;
@@ -58,6 +61,24 @@ export interface UsageBoardRow {
   costUnknown?: boolean;
 }
 
+/** 「今日可记」行（ui-wave-a ticket 02）：今日尚无 DELTA 记录的计数型活跃订阅 + ≤3 快捷元组 */
+export interface PendingQuickLogRow {
+  id: string;
+  name: string;
+  usageUnit: string | null;
+  tuples: UsageTuple[];
+}
+/** 用量装配结果（ui-wave-a ticket 03）：红黑榜 / 今日可记 / 订阅列表盈亏与快捷元组共用同一来源，
+ *  保证全站同一数字不出两个版本。verdict 为 null = 当前无覆盖区间。 */
+export type DashboardUsageMap = Map<
+  string,
+  {
+    sub: SubscriptionWithPayments;
+    records: UsageRecord[];
+    verdict: UsageVerdict | null;
+  }
+>;
+
 export interface DashboardData {
   totalDailyCost: number;
   totalMonthlyCost: number;
@@ -68,6 +89,8 @@ export interface DashboardData {
   upcoming: UpcomingItem[];
   purchases: PurchaseRow[];
   usageBoard: UsageBoardRow[];
+  pendingQuickLogs: PendingQuickLogRow[];
+  usageById: DashboardUsageMap;
   itemDailyCost: number;
   trend: number[];
 }
@@ -137,33 +160,62 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
         s.quotaPacks = await listPacks(s.id);
       }),
   );
-  const usageBoard: UsageBoardRow[] = (
+  // 用量装配一次完成、三处复用（红黑榜 verdict + 今日可记元组 + 订阅列表盈亏/快捷录入），避免 N+1 与重复流水线
+  const usageSubs = subs.filter((s) => s.usageKind);
+  const usageById: DashboardUsageMap = new Map(
     await Promise.all(
-      subs
-        .filter((s) => s.usageKind)
-        .map(async (sub) => {
-          const v = getUsageVerdict(sub, await listUsage(sub.id), today, userId);
-          if (!v) return null;
-          return {
-            id: sub.id,
-            name: sub.name,
-            detail:
-              v.kind === "COUNT"
-                ? `${v.usage} ${sub.usageUnit ?? ""} × ${v.value > 0 && v.usage > 0 ? (v.value / v.usage).toFixed(2) : sub.altUnitPrice} − ${v.cost.toFixed(2)}`
-                : v.kind === "SAVINGS"
-                  ? `已省 ${v.saved.toFixed(2)} − 成本 ${v.cost.toFixed(2)}`
-                  : v.kind === "PACK"
-                    ? `余额 ${v.balance} ${sub.usageUnit ?? ""} · 区间浪费 ${v.periodWaste.amount.toFixed(2)}`
-                    : `已用 ${Math.round(v.usageRate * 100)}%（${v.used}/${v.total} ${sub.usageUnit ?? ""}）${v.hit100At ? " · 已用满" : ""}`,
-            verdictAmount: v.verdictAmount,
-            costUnknown: v.costUnknown,
-            ...(v.kind === "PACK" && v.staleDays != null && v.staleDays >= 30 ? { stale: true } : {}),
-          };
-        }),
-    )
-  )
+      usageSubs.map(async (sub) => {
+        const records = await listUsage(sub.id);
+        return [sub.id, { sub, records, verdict: getUsageVerdict(sub, records, today, userId) }] as const;
+      }),
+    ),
+  );
+  const usageBoard: UsageBoardRow[] = usageSubs
+    .map((sub) => {
+      const v = usageById.get(sub.id)!.verdict;
+      if (!v) return null;
+      return {
+        id: sub.id,
+        name: sub.name,
+        detail:
+          v.kind === "COUNT"
+            ? `${v.usage} ${sub.usageUnit ?? ""} × ${v.value > 0 && v.usage > 0 ? (v.value / v.usage).toFixed(2) : sub.altUnitPrice} − ${v.cost.toFixed(2)}`
+            : v.kind === "SAVINGS"
+              ? `已省 ${v.saved.toFixed(2)} − 成本 ${v.cost.toFixed(2)}`
+              : v.kind === "PACK"
+                ? `余额 ${v.balance} ${sub.usageUnit ?? ""} · 区间浪费 ${v.periodWaste.amount.toFixed(2)}`
+                : `已用 ${Math.round(v.usageRate * 100)}%（${v.used}/${v.total} ${sub.usageUnit ?? ""}）${v.hit100At ? " · 已用满" : ""}`,
+        verdictAmount: v.verdictAmount,
+        costUnknown: v.costUnknown,
+        ...(v.kind === "PACK" && v.staleDays != null && v.staleDays >= 30 ? { stale: true } : {}),
+      };
+    })
     .filter((r) => r !== null)
     .sort((a, b) => b.verdictAmount - a.verdictAmount);
+
+  // 今日可记窄条：今日（北京墙钟）当前用户尚无 DELTA 记录的计数型活跃订阅，日均降序 cap 5
+  const pendingQuickLogs: PendingQuickLogRow[] = pendingQuickLog(
+    subs.map((s) => ({
+      id: s.id,
+      name: s.name,
+      usageUnit: s.usageUnit,
+      usageKind: s.usageKind,
+      status: s.status,
+      dailyCost: views.get(s.id)!.myDailyRate,
+    })),
+    new Map([...usageById].map(([id, u]) => [id, u.records])),
+    isoDay(today),
+    userId,
+  ).map((s) => ({
+    id: s.id,
+    name: s.name,
+    usageUnit: s.usageUnit,
+    // 快捷元组按人切片（ADR-0003）：只从我的历史记录提取，与详情页口径一致
+    tuples: usageTuples(
+      (usageById.get(s.id)?.records ?? []).filter((r) => r.userId === userId),
+      3,
+    ),
+  }));
 
   const upcoming: UpcomingItem[] = subs
     .filter((s) => s.status === "ACTIVE")
@@ -209,12 +261,14 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     totalDailyCost,
     totalMonthlyCost: totalDailyCost * 30.4,
     monthSpent,
+    usageById,
     yearSpent,
     activeCount: active.length,
     rows,
     upcoming,
     purchases,
     usageBoard,
+    pendingQuickLogs,
     itemDailyCost,
     trend,
   };

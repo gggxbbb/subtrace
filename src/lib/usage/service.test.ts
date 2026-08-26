@@ -2,6 +2,7 @@
 
 import { beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "../db";
+import { isoDay } from "../dates";
 import { addBeneficiary } from "../beneficiaries/service";
 import { createSubscription, getSubscription, recordPayment } from "../subscriptions/service";
 import {
@@ -16,6 +17,7 @@ import {
   listPacks,
   listUsage,
   nextAutoGrant,
+  quickAddUsage,
   reconcileAutoPacks,
   setUsageConfig,
   updatePack,
@@ -1334,6 +1336,48 @@ describe("显式周期盈亏（getUsageVerdictForPeriod）", () => {
     const plain = getUsageVerdictForPeriod(fresh, records, periods[0], d("2026-03-15"));
     if (plain?.kind !== "PACK") throw new Error("expect PACK");
     expect(plain.periodWaste.quantity).toBe(0);
+  });
+});
+
+describe("快捷录入（ui-wave-a ticket 02 服务缝）", () => {
+  it("写入字段：日期 = 北京墙钟今日、元组 quantity/unitPrice、kind=DELTA、记本人名下", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次", altUnitPrice: 30 });
+    const rec = await quickAddUsage(ownerId, sub.id, { quantity: 2, unitPrice: 39 });
+    expect(rec.kind).toBe("DELTA");
+    expect(rec.quantity).toBe(2);
+    expect(rec.unitPrice).toBe(39);
+    expect(rec.userId).toBe(ownerId);
+    expect(isoDay(rec.date)).toBe(isoDay(new Date()));
+  });
+
+  it("单价缺省 → 记录 unitPrice 为 null（verdict 读取时走订阅替代单价继承链）", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次", altUnitPrice: 30 });
+    const rec = await quickAddUsage(ownerId, sub.id, { quantity: 1 });
+    expect(rec.unitPrice).toBeNull();
+  });
+
+  it("非计数型拒绝：额度型 / 未配置均抛 quick_count_only", async () => {
+    const quota = await gym();
+    await setUsageConfig(ownerId, quota.id, { usageKind: "QUOTA", usageUnit: "张", quotaTotal: 100 });
+    await expect(quickAddUsage(ownerId, quota.id, { quantity: 1 })).rejects.toThrow("quick_count_only");
+    const plain = await gym();
+    await expect(quickAddUsage(ownerId, plain.id, { quantity: 1 })).rejects.toThrow("quick_count_only");
+  });
+
+  it("受益人快捷录入写自己名下（ADR-0003 按人切片）", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次", altUnitPrice: 30 });
+    await addBeneficiary(ownerId, sub.id, { kind: "USER", userId: otherId });
+    const rec = await quickAddUsage(otherId, sub.id, { quantity: 1 });
+    expect(rec.userId).toBe(otherId);
+  });
+
+  it("负数 quantity 拒绝（沿用 addUsage 守卫）", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次" });
+    await expect(quickAddUsage(ownerId, sub.id, { quantity: -1 })).rejects.toThrow("usage_negative");
   });
 });
 

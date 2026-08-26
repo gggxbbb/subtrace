@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { isoDay } from "@/lib/dates";
 import { Plus } from "lucide-react";
-import { Led, ORANGE, Panel } from "@/components/te";
+import { ErrorBanner, Led, ORANGE, Panel } from "@/components/te";
 import { fmtMoney } from "@/lib/format";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
 import { ListToolbar } from "@/components/ListToolbar";
@@ -9,9 +9,39 @@ import { matchesKeyword, parseListQuery, sortBy, subStatusOf } from "@/lib/list-
 import { getCurrentUser } from "@/lib/auth/session";
 import { getDashboardData, type DashboardRow } from "@/lib/dashboard";
 import { listArchivedSubscriptions } from "@/lib/subscriptions/service";
+import { pnlTone } from "@/lib/usage/pnl";
+import { usageTuples, type UsageTuple } from "@/lib/usage/tuples";
 import { ArchivedList } from "./ArchivedList";
+import { QuickLogButtons } from "@/components/QuickLogButtons";
 
-type Row = DashboardRow;
+type Row = DashboardRow & {
+  /** 当前区间盈亏（红黑榜同口径 getUsageVerdict）；未启用用量为 null */
+  pnl: number | null;
+  /** 覆盖段金额未知：盈亏不可信，灰显 */
+  pnlUnknown: boolean;
+  /** 计数型活跃订阅的快捷录入元组（cap 3）；其余为空 */
+  quickTuples: UsageTuple[];
+  usageUnit: string | null;
+};
+
+/** 盈亏单元格：盈 income / 亏 destructive / 成本未知灰显注明 / 未跟踪 "—"（表格与卡片共用；四态见 lib/usage/pnl） */
+function PnlValue({ row, cur }: { row: Row; cur: string }) {
+  const tone = pnlTone(row.pnl === null ? null : { verdictAmount: row.pnl, costUnknown: row.pnlUnknown });
+  if (tone === "none") return <span className="text-faint">—</span>;
+  if (tone === "unknown") {
+    return (
+      <span className="text-faint" title="成本未记录，盈亏不可信">
+        未知
+      </span>
+    );
+  }
+  return (
+    <span className={tone === "pos" ? "text-income" : "text-destructive"}>
+      {tone === "pos" ? "+" : "−"}
+      {fmtMoney(Math.abs(row.pnl!), cur)}
+    </span>
+  );
+}
 
 /** 到期状态徽标：表格与卡片视图共用（口径同 subStatusOf） */
 function StatusPill({ s }: { s: Row }) {
@@ -45,7 +75,7 @@ function StatusPill({ s }: { s: Row }) {
   );
 }
 
-function SubscriptionTable({ rows, cur }: { rows: Row[]; cur: string }) {
+function SubscriptionTable({ rows, cur, back }: { rows: Row[]; cur: string; back: string }) {
   return (
     <div className="overflow-x-auto">
     <table className="w-full min-w-[640px] text-[13px]">
@@ -57,7 +87,9 @@ function SubscriptionTable({ rows, cur }: { rows: Row[]; cur: string }) {
           <th className="px-4 py-2 font-medium">到期日</th>
           <th className="px-4 py-2 text-right font-medium">日均</th>
           <th className="px-4 py-2 text-right font-medium">月均</th>
+          <th className="px-4 py-2 text-right font-medium">盈亏</th>
           <th className="px-4 py-2 font-medium">状态</th>
+          <th className="px-4 py-2 font-medium">记账</th>
         </tr>
       </thead>
       <tbody>
@@ -83,14 +115,20 @@ function SubscriptionTable({ rows, cur }: { rows: Row[]; cur: string }) {
             <td className="px-4 py-2.5 text-right text-[11px] tabular-nums text-muted f-mono">
               {s.costUnknown && s.dailyCost === 0 ? "—" : fmtMoney(s.monthlyCost, cur)}
             </td>
+            <td className="px-4 py-2.5 text-right text-[11px] font-semibold tabular-nums f-mono">
+              <PnlValue row={s} cur={cur} />
+            </td>
             <td className="px-4 py-2.5">
               <StatusPill s={s} />
+            </td>
+            <td className="px-4 py-2.5">
+              <QuickLogButtons subscriptionId={s.id} tuples={s.quickTuples} unit={s.usageUnit} back={back} />
             </td>
           </tr>
         ))}
         {rows.length === 0 && (
           <tr>
-            <td colSpan={7} className="px-4 py-8 text-center text-[11px] uppercase text-faint f-mono">
+            <td colSpan={9} className="px-4 py-8 text-center text-[11px] uppercase text-faint f-mono">
               还没有订阅，点右上角「新建订阅」开始
             </td>
           </tr>
@@ -101,7 +139,7 @@ function SubscriptionTable({ rows, cur }: { rows: Row[]; cur: string }) {
   );
 }
 
-function SubscriptionCards({ rows, cur }: { rows: Row[]; cur: string }) {
+function SubscriptionCards({ rows, cur, back }: { rows: Row[]; cur: string; back: string }) {
   if (rows.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-[11px] uppercase text-faint f-mono">
@@ -112,28 +150,39 @@ function SubscriptionCards({ rows, cur }: { rows: Row[]; cur: string }) {
   return (
     <div className="grid grid-cols-1 gap-px bg-surface sm:grid-cols-2 lg:grid-cols-3">
       {rows.map((s) => (
-        <Link key={s.id} href={`/subscriptions/${s.id}`} className="block border border-line bg-surface px-4 py-3 hover:bg-black/[0.03]">
-          <div className="flex items-center justify-between gap-2">
-            <span className="min-w-0 truncate text-[13px] font-medium" title={s.name}>
-              {s.name}
-            </span>
-            <StatusPill s={s} />
-          </div>
-          <div className="mt-1.5 flex items-center justify-between gap-2 text-[9px] text-muted f-mono">
-            <span className="min-w-0 truncate">
-              {s.category ?? "—"} · {s.cycleLabel}
-            </span>
-            <span className="shrink-0 tabular-nums">{s.expiry ? isoDay(s.expiry) : "—"}</span>
-          </div>
-          <div className="mt-1.5 flex items-baseline justify-between text-[11px] tabular-nums f-mono">
-            <span className="font-semibold">
-              {s.costUnknown && s.dailyCost === 0 ? "未知" : `${fmtMoney(s.dailyCost, cur)}/day`}
-            </span>
-            <span className="text-muted">
-              {s.costUnknown && s.dailyCost === 0 ? "—" : `${fmtMoney(s.monthlyCost, cur)}/mo`}
-            </span>
-          </div>
-        </Link>
+        <div key={s.id} className="border border-line bg-surface px-4 py-3 hover:bg-black/[0.03]">
+          <Link href={`/subscriptions/${s.id}`} className="block">
+            <div className="flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate text-[13px] font-medium" title={s.name}>
+                {s.name}
+              </span>
+              <StatusPill s={s} />
+            </div>
+            <div className="mt-1.5 flex items-center justify-between gap-2 text-[9px] text-muted f-mono">
+              <span className="min-w-0 truncate">
+                {s.category ?? "—"} · {s.cycleLabel}
+              </span>
+              <span className="shrink-0 tabular-nums">{s.expiry ? isoDay(s.expiry) : "—"}</span>
+            </div>
+            <div className="mt-1.5 flex items-baseline justify-between text-[11px] tabular-nums f-mono">
+              <span className="font-semibold">
+                {s.costUnknown && s.dailyCost === 0 ? "未知" : `${fmtMoney(s.dailyCost, cur)}/day`}
+              </span>
+              <span className="text-muted">
+                {s.costUnknown && s.dailyCost === 0 ? "—" : `${fmtMoney(s.monthlyCost, cur)}/mo`}
+              </span>
+            </div>
+            <div className="mt-1.5 flex items-baseline justify-between text-[11px] tabular-nums f-mono">
+              <span className="text-[9px] uppercase text-faint">盈亏</span>
+              <PnlValue row={s} cur={cur} />
+            </div>
+          </Link>
+          {s.quickTuples.length > 0 && (
+            <div className="mt-2 border-t border-dashed border-line pt-2">
+              <QuickLogButtons subscriptionId={s.id} tuples={s.quickTuples} unit={s.usageUnit} back={back} />
+            </div>
+          )}
+        </div>
       ))}
     </div>
   );
@@ -144,6 +193,7 @@ const SORT_KEYS = {
   expiry: { label: "到期日", key: (r: Row) => r.expiry },
   daily: { label: "日均", key: (r: Row) => r.dailyCost },
   monthly: { label: "月均", key: (r: Row) => r.monthlyCost },
+  pnl: { label: "盈亏", key: (r: Row) => r.pnl },
 } as const;
 type SortKey = keyof typeof SORT_KEYS;
 
@@ -159,8 +209,31 @@ export default async function SubscriptionsPage({
   const sp = await searchParams;
   const { sort: sortRaw, dir, cat, status, q } = parseListQuery(sp);
   const sortKey = sortRaw as SortKey | undefined;
+  const error = typeof sp.error === "string" ? sp.error : null;
 
-  let rows = d.rows;
+  // 盈亏列 + 快捷录入共用 getDashboardData 的用量装配（红黑榜同口径、同一来源，无重复流水线）
+
+  // 回跳地址带当前列表 searchParams：快捷录入失败/成功后排序筛选状态不丢
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) {
+    if (k !== "error" && typeof v === "string" && v) qs.set(k, v);
+  }
+  const back = `/subscriptions${qs.size ? `?${qs.toString()}` : ""}`;
+
+  let rows: Row[] = d.rows.map((r) => {
+    const u = d.usageById.get(r.id);
+    return {
+      ...r,
+      pnl: u?.verdict?.verdictAmount ?? null,
+      pnlUnknown: u?.verdict?.costUnknown ?? false,
+      quickTuples:
+        u && u.sub.usageKind === "COUNT" && r.status === "ACTIVE"
+          // 快捷元组按人切片（ADR-0003）：只从我的历史记录提取，与详情页口径一致
+          ? usageTuples(u.records.filter((x) => x.userId === user.id), 3)
+          : [],
+      usageUnit: u?.sub.usageUnit ?? null,
+    };
+  });
   if (cat) rows = rows.filter((r) => r.category === cat);
   if (status) rows = rows.filter((r) => subStatusOf(r) === status);
   if (q) rows = rows.filter((r) => matchesKeyword(r.name, q));
@@ -188,6 +261,7 @@ export default async function SubscriptionsPage({
       </header>
 
       <div className="px-4 py-5 md:px-6">
+        <ErrorBanner error={error} defaultMessage="快捷录入失败，请进详情页录入" className="mb-4" />
         <ViewSwitcher
           storageKey="subtrace:view:subscriptions"
           desktopDefault="list"
@@ -206,12 +280,12 @@ export default async function SubscriptionsPage({
           }
           list={
             <Panel index="01" title={`全部订阅 / ${rows.length}`}>
-              <SubscriptionTable rows={rows} cur={cur} />
+              <SubscriptionTable rows={rows} cur={cur} back={back} />
             </Panel>
           }
           card={
             <Panel index="01" title={`全部订阅 / ${rows.length}`}>
-              <SubscriptionCards rows={rows} cur={cur} />
+              <SubscriptionCards rows={rows} cur={cur} back={back} />
             </Panel>
           }
         />

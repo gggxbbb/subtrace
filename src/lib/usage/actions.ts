@@ -9,6 +9,7 @@ import {
   addQuotaSnapshot,
   addSavings,
   addUsage,
+  quickAddUsage,
   deletePack,
   deleteUsage,
   setUsageConfig,
@@ -48,6 +49,28 @@ export async function setUsageConfigAction(subscriptionId: string, formData: For
   });
   revalidatePath(`/subscriptions/${subscriptionId}`);
   redirect(`/subscriptions/${subscriptionId}`);
+}
+
+/** 快捷录入（ui-wave-a ticket 02）：列表/控制台的 tuple 一键按钮。仅计数型（守卫在 service 缝）；
+ *  日期恒为服务器北京墙钟今日。back 仅允许站内路径（防开放重定向）；
+ *  失败回跳 back 并带固定码 ?error=quick（沿用全站固定错误码先例，ErrorBanner 出文案）。 */
+export async function quickAddUsageAction(
+  subscriptionId: string,
+  quantity: number,
+  unitPrice: number | null,
+  back: string,
+) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const safeBack = back.startsWith("/") && !back.startsWith("//") ? back : "/dashboard";
+  try {
+    await quickAddUsage(user.id, subscriptionId, { quantity, unitPrice: unitPrice ?? undefined });
+  } catch {
+    redirect(`${safeBack}${safeBack.includes("?") ? "&" : "?"}error=quick`);
+  }
+  revalidatePath("/subscriptions");
+  revalidatePath("/dashboard");
+  revalidatePath(`/subscriptions/${subscriptionId}`);
 }
 
 export async function addUsageAction(subscriptionId: string, formData: FormData) {

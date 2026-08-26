@@ -31,6 +31,31 @@ describe("sortBy", () => {
     sortBy(rows, "desc", (r) => r.v);
     expect(rows.map((r) => r.name)).toEqual(before);
   });
+  it("盈亏升序：亏在前，未跟踪（null）恒最后", () => {
+    const pnlRows = [
+      { name: "profit", pnl: 120 as number | null },
+      { name: "untracked", pnl: null },
+      { name: "loss", pnl: -30 as number | null },
+    ];
+    expect(sortBy(pnlRows, "asc", (r) => r.pnl).map((r) => r.name)).toEqual([
+      "loss",
+      "profit",
+      "untracked",
+    ]);
+  });
+
+  it("盈亏降序：盈在前（红黑榜口径），未跟踪恒最后", () => {
+    const pnlRows = [
+      { name: "loss", pnl: -30 as number | null },
+      { name: "untracked", pnl: null },
+      { name: "profit", pnl: 120 as number | null },
+    ];
+    expect(sortBy(pnlRows, "desc", (r) => r.pnl).map((r) => r.name)).toEqual([
+      "profit",
+      "loss",
+      "untracked",
+    ]);
+  });
 });
 
 describe("subStatusOf", () => {

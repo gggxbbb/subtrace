@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { isoDay, wallDow, wallParts } from "@/lib/dates";
+import { isoDay } from "@/lib/dates";
+import { usageHeatmap } from "@/lib/usage/heatmap";
+import { usageTuples } from "@/lib/usage/tuples";
 import { fmtMoney } from "@/lib/format";
 import { Led, inputCls, labelCls } from "@/components/te";
 import {
@@ -101,13 +103,8 @@ export function UsageEntryPanel({
   const today = isoDay(new Date());
   const last = records[records.length - 1];
   const kind: "COUNT" | "QUOTA" | "SAVINGS" = usageKind ?? "COUNT";
-  // 从历史提取去重的 用量×单价 元组（最近优先）
-  const tuples: { quantity: number; unitPrice: number | null }[] = [];
-  for (const r of [...records].reverse()) {
-    if (!tuples.some((t) => t.quantity === r.quantity && t.unitPrice === r.unitPrice)) {
-      tuples.push({ quantity: r.quantity, unitPrice: r.unitPrice });
-    }
-  }
+  // 从历史提取去重的 用量×单价 元组（最近优先），与快捷录入共用同一函数
+  const tuples = usageTuples(records);
   const [quantity, setQuantity] = useState<string>(last?.quantity.toString() ?? "1");
   const [unitPrice, setUnitPrice] = useState<string>(last?.unitPrice?.toString() ?? "");
   const pricePlaceholder =
@@ -144,26 +141,6 @@ export function UsageEntryPanel({
         ? { done: false as const, remaining: r2(verdict.cost - verdict.saved) }
         : { done: true as const, net: r2(verdict.saved - verdict.cost) }
       : null;
-  // 日历数据：从区间首日所在周的周一开始，到区间末日止
-  const calDays: { day: number; inPeriod: boolean; used: boolean; today: boolean }[] = [];
-  if (verdict) {
-    const start = new Date(`${verdict.periodStart}T00:00:00+08:00`).getTime();
-    const end = new Date(`${verdict.periodEnd}T00:00:00+08:00`).getTime();
-    const todayMs = new Date(`${today}T00:00:00+08:00`).getTime();
-    const usedDates = new Set(records.map((r) => r.date));
-    // 对齐周一（北京墙钟，0=周日）
-    const startDow = (wallDow(new Date(start)) + 6) % 7;
-    const calStart = start - startDow * 86_400_000;
-    for (let t = calStart; t < end; t += 86_400_000) {
-      const iso = isoDay(new Date(t));
-      calDays.push({
-        day: wallParts(new Date(t)).day,
-        inPeriod: t >= start,
-        used: usedDates.has(iso),
-        today: t === todayMs,
-      });
-    }
-  }
 
   return (
     <div className="px-4 py-4">
@@ -353,34 +330,65 @@ export function UsageEntryPanel({
               )}
             </div>
           )}
-          <div className="grid grid-cols-7 gap-1">
-            {["一", "二", "三", "四", "五", "六", "日"].map((w) => (
-              <div key={w} className="text-center text-[9px] uppercase text-faint f-mono">
+          <UsageHeatmap records={records} kind={kind} usageUnit={usageUnit} currency={currency} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 压缩用量热力图：近 53 周（周一为首、北京墙钟），accent 透明度 5 档编码用量，title 悬浮提示 */
+function UsageHeatmap({
+  records,
+  kind,
+  usageUnit,
+  currency,
+}: {
+  records: UsageRecordRow[];
+  kind: "COUNT" | "QUOTA" | "SAVINGS";
+  usageUnit: string | null;
+  currency: string;
+}) {
+  const today = isoDay(new Date());
+  const weeks = usageHeatmap(records, kind, today);
+  const levelBg = ["", "bg-accent/25", "bg-accent/50", "bg-accent/75", "bg-accent"];
+  const fmtValue = (v: number) =>
+    kind === "SAVINGS" ? fmtMoney(v, currency) : `${Math.round(v * 100) / 100} ${usageUnit ?? "次"}`;
+  return (
+    <div>
+      <div className="overflow-x-auto">
+        <div className="flex w-max gap-[3px]">
+          <div className="flex flex-col gap-[3px]">
+            {["一", "", "", "四", "", "", "日"].map((w, i) => (
+              <div key={i} className="flex h-2.5 w-3 items-center text-[8px] leading-none text-faint f-mono">
                 {w}
               </div>
             ))}
-            {calDays.map((d, i) => (
-              <div
-                key={i}
-                className={`flex flex-col items-center py-1 text-[10px] f-mono ${
-                  d.today ? "border border-ink bg-base font-bold" : "border border-transparent"
-                } ${d.inPeriod ? "" : "text-line-strong"}`}
-              >
-                <span>{d.day}</span>
-                <span
-                  className="mt-0.5 inline-block h-1.5 w-1.5 rounded-full"
-                  style={{ background: d.used ? "var(--accent)" : "transparent" }}
+          </div>
+          {weeks.map((week, ci) => (
+            <div key={ci} className="flex flex-col gap-[3px]">
+              {week.map((cell) => (
+                <div
+                  key={cell.date}
+                  title={cell.inWindow ? `${cell.date} · ${fmtValue(cell.value)}` : undefined}
+                  className={
+                    cell.inWindow
+                      ? `h-2.5 w-2.5 ${cell.level === 0 ? "border border-line" : levelBg[cell.level]} ${
+                          cell.date === today ? "outline-1 outline-ink" : ""
+                        }`
+                      : "invisible h-2.5 w-2.5"
+                  }
                 />
-              </div>
-            ))}
-          </div>
-          <div className="mt-1 flex justify-between text-[9px] uppercase text-faint f-mono">
-            <span>{verdict.periodStart}</span>
-            <span>点 = 有用量 · 框 = 今天</span>
-            <span>{verdict.periodEnd}</span>
-          </div>
+              ))}
+            </div>
+          ))}
         </div>
-      )}
+      </div>
+      <div className="mt-1 flex justify-between text-[9px] uppercase text-faint f-mono">
+        <span>{weeks[0][0].date}</span>
+        <span>深 = 用量高 · 框 = 今天</span>
+        <span>{today}</span>
+      </div>
     </div>
   );
 }
