@@ -342,7 +342,7 @@ export default async function SubscriptionDetailPage({
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
           {isOwner ? (
             <Panel index="01" title="记一笔付费">
               <PaymentForm subscriptionId={sub.id} prefill={prefill} />
@@ -387,7 +387,7 @@ export default async function SubscriptionDetailPage({
         </div>
 
         {sub.usageKind && (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
             <Panel
               index="03"
               title={`用量录入${sub.script ? " · 脚本同步中" : ""}`}

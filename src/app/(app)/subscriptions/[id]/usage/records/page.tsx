@@ -3,6 +3,7 @@ import { isoDay } from "@/lib/dates";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getSubscription } from "@/lib/subscriptions/service";
 import { listUsage } from "@/lib/usage/service";
+import { monthlyUsageAggregation } from "@/lib/usage/monthly";
 import { UsageRecordsManager, type UsageRow } from "./UsageRecordsManager";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +47,8 @@ export default async function UsageRecordsPage({
   if (from) rows = rows.filter((r) => new Date(`${r.date}T00:00:00+08:00`) >= from);
   if (to) rows = rows.filter((r) => new Date(`${r.date}T00:00:00+08:00`) <= to);
   rows = rows.reverse();
+  // 按月聚合带：跟随当前筛选后的行集（选了受益人只聚合他的）
+  const monthly = monthlyUsageAggregation(rows);
 
   const back = new URLSearchParams(
     Object.entries({ userId: sp.userId, kind: sp.kind, from: sp.from, to: sp.to }).filter(([, v]) => v) as [string, string][],
@@ -74,6 +77,7 @@ export default async function UsageRecordsPage({
           grantMode={sub.grantMode as "RESET" | "STACKED" | null}
           usageUnit={sub.usageUnit}
           rows={rows}
+          monthly={monthly}
           total={all.length}
           userOptions={[...names.entries()].map(([id, name]) => ({ id, name }))}
           filters={{ userId: sp.userId ?? "", kind: sp.kind ?? "", from: sp.from ?? "", to: sp.to ?? "" }}

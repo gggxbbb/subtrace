@@ -195,7 +195,7 @@ export default async function ReportsPage({
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-2 text-right text-[11px] font-semibold tabular-nums f-mono">{fmtMoney(it.cost, cur)}</td>
+                  <td className="px-4 py-2 text-right text-[13px] font-semibold tabular-nums">{fmtMoney(it.cost, cur)}</td>
                   <td className="px-4 py-2 text-right text-[11px] tabular-nums text-muted f-mono">
                     {fmtMoney(it.cost / r.days.length, cur)}
                   </td>

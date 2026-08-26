@@ -9,13 +9,6 @@ export function ArchivedPurchaseList({
 }: {
   rows: { id: string; name: string; category: string | null; status: string; purchaseDate: string }[];
 }) {
-  if (rows.length === 0) {
-    return (
-      <div className="px-4 py-6 text-center text-[11px] uppercase text-faint f-mono">
-        没有已归档的物品
-      </div>
-    );
-  }
   return (
     <div>
       {rows.map((r) => (

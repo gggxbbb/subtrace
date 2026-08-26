@@ -105,7 +105,7 @@ function SubscriptionTable({ rows, cur, back }: { rows: Row[]; cur: string; back
             <td className="px-4 py-2.5 text-[11px] tabular-nums text-muted f-mono">
               {s.expiry ? isoDay(s.expiry) : "—"}
             </td>
-            <td className="px-4 py-2.5 text-right text-[11px] font-semibold tabular-nums f-mono">
+            <td className="px-4 py-2.5 text-right text-[13px] font-semibold tabular-nums">
               {s.costUnknown && s.dailyCost === 0 ? (
                 <span className="text-faint">未知</span>
               ) : (
@@ -115,7 +115,7 @@ function SubscriptionTable({ rows, cur, back }: { rows: Row[]; cur: string; back
             <td className="px-4 py-2.5 text-right text-[11px] tabular-nums text-muted f-mono">
               {s.costUnknown && s.dailyCost === 0 ? "—" : fmtMoney(s.monthlyCost, cur)}
             </td>
-            <td className="px-4 py-2.5 text-right text-[11px] font-semibold tabular-nums f-mono">
+            <td className="px-4 py-2.5 text-right text-[13px] font-semibold tabular-nums">
               <PnlValue row={s} cur={cur} />
             </td>
             <td className="px-4 py-2.5">
@@ -164,17 +164,19 @@ function SubscriptionCards({ rows, cur, back }: { rows: Row[]; cur: string; back
               </span>
               <span className="shrink-0 tabular-nums">{s.expiry ? isoDay(s.expiry) : "—"}</span>
             </div>
-            <div className="mt-1.5 flex items-baseline justify-between text-[11px] tabular-nums f-mono">
-              <span className="font-semibold">
+            <div className="mt-1.5 flex items-baseline justify-between text-[11px] tabular-nums">
+              <span className="text-[13px] font-semibold">
                 {s.costUnknown && s.dailyCost === 0 ? "未知" : `${fmtMoney(s.dailyCost, cur)}/day`}
               </span>
-              <span className="text-muted">
+              <span className="text-muted f-mono">
                 {s.costUnknown && s.dailyCost === 0 ? "—" : `${fmtMoney(s.monthlyCost, cur)}/mo`}
               </span>
             </div>
-            <div className="mt-1.5 flex items-baseline justify-between text-[11px] tabular-nums f-mono">
-              <span className="text-[9px] uppercase text-faint">盈亏</span>
-              <PnlValue row={s} cur={cur} />
+            <div className="mt-1.5 flex items-baseline justify-between text-[11px] tabular-nums">
+              <span className="text-[9px] uppercase text-faint f-mono">盈亏</span>
+              <span className="text-[13px] font-semibold">
+                <PnlValue row={s} cur={cur} />
+              </span>
             </div>
           </Link>
           {s.quickTuples.length > 0 && (
@@ -290,18 +292,20 @@ export default async function SubscriptionsPage({
           }
         />
 
-        <div className="mt-4">
-          <Panel index="02" title={`已归档 / ${archived.length}`}>
-            <ArchivedList
-              rows={archived.map((a) => ({
-                id: a.id,
-                name: a.name,
-                category: a.category,
-                startDate: isoDay(a.startDate),
-              }))}
-            />
-          </Panel>
-        </div>
+        {archived.length > 0 && (
+          <div className="mt-4">
+            <Panel index="02" title={`已归档 / ${archived.length}`}>
+              <ArchivedList
+                rows={archived.map((a) => ({
+                  id: a.id,
+                  name: a.name,
+                  category: a.category,
+                  startDate: isoDay(a.startDate),
+                }))}
+              />
+            </Panel>
+          </div>
+        )}
       </div>
     </>
   );

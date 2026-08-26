@@ -108,7 +108,7 @@ export default async function DashboardPage({
           </div>
         </Panel>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
           <Panel index={pn(4)} title="即将到期" action="全部" href="/subscriptions">            {d.upcoming.length === 0 && (
               <div className="px-4 py-6 text-center text-[11px] uppercase text-faint f-mono">
                 未来 30 天没有到期订阅

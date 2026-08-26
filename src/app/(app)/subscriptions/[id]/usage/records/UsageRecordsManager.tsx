@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { isoDay } from "@/lib/dates";
 import { fmtMoney } from "@/lib/format";
+import { monthRange, type MonthlyUsage } from "@/lib/usage/monthly";
 import { inputCls, labelCls } from "@/components/te";
 import {
   addQuotaSnapshotAction,
@@ -35,6 +36,7 @@ export function UsageRecordsManager({
   grantMode,
   usageUnit,
   rows,
+  monthly,
   total,
   userOptions,
   filters,
@@ -49,6 +51,8 @@ export function UsageRecordsManager({
   grantMode: GrantMode | null;
   usageUnit: string | null;
   rows: UsageRow[];
+  /** 按月聚合（筛选后行集，服务端算好传入）；仅 COUNT/SAVINGS 渲染聚合带 */
+  monthly: MonthlyUsage[];
   total: number;
   userOptions: { id: string; name: string }[];
   filters: { userId: string; kind: string; from: string; to: string };
@@ -62,6 +66,9 @@ export function UsageRecordsManager({
   const backInput = <input type="hidden" name="back" value={back} />;
   const canTouch = (r: UsageRow) => isOwner || r.userId === currentUserId;
   const stacked = usageKind === "QUOTA" && grantMode === "STACKED";
+  // QUOTA（含 STACKED）快照不可加，不渲染聚合带；kind=TOTAL 筛选下快照同样不可加（spec story 4）
+  const showMonthly =
+    (usageKind === "COUNT" || usageKind === "SAVINGS") && monthly.length > 0 && filters.kind !== "TOTAL";
 
   return (
     <>
@@ -174,6 +181,31 @@ export function UsageRecordsManager({
             保存 →
           </button>
         </form>
+      )}
+
+      {showMonthly && (
+        <div className="border border-ink bg-surface">
+          {monthly.map((m) => {
+            const { from, to } = monthRange(m.month);
+            // 点击月份 = GET 下钻：回填 from/to，保留当前 userId/kind 筛选
+            const qs = new URLSearchParams();
+            if (filters.userId) qs.set("userId", filters.userId);
+            if (filters.kind) qs.set("kind", filters.kind);
+            qs.set("from", from);
+            qs.set("to", to);
+            // 当前筛选恰好落在该月首末日时高亮
+            const active = filters.from === from && filters.to === to;
+            return (
+              <a
+                key={m.month}
+                href={`/subscriptions/${subscriptionId}/usage/records?${qs.toString()}`}
+                className={`block border-b border-line px-4 py-2 text-[12px] f-mono last:border-0 hover:bg-base ${active ? "bg-base font-semibold" : ""}`}
+              >
+                {m.month} · {m.count} 条 · Σ {usageKind === "SAVINGS" ? fmtMoney(m.total, currency) : `${m.total} ${usageUnit ?? "次"}`}
+              </a>
+            );
+          })}
+        </div>
       )}
 
       <div className="text-[10px] uppercase text-faint f-mono">

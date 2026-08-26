@@ -199,19 +199,21 @@ export default async function PurchasesPage({
           }
         />
 
-        <div className="mt-4">
-          <Panel index="02" title={`已归档 / ${archived.length}`}>
-            <ArchivedPurchaseList
-              rows={archived.map((a) => ({
-                id: a.id,
-                name: a.name,
-                category: a.category,
-                status: a.status,
-                purchaseDate: isoDay(a.purchaseDate),
-              }))}
-            />
-          </Panel>
-        </div>
+        {archived.length > 0 && (
+          <div className="mt-4">
+            <Panel index="02" title={`已归档 / ${archived.length}`}>
+              <ArchivedPurchaseList
+                rows={archived.map((a) => ({
+                  id: a.id,
+                  name: a.name,
+                  category: a.category,
+                  status: a.status,
+                  purchaseDate: isoDay(a.purchaseDate),
+                }))}
+              />
+            </Panel>
+          </div>
+        )}
       </div>
     </>
   );
