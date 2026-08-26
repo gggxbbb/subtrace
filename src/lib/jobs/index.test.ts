@@ -53,8 +53,22 @@ describe("runJob", () => {
 
   it("每个 job 只保留最近 50 条", async () => {
     scheduleJob(testJob({ key: "prune-job" }));
-    for (let i = 0; i < 55; i++) await runJob("prune-job");
-    expect(await prisma.jobRun.count({ where: { jobKey: "prune-job" } })).toBe(50);
+    // 存量 55 条直插入库（逐条 runJob 在慢机器上超 5s 超时），再跑一次触发裁剪
+    await prisma.jobRun.createMany({
+      data: Array.from({ length: 55 }, (_, i) => ({
+        jobKey: "prune-job",
+        startedAt: new Date(i * 60_000), // i 越大越新
+        durationMs: 1,
+        status: "OK",
+        message: `run-${i}`,
+      })),
+    });
+    await runJob("prune-job");
+    const rows = await prisma.jobRun.findMany({ where: { jobKey: "prune-job" }, orderBy: { startedAt: "asc" } });
+    expect(rows).toHaveLength(50);
+    // 56 条（55 存量 + 本次新记录）裁到 50：最旧 6 条（run-0..5）被裁掉，本次新记录在列
+    expect(rows[0].message).toBe("run-6");
+    expect(rows.at(-1)!.message).toBe("done");
   });
 });
 
