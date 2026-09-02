@@ -6,7 +6,7 @@ Type: task
 
 **Blocked by:** 无（与 01 同触 `dashboard/page.tsx` 与 `getDashboardData`，建议先 01 后 02 或同人连续完成）
 
-**Status:** ready-for-agent
+**Status:** resolved（review 后补：零日窗口零值判定 + 两处去重）
 
 - [ ] rollingVerdict 三口径窗口净盈亏，复用 periodCost / usageValue / 快照差值
 - [ ] QUOTA 跨用量周期重叠天数加权折算单价
