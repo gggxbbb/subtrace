@@ -150,15 +150,18 @@ export function Kpi({
   value,
   sub,
   led,
+  title,
 }: {
   index: string;
   label: string;
   value: string;
   sub: string;
   led?: string;
+  /** 卡片悬浮提示（如「≈每月」换算） */
+  title?: string;
 }) {
   return (
-    <div className="border border-ink bg-surface p-4">
+    <div className="border border-ink bg-surface p-4" title={title}>
       <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.15em] text-muted f-mono">
         <span className="min-w-0 truncate" title={label}>{label}</span>
         <span className="flex shrink-0 items-center gap-1.5 text-faint">

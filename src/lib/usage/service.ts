@@ -13,7 +13,7 @@ import { currentUsagePeriod, periodCost, usagePeriods } from "./period";
 import { dayStart, today } from "../dates";
 import { packVerdict, resetVerdict, type PackVerdict, type QuotaVerdict } from "./ledger";
 import { streamVerdict, type CountVerdict, type SavingsVerdict } from "./stream";
-import { rollingVerdict, type RollingVerdict } from "./rolling";
+import { intervalVerdict, rollingVerdict, type RollingInput, type RollingVerdict } from "./rolling";
 import { shareForViewer } from "../beneficiaries/service";
 
 export type UsageVerdict = CountVerdict | QuotaVerdict | SavingsVerdict | PackVerdict;
@@ -521,20 +521,17 @@ export function getUsageVerdictForPeriod(
   return dispatchVerdict(sub, records, today, forUserId, period, terminal);
 }
 
-/** 滑动窗判定（ADR-0014）：红黑榜与详情页 headline 的统一口径——[今天−30d, 今天) 固定 30 天。
- *  周期 verdict（getUsageVerdict / getUsageVerdictForPeriod）保留供历史回看与倒计时数据源，二者互补。
- *  STACKED 的浪费事件复用 packVerdict 账本装配（全量浪费由 rolling 按窗口过滤）。
- *  传 forUserId 时按该受益人切片：成本 × 份额，COUNT/SAVINGS 只计本人记录（QUOTA 池级不切）。 */
-export function getRollingVerdict(
+/** 滑动窗/回看判定输入装配：getRollingVerdict（headline）与 getIntervalVerdict（报表回看）共用 */
+function rollingInputOf(
   sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[]; quotaPacks?: QuotaPack[] },
   records: UsageRecord[],
   today: Date,
   forUserId?: string,
-): RollingVerdict | null {
+): RollingInput | null {
   if (!sub.usageKind) return null;
   const stacked = sub.usageKind === "QUOTA" && sub.grantMode === "STACKED";
   const pack = stacked ? packVerdict(sub, records, today, forUserId) : null;
-  return rollingVerdict({
+  return {
     kind: sub.usageKind as UsageKind,
     stacked,
     altUnitPrice: sub.altUnitPrice,
@@ -550,7 +547,34 @@ export function getRollingVerdict(
     packs: stacked
       ? (sub.quotaPacks ?? []).map((p) => ({ grantedAt: p.grantedAt, quantity: p.quantity }))
       : undefined,
-  });
+  };
+}
+
+/** 滑动窗判定（ADR-0014）：红黑榜与详情页 headline 的统一口径——[今天−30d, 今天) 固定 30 天。
+ *  周期 verdict（getUsageVerdict / getUsageVerdictForPeriod）保留供历史回看与倒计时数据源，二者互补。
+ *  STACKED 的浪费事件复用 packVerdict 账本装配（全量浪费由 rolling 按窗口过滤）。
+ *  传 forUserId 时按该受益人切片：成本 × 份额，COUNT/SAVINGS 只计本人记录（QUOTA 池级不切）。 */
+export function getRollingVerdict(
+  sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[]; quotaPacks?: QuotaPack[] },
+  records: UsageRecord[],
+  today: Date,
+  forUserId?: string,
+): RollingVerdict | null {
+  const input = rollingInputOf(sub, records, today, forUserId);
+  return input ? rollingVerdict(input) : null;
+}
+
+/** 任意区间判定（ADR-0015 报表回看）：与 getRollingVerdict 同一装配与算法，仅窗口换为用户所选 [start, end)。
+ *  today 仍用于成本段推算终点与到期合成快照，不影响区间过滤。 */
+export function getIntervalVerdict(
+  sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[]; quotaPacks?: QuotaPack[] },
+  records: UsageRecord[],
+  window: { start: Date; end: Date },
+  today: Date,
+  forUserId?: string,
+): RollingVerdict | null {
+  const input = rollingInputOf(sub, records, today, forUserId);
+  return input ? intervalVerdict(input, window.start, window.end) : null;
 }
 
 /** 编辑用量记录（所有者或记录本人） */

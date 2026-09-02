@@ -2,7 +2,14 @@
 // 固定锚点：today = 2026-09-02（北京墙钟）→ 窗口 = [2026-08-03, 2026-09-02)，30 天，今天排他。
 
 import { describe, expect, it } from "vitest";
-import { rollingVerdict, rollingWindowOf, ROLLING_DAYS, type RollingInput } from "./rolling";
+import {
+  intervalVerdict,
+  intervalWindowOf,
+  rollingVerdict,
+  rollingWindowOf,
+  ROLLING_DAYS,
+  type RollingInput,
+} from "./rolling";
 import type { CostSegment } from "../cost-engine";
 
 const d = (s: string) => new Date(`${s}T00:00:00+08:00`);
@@ -389,5 +396,150 @@ describe("rollingVerdict 边界", () => {
     expect(v.costUnknown).toBe(true);
     expect(v.cost).toBe(0);
     expect(v.value).toBe(60);
+  });
+});
+
+describe("intervalWindowOf 任意区间窗口（ADR-0015 回看）", () => {
+  it("窗口 = [start, end)，起始日晚于 start 时收窄（与滑动窗同语义）", () => {
+    const w = intervalWindowOf(d("2026-07-01"), d("2026-08-01"), d("2026-01-01"));
+    expect(w.start).toEqual(d("2026-07-01"));
+    expect(w.end).toEqual(d("2026-08-01"));
+    expect(w.days).toBe(31);
+    const n = intervalWindowOf(d("2026-07-01"), d("2026-08-01"), d("2026-07-15"));
+    expect(n.start).toEqual(d("2026-07-15"));
+    expect(n.days).toBe(17);
+  });
+
+  it("空区间（start = end）与起始日晚于区间止：天数为 0", () => {
+    expect(intervalWindowOf(d("2026-07-01"), d("2026-07-01"), d("2026-01-01")).days).toBe(0);
+    expect(intervalWindowOf(d("2026-07-01"), d("2026-08-01"), d("2026-09-01")).days).toBe(0);
+  });
+});
+
+describe("intervalVerdict 任意区间判定（ADR-0015 回看）", () => {
+  it("区间 = [今天−30d, 今天) 时与 rollingVerdict 逐字段全等（三口径）", () => {
+    const inputs: RollingInput[] = [
+      base({
+        kind: "COUNT",
+        altUnitPrice: 30,
+        segments: [seg("2026-08-04", "2026-09-04", 310)],
+        records: [rec("2026-08-10", 2), rec("2026-08-20", 1)],
+      }),
+      base({
+        kind: "SAVINGS",
+        segments: [seg("2026-08-04", "2026-09-04", 310)],
+        records: [rec("2026-08-05", 100), rec("2026-09-01", 20)],
+      }),
+      base({
+        kind: "QUOTA",
+        quotaTotal: 100,
+        usageCycle: null,
+        segments: [seg("2026-08-01", "2026-09-01", 310)],
+        records: [
+          rec("2026-08-10", 90, { kind: "TOTAL", semantic: "REMAINING" }),
+          rec("2026-08-20", 40, { kind: "TOTAL", semantic: "REMAINING" }),
+        ],
+      }),
+    ];
+    for (const input of inputs) {
+      expect(intervalVerdict(input, d("2026-08-03"), d("2026-09-02"))).toEqual(rollingVerdict(input));
+    }
+  });
+
+  it("历史区间（与今天不相交）：净盈亏按该区间计算，窗外记录不计", () => {
+    // 段 [07-01, 08-01) 净 310（10/天）；区间 = 整段
+    const v = intervalVerdict(
+      base({
+        altUnitPrice: 30,
+        segments: [seg("2026-07-01", "2026-08-01", 310)],
+        records: [rec("2026-07-10", 5), rec("2026-08-05", 3)], // 后者窗外
+      }),
+      d("2026-07-01"),
+      d("2026-08-01"),
+    );
+    if (v?.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(v.windowDays).toBe(31);
+    expect(v.cost).toBeCloseTo(310);
+    expect(v.usage).toBe(5);
+    expect(v.value).toBe(150);
+    expect(v.verdictAmount).toBeCloseTo(-160);
+    expect(v.costPerUse).toBeCloseTo(62);
+  });
+
+  it("起始日收窄：订阅启用晚于区间起，输出收窄后窗口", () => {
+    const v = intervalVerdict(
+      base({
+        altUnitPrice: 30,
+        startDate: d("2026-07-15"),
+        segments: [seg("2026-07-15", "2026-08-15", 310)], // 31 天 × 10/天
+      }),
+      d("2026-07-01"),
+      d("2026-08-01"),
+    );
+    if (v?.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(v.windowDays).toBe(17);
+    expect(v.windowStart).toEqual(d("2026-07-15"));
+    expect(v.cost).toBeCloseTo(170);
+  });
+
+  it("单日区间：days=1，按 1 天摊成本", () => {
+    const v = intervalVerdict(
+      base({
+        altUnitPrice: 30,
+        segments: [seg("2026-07-01", "2026-08-01", 310)],
+        records: [rec("2026-07-10", 2)],
+      }),
+      d("2026-07-10"),
+      d("2026-07-11"),
+    );
+    if (v?.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(v.windowDays).toBe(1);
+    expect(v.cost).toBeCloseTo(10);
+    expect(v.value).toBe(60);
+    expect(v.verdictAmount).toBeCloseTo(50);
+  });
+
+  it("空区间（start = end）：三口径均零值判定而非 null", () => {
+    const segs = [seg("2026-07-01", "2026-08-01", 310)];
+    const count = intervalVerdict(base({ kind: "COUNT", altUnitPrice: 30, segments: segs }), d("2026-07-01"), d("2026-07-01"));
+    expect(count).toMatchObject({ kind: "COUNT", windowDays: 0, cost: 0, verdictAmount: 0 });
+    const savings = intervalVerdict(base({ kind: "SAVINGS", segments: segs }), d("2026-07-01"), d("2026-07-01"));
+    expect(savings).toMatchObject({ kind: "SAVINGS", windowDays: 0, saved: 0, verdictAmount: 0 });
+    const quota = intervalVerdict(base({ kind: "QUOTA", quotaTotal: 100, segments: segs }), d("2026-07-01"), d("2026-07-01"));
+    expect(quota).toMatchObject({ kind: "QUOTA", windowDays: 0, consumed: 0, verdictAmount: 0 });
+  });
+
+  it("QUOTA 历史区间：重叠天数加权折算与浪费事件按区间过滤原样成立", () => {
+    // 同 QUOTA 组夹具：P1 [08-01,09-01) 310/100，P2 [09-01,10-01) 150/100；
+    // 回看区间 [08-01, 09-01) = 整 P1：单价 = 3.1，成本 310
+    const v = intervalVerdict(
+      {
+        ...base({
+          kind: "QUOTA",
+          quotaTotal: 100,
+          usageCycle: { cycle: { kind: "calendar", unit: "month", count: 1 }, anchor: d("2026-08-01") },
+          segments: [seg("2026-08-01", "2026-09-01", 310), seg("2026-09-01", "2026-10-01", 150)],
+          records: [
+            rec("2026-08-10", 100, { kind: "TOTAL", semantic: "USED" }),
+            rec("2026-08-20", 250, { kind: "TOTAL", semantic: "USED" }), // +150
+            rec("2026-09-05", 260, { kind: "TOTAL", semantic: "USED" }), // 区间外
+          ],
+        }),
+        stacked: true,
+        wasteEvents: [
+          { date: d("2026-08-15"), quantity: 2, amount: 6.2 }, // 区间内
+          { date: d("2026-09-05"), quantity: 1, amount: 1.5 }, // 区间外
+        ],
+      },
+      d("2026-08-01"),
+      d("2026-09-01"),
+    );
+    if (v?.kind !== "QUOTA") throw new Error("expect QUOTA");
+    expect(v.consumed).toBe(150);
+    expect(v.unitCost).toBeCloseTo(3.1);
+    expect(v.value).toBeCloseTo(465);
+    expect(v.cost).toBeCloseTo(310);
+    expect(v.verdictAmount).toBeCloseTo(155);
+    expect(v.wasteEvents).toEqual([{ date: d("2026-08-15"), quantity: 2, amount: 6.2 }]);
   });
 });

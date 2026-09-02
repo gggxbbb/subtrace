@@ -26,6 +26,8 @@ export interface DashboardRow {
   dailyCost: number;
   monthlyCost: number;
   status: string;
+  /** 是否自动续费（A3 KPI 副标题统计用，复用已装配数据，不新增查询） */
+  autoRenew: boolean;
   /** 共享订阅（非我拥有）：标注所有者 */
   sharedFrom: string | null;
   /** 我的份额（0–1；无分摊为 1） */
@@ -115,6 +117,8 @@ export type DashboardUsageMap = Map<
 
 export interface DashboardData {
   totalDailyCost: number;
+  /** 活跃订阅我的份额日均之和（与 itemDailyCost 并列，totalDailyCost = 两者之和） */
+  subDailyCost: number;
   totalMonthlyCost: number;
   monthSpent: number;
   yearSpent: number;
@@ -164,8 +168,9 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       category: sub.category,
       costUnknown: v.costUnknown,
       cycleLabel: cycleLabel(sub),
-      expiry: v.expiry,
       daysUntilExpiry: v.expiry ? dayDiff(today, v.expiry) : null,
+      autoRenew: sub.autoRenew,
+      expiry: v.expiry,
       dailyCost: v.myDailyRate,
       monthlyCost: v.myDailyRate * 30.4,
       status: sub.status,
@@ -188,7 +193,8 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     };
   });
   const itemDailyCost = purchases.reduce((s, p) => s + p.dailyCost, 0);
-  const totalDailyCost = active.reduce((s, r) => s + r.dailyCost, 0) + itemDailyCost;
+  const subDailyCost = active.reduce((s, r) => s + r.dailyCost, 0);
+  const totalDailyCost = subDailyCost + itemDailyCost;
 
   // 用量红黑榜：headline 为滑动窗判定（ADR-0014，[今天−30d, 今天) 固定 30 天），按窗口净盈亏排序（按人切片，ADR-0003）。
   // STACKED 先做 AUTO 包读时对账（ADR-0012）并刷新内存中的包列表，verdict 才看得到新生成的包
@@ -319,6 +325,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
 
   return {
     totalDailyCost,
+    subDailyCost,
     totalMonthlyCost: totalDailyCost * 30.4,
     monthSpent,
     usageById,

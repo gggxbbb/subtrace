@@ -69,9 +69,9 @@ export default async function DashboardPage({
         )}
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Kpi index="A1" label="当日总日均" value={fmtMoney(d.totalDailyCost, cur)} sub={`≈ 每月 ${fmtMoney(d.totalMonthlyCost, cur)}`} led={ORANGE} />
+          <Kpi index="A1" label="当日总日均" value={fmtMoney(d.totalDailyCost, cur)} sub={`订阅 ${fmtMoney(d.subDailyCost, cur)} · 物品 ${fmtMoney(d.itemDailyCost, cur)}`} title={`≈ 每月 ${fmtMoney(d.totalMonthlyCost, cur)}`} led={ORANGE} />
           <Kpi index="A2" label="本月支出" value={fmtMoney(d.monthSpent, cur)} sub={`年度累计 ${fmtMoney(d.yearSpent, cur)}`} />
-          <Kpi index="A3" label="活跃订阅" value={`${d.activeCount}`} sub={`物品 ${d.purchases.length} 件 · 日均 ${fmtMoney(d.itemDailyCost, cur)}`} />
+          <Kpi index="A3" label="活跃订阅" value={`${d.activeCount}`} sub={`自动续费 ${d.rows.filter((r) => r.status === "ACTIVE" && r.autoRenew).length} · 手动 ${d.rows.filter((r) => r.status === "ACTIVE" && !r.autoRenew).length}`} />
           <Kpi index="A4" label="30 天日均" value={fmtMoney(avg, cur)} sub="近 30 天摊销均值" />
         </div>
 

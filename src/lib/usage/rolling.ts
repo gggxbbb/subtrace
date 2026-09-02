@@ -1,4 +1,4 @@
-// 滑动窗判定引擎（ADR-0014）：用量盈亏对外 headline 的统一观察窗。
+// 滑动窗判定引擎（ADR-0014）：用量盈亏对外 headline 的统一观察窗；任意区间回看（ADR-0015）复用同一算法。
 // 窗口 = [北京墙钟今天−30d, 今天)，固定 30 天（今天为排他终点）；订阅启用不足 30 天收窄为实际天数。
 // 净盈亏 = 窗口内用回价值 − periodCost(窗口)，三口径仅价值计量不同：
 //   COUNT   = usageValuePriced(窗口)（次数×替代单价，单价跟记录走；可缺价：全无→价值未知，部分→仅计有单价部分）
@@ -28,11 +28,11 @@ import { snapshotConsumptions } from "./heatmap";
 export const ROLLING_DAYS = 30;
 
 export interface RollingWindow {
-  /** 窗口起（含）：今天−30d 或订阅起始日（取晚者） */
+  /** 窗口起（含）：区间起或订阅起始日（取晚者） */
   start: Date;
-  /** 窗口止（排他）= 今天零点 */
+  /** 窗口止（排他）：headline 为今天零点，回看下为区间止（ADR-0015） */
   end: Date;
-  /** 实际天数；启用不足 30 天时 < 30（UI 标注「近 N 天」） */
+  /** 实际天数；收窄时 < 名义长度（headline UI 标注「近 N 天」） */
   days: number;
 }
 
@@ -43,6 +43,15 @@ export function rollingWindowOf(today: Date, startDate: Date): RollingWindow {
   const anchor = dayStart(startDate);
   const start = anchor > earliest ? anchor : earliest;
   return { start, end, days: Math.max(0, dayDiff(start, end)) };
+}
+
+/** 任意区间窗口（ADR-0015 报表回看）：[start, end) 北京墙钟日界归一；订阅起始日晚于 start 时收窄（与滑动窗同语义） */
+export function intervalWindowOf(start: Date, end: Date, startDate: Date): RollingWindow {
+  const e = dayStart(end);
+  const anchor = dayStart(startDate);
+  const s0 = dayStart(start);
+  const s = anchor > s0 ? anchor : s0;
+  return { start: s, end: e, days: Math.max(0, dayDiff(s, e)) };
 }
 
 export interface RollingRecord {
@@ -178,12 +187,12 @@ function weightedPackUnitCost(
 }
 
 /**
- * 滑动窗判定：三口径统一净盈亏。窗口无成本覆盖（无相交段）为 null（与周期 verdict 无覆盖同语义）；
+ * 窗口判定核心：rollingVerdict（固定 30 天滑动窗，ADR-0014）与 intervalVerdict（任意区间回看，ADR-0015）
+ * 的唯一算法实现——窗口无成本覆盖（无相交段）为 null（与周期 verdict 无覆盖同语义）；
  * QUOTA 无总额度或无法折算单价时为 null；COUNT 无单价记录放行，输出 valueUnknown / valuePartial（ticket 04）。
- * 窗口为空（当日启用 / 尚未开始，days=0）出零值判定而非 null——行不消失，UI 标注「今日启用」。
+ * 窗口为空（当日启用 / 尚未开始 / 空区间，days=0）出零值判定而非 null——行不消失，UI 标注「今日启用」。
  */
-export function rollingVerdict(input: RollingInput): RollingVerdict | null {
-  const win = rollingWindowOf(input.today, input.startDate);
+function verdictInWindow(input: RollingInput, win: RollingWindow): RollingVerdict | null {
   if (win.days <= 0) {
     const zero = { windowStart: win.start, windowEnd: win.end, windowDays: 0, cost: 0, verdictAmount: 0 };
     if (input.kind === "SAVINGS") return { kind: "SAVINGS", ...zero, saved: 0 };
@@ -291,4 +300,14 @@ export function rollingVerdict(input: RollingInput): RollingVerdict | null {
     verdictAmount: value - cost,
     ...(wasteEvents ? { wasteEvents } : {}),
   };
+}
+
+/** 滑动窗判定（ADR-0014 headline）：窗口 = [今天−30d, 今天)，固定 30 天——任意区间判定的特例 */
+export function rollingVerdict(input: RollingInput): RollingVerdict | null {
+  return verdictInWindow(input, rollingWindowOf(input.today, input.startDate));
+}
+
+/** 任意区间判定（ADR-0015 报表回看）：[start, end)；与 rollingVerdict 同一算法，仅窗口来源不同 */
+export function intervalVerdict(input: RollingInput, start: Date, end: Date): RollingVerdict | null {
+  return verdictInWindow(input, intervalWindowOf(start, end, input.startDate));
 }
