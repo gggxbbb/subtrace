@@ -13,6 +13,8 @@ import { currentUsagePeriod, periodCost, usagePeriods } from "./period";
 import { dayStart, today } from "../dates";
 import { packVerdict, resetVerdict, type PackVerdict, type QuotaVerdict } from "./ledger";
 import { streamVerdict, type CountVerdict, type SavingsVerdict } from "./stream";
+import { rollingVerdict, type RollingVerdict } from "./rolling";
+import { shareForViewer } from "../beneficiaries/service";
 
 export type UsageVerdict = CountVerdict | QuotaVerdict | SavingsVerdict | PackVerdict;
 
@@ -141,7 +143,7 @@ export async function addQuotaSnapshot(
   });
 }
 
-/** 省钱型：录入已省金额（amount 增量；cumulative 平台累计值自动与本区间已记求差，ADR-0011） */
+/** 省钱型：录入已省金额（amount 增量；cumulative 平台累计值自动与当前服务区间已记求差，ADR-0011） */
 export async function addSavings(
   actorId: string,
   subscriptionId: string,
@@ -179,7 +181,7 @@ export async function addSavings(
     const baseline = periodRecords.reduce((s, r) => s + r.quantity, 0);
     quantity = Math.round((input.cumulative - baseline) * 100) / 100;
     if (quantity <= 0) {
-      throw new Error("累计值未超过本区间已记已省，若是新周期请改用增量录入 savings_not_increased");
+      throw new Error("累计值未超过当前服务区间已记已省，若是新周期请改用增量录入 savings_not_increased");
     }
   }
   return prisma.usageRecord.create({
@@ -517,6 +519,38 @@ export function getUsageVerdictForPeriod(
   terminal?: boolean,
 ): UsageVerdict | null {
   return dispatchVerdict(sub, records, today, forUserId, period, terminal);
+}
+
+/** 滑动窗判定（ADR-0014）：红黑榜与详情页 headline 的统一口径——[今天−30d, 今天) 固定 30 天。
+ *  周期 verdict（getUsageVerdict / getUsageVerdictForPeriod）保留供历史回看与倒计时数据源，二者互补。
+ *  STACKED 的浪费事件复用 packVerdict 账本装配（全量浪费由 rolling 按窗口过滤）。
+ *  传 forUserId 时按该受益人切片：成本 × 份额，COUNT/SAVINGS 只计本人记录（QUOTA 池级不切）。 */
+export function getRollingVerdict(
+  sub: SubscriptionWithPayments & { beneficiaries?: Beneficiary[]; quotaPacks?: QuotaPack[] },
+  records: UsageRecord[],
+  today: Date,
+  forUserId?: string,
+): RollingVerdict | null {
+  if (!sub.usageKind) return null;
+  const stacked = sub.usageKind === "QUOTA" && sub.grantMode === "STACKED";
+  const pack = stacked ? packVerdict(sub, records, today, forUserId) : null;
+  return rollingVerdict({
+    kind: sub.usageKind as UsageKind,
+    stacked,
+    altUnitPrice: sub.altUnitPrice,
+    quotaTotal: sub.quotaTotal,
+    startDate: sub.startDate,
+    today,
+    records,
+    forUserId,
+    share: forUserId ? shareForViewer(sub.beneficiaries ?? [], sub.ownerId, forUserId) : 1,
+    segments: costSegments(toEngineSub(sub), toEnginePayments(sub.payments), today),
+    usageCycle: usageCycleOf(sub),
+    wasteEvents: pack?.wasteEvents,
+    packs: stacked
+      ? (sub.quotaPacks ?? []).map((p) => ({ grantedAt: p.grantedAt, quantity: p.quantity }))
+      : undefined,
+  });
 }
 
 /** 编辑用量记录（所有者或记录本人） */

@@ -14,6 +14,25 @@ export interface HeatmapRecord {
   semantic: string | null;
 }
 
+/**
+ * 相邻快照差值消耗（热力图与滑动窗 rolling.ts 共用，同粒度近似，ADR-0014）。
+ * 输入 TOTAL 快照（任意顺序），按日期升序输出每个快照日的消耗：
+ * REMAINING = 较上一快照的降量；USED = 较上一快照的增量；首个快照无前值可差记 0。
+ * 负差值（额度复位/充值/反向校准）如实保留，由调用方决定如何解读。
+ */
+export function snapshotConsumptions(
+  snapshots: { date: string; quantity: number; semantic: string | null }[],
+): { date: string; consumed: number }[] {
+  const sorted = [...snapshots].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  let prev: number | null = null;
+  return sorted.map((s) => {
+    const consumed =
+      prev === null ? 0 : s.semantic === "REMAINING" ? prev - s.quantity : s.quantity - prev;
+    prev = s.quantity;
+    return { date: s.date, consumed };
+  });
+}
+
 export interface HeatmapCell {
   date: string;
   /** 0 = 空白；1-4 = 窗口内正值按分位 25/50/75/100 分档 */
@@ -48,13 +67,8 @@ export function usageHeatmap(
   const values = new Map<string, number>();
   if (kind === "QUOTA") {
     // 仅 TOTAL 快照日有值：较上一快照的消耗（REMAINING 降量 / USED 增量）
-    const snapshots = inWindowRecords
-      .filter((r) => r.kind === "TOTAL")
-      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-    let prev: number | null = null;
-    for (const s of snapshots) {
-      values.set(s.date, prev === null ? 0 : s.semantic === "REMAINING" ? prev - s.quantity : s.quantity - prev);
-      prev = s.quantity;
+    for (const c of snapshotConsumptions(inWindowRecords.filter((r) => r.kind === "TOTAL"))) {
+      values.set(c.date, c.consumed);
     }
   } else {
     // COUNT / SAVINGS：当日 Σ quantity（省钱型 quantity 即金额）

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { isoDay } from "@/lib/dates";
+import { isoDay, wallParts } from "@/lib/dates";
 import { usageHeatmap } from "@/lib/usage/heatmap";
+import { ROLLING_DAYS } from "@/lib/usage/rolling";
 import { usageTuples } from "@/lib/usage/tuples";
 import { fmtMoney } from "@/lib/format";
 import { Led, inputCls, labelCls } from "@/components/te";
@@ -80,6 +81,45 @@ export type VerdictData =
       costUnknown?: boolean;
     };
 
+/** 序列化后的滑动窗判定（ADR-0014，详情页 server 端构造）：windowEnd 为展示用末日（含） */
+export type RollingVerdictData =
+  | {
+      kind: "COUNT";
+      windowStart: string;
+      windowEnd: string;
+      windowDays: number;
+      cost: number;
+      costUnknown?: boolean;
+      verdictAmount: number;
+      usage: number;
+      value: number;
+      costPerUse: number | null;
+    }
+  | {
+      kind: "SAVINGS";
+      windowStart: string;
+      windowEnd: string;
+      windowDays: number;
+      cost: number;
+      costUnknown?: boolean;
+      verdictAmount: number;
+      saved: number;
+    }
+  | {
+      kind: "QUOTA";
+      windowStart: string;
+      windowEnd: string;
+      windowDays: number;
+      cost: number;
+      costUnknown?: boolean;
+      verdictAmount: number;
+      consumed: number;
+      unitCost: number;
+      value: number;
+      /** STACKED：窗口内已确认浪费事件（按确认日升序） */
+      wasteEvents?: { date: string; quantity: number; amount: number }[];
+    };
+
 /** 用量录入卡：类型/单位可就地设定；本次用量、本次单价、当月总额度逐条可调，默认继承上一条记录 */
 export function UsageEntryPanel({
   subscriptionId,
@@ -128,7 +168,7 @@ export function UsageEntryPanel({
         ? { done: true as const }
         : { done: false as const, remainingPct: r2((1 - verdict.usageRate) * 100) }
       : null;
-  // 省钱型：本区间已记已省（累计录入的求差基准，无覆盖区间时为全部记录）与回本差额
+  // 省钱型：当前服务区间已记已省（累计录入的求差基准，无覆盖区间时为全部记录）与回本差额
   const savingsBaseline =
     r2(
       records
@@ -171,7 +211,7 @@ export function UsageEntryPanel({
             </button>
           </div>
           <div className="text-[9px] uppercase text-faint f-mono">
-            二选一：直接记本次省了多少；或照抄平台「当期已省」，自动与本区间已记（{fmtMoney(savingsBaseline, currency)}）求差
+            二选一：直接记本次省了多少；或照抄平台「当期已省」，自动与当前服务区间已记（{fmtMoney(savingsBaseline, currency)}）求差
           </div>
         </form>
       ) : kind === "COUNT" ? (
@@ -308,7 +348,7 @@ export function UsageEntryPanel({
             <div className="mb-2 flex items-center gap-2 text-[11px]">
               <Led color={quotaHint.done ? "#22c55e" : "var(--accent)"} />
               {quotaHint.done ? (
-                <span>本区间已用满 100%</span>
+                <span>当前周期已用满 100%</span>
               ) : (
                 <span>
                   还差 <strong className="tabular-nums">{quotaHint.remainingPct}%</strong> 用满
@@ -541,7 +581,7 @@ function LedgerVerdict({
             )}
           </div>
           <div>
-            <div className="text-[9px] uppercase text-faint f-mono">本区间浪费</div>
+            <div className="text-[9px] uppercase text-faint f-mono">区间浪费</div>
             <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.periodWaste.amount <= 0 ? "text-income" : "text-destructive"}`}>
               {v.periodWaste.amount <= 0 ? fmtMoney(0, currency) : `−${fmtMoney(v.periodWaste.amount, currency)}`}
               <Led color={v.periodWaste.amount <= 0 ? "#22c55e" : "#ef4444"} />
@@ -619,7 +659,84 @@ function LedgerVerdict({
   );
 }
 
-/** 盈亏呈现卡：周期导航 + 流式/账本两套引擎渲染 + 历史回看 */
+/** 滑动窗 headline（ADR-0014）：详情页主判定——近 N 天 付了 / 用回 / 净盈亏；周期事实见下方逐周期回看 */
+function RollingHeadline({
+  r,
+  usageUnit,
+  currency,
+}: {
+  r: RollingVerdictData;
+  usageUnit: string | null;
+  currency: string;
+}) {
+  const value = r.kind === "SAVINGS" ? r.saved : r.value;
+  const quantityLabel =
+    r.kind === "COUNT"
+      ? `${r.usage} ${usageUnit ?? "次"}`
+      : r.kind === "QUOTA"
+        ? `消耗 ${Math.round(r.consumed * 100) / 100} ${usageUnit ?? ""}`
+        : null;
+  return (
+    <div className="mb-3 border border-ink bg-base px-3 py-2.5">
+      <div className="flex items-center justify-between text-[9px] uppercase tracking-wider text-faint f-mono">
+        <span>
+          {r.windowDays === 0
+            ? "今日启用 · 明日出数"
+            : `近 ${r.windowDays} 天${r.windowDays < ROLLING_DAYS ? ` · 启用未满 ${ROLLING_DAYS} 天` : ""}`}
+        </span>
+        <span className="tabular-nums">
+          {r.windowStart} ~ {r.windowEnd}
+        </span>
+      </div>
+      <div className="mt-2 grid grid-cols-3 gap-3">
+        <div>
+          <div className="text-[9px] uppercase text-faint f-mono">付了</div>
+          <div className="text-lg font-bold tabular-nums">{fmtMoney(r.cost, currency)}</div>
+        </div>
+        <div>
+          <div className="text-[9px] uppercase text-faint f-mono">
+            用回{r.kind === "SAVINGS" ? "（已省）" : ""}
+          </div>
+          <div className="text-lg font-bold tabular-nums">
+            {fmtMoney(value, currency)}
+            {quantityLabel && (
+              <span className="ml-1 text-[10px] font-normal text-faint">{quantityLabel}</span>
+            )}
+          </div>
+        </div>
+        <div>
+          <div className="text-[9px] uppercase text-faint f-mono">净盈亏</div>
+          {r.costUnknown ? (
+            <div className="text-lg font-bold text-faint">未知</div>
+          ) : (
+            <div
+              className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${r.verdictAmount >= 0 ? "text-income" : "text-destructive"}`}
+            >
+              {r.verdictAmount >= 0 ? "+" : "−"}
+              {fmtMoney(Math.abs(r.verdictAmount), currency)}
+              <Led color={r.verdictAmount >= 0 ? "#22c55e" : "#ef4444"} />
+            </div>
+          )}
+          {r.costUnknown && (
+            <div className="text-[9px] text-faint f-mono">成本未记录，盈亏不可信</div>
+          )}
+        </div>
+      </div>
+      {r.kind === "QUOTA" && r.wasteEvents && r.wasteEvents.length > 0 && (
+        <div className="mt-2 border-t border-dashed border-line-strong pt-1.5 text-[9px] text-destructive f-mono">
+          {r.wasteEvents
+            .map((w) => {
+              const p = wallParts(new Date(w.date));
+              return `${p.month + 1}月${p.day}日到期焚毁 ${w.quantity} ${usageUnit ?? ""}${w.amount > 0 ? `（−${fmtMoney(w.amount, currency)}）` : ""}`;
+            })
+            .join("；")}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 盈亏呈现卡：滑动窗 headline（主判定，ADR-0014）+ 周期导航 + 流式/账本两套引擎渲染 + 历史回看 */
 export function UsageVerdictPanel({
   verdicts,
   currentIndex,
@@ -629,6 +746,7 @@ export function UsageVerdictPanel({
   records,
   perUser = [],
   currency,
+  rolling,
 }: {
   verdicts: { start: string; end: string; verdict: VerdictData | null }[];
   currentIndex: number;
@@ -640,6 +758,8 @@ export function UsageVerdictPanel({
   /** 所有者视角：各受益人用量与盈亏对比 */
   perUser?: { name: string; usageLabel: string; verdictAmount: number }[];
   currency: string;
+  /** 滑动窗判定（主判定 headline；null = 窗口无成本覆盖） */
+  rolling: RollingVerdictData | null;
 }) {
   const last = Math.max(0, verdicts.length - 1);
   const [idx, setIdx] = useState(Math.max(0, Math.min(currentIndex, last)));
@@ -648,6 +768,12 @@ export function UsageVerdictPanel({
     "flex h-6 w-6 items-center justify-center border border-ink bg-surface text-[12px] leading-none f-mono hover:bg-ink hover:text-surface disabled:pointer-events-none disabled:opacity-30";
   return (
     <div className="px-4 py-4">
+      {rolling && <RollingHeadline r={rolling} usageUnit={usageUnit} currency={currency} />}
+      {rolling && verdicts.length > 0 && (
+        <div className="mb-1.5 text-[9px] uppercase tracking-wider text-faint f-mono">
+          逐周期回看（周期口径）
+        </div>
+      )}
       {verdicts.length > 0 && (
         <div className="mb-3 flex items-center justify-between gap-2">
           <button

@@ -12,6 +12,7 @@ import {
   addUsage,
   deletePack,
   deleteUsage,
+  getRollingVerdict,
   getUsageVerdict,
   getUsageVerdictForPeriod,
   listPacks,
@@ -397,7 +398,7 @@ describe("省钱型配置与录入（ADR-0011）", () => {
     ).rejects.toThrow(/savings_required/);
   });
 
-  it("累计录入自动与本区间已记求差", async () => {
+  it("累计录入自动与当前服务区间已记求差", async () => {
     const sub = await jd();
     await setUsageConfig(ownerId, sub.id, { usageKind: "SAVINGS", usageUnit: "" });
     await addSavings(ownerId, sub.id, ownerId, { date: d("2026-07-05"), amount: 30 });
@@ -406,7 +407,7 @@ describe("省钱型配置与录入（ADR-0011）", () => {
     expect(rec.quantity).toBeCloseTo(12);
   });
 
-  it("求差 ≤ 0 拒绝（等于或低于本区间已记）", async () => {
+  it("求差 ≤ 0 拒绝（等于或低于当前服务区间已记）", async () => {
     const sub = await jd();
     await setUsageConfig(ownerId, sub.id, { usageKind: "SAVINGS", usageUnit: "" });
     await addSavings(ownerId, sub.id, ownerId, { date: d("2026-07-05"), amount: 30 });
@@ -818,7 +819,7 @@ describe("PackVerdict 装配", () => {
     return sub;
   };
 
-  it("浪费导向：verdictAmount = −本区间确认浪费；余额/快照日期/陈旧天数/到期预警/累计浪费", async () => {
+  it("浪费导向：verdictAmount = −周期内确认浪费；余额/快照日期/陈旧天数/到期预警/累计浪费", async () => {
     const sub = await ledger();
     const v = getUsageVerdict((await getSubscription(ownerId, sub.id))!, await listUsage(sub.id), d("2026-08-10"));
     if (v?.kind !== "PACK") throw new Error("expect PACK");
@@ -1547,7 +1548,7 @@ describe("带日期写路径（usage-shell ticket 01：录入台补记）", () =
       cumulative: 20,
     });
     expect(isoDay(rec.date)).toBe("2026-07-12");
-    expect(rec.quantity).toBe(14); // 20 − 本区间已记 6
+    expect(rec.quantity).toBe(14); // 20 − 服务区间内已记 6
   });
 
   it("北京墙钟今日允许（边界非未来）", async () => {
@@ -1555,5 +1556,80 @@ describe("带日期写路径（usage-shell ticket 01：录入台补记）", () =
     await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次", altUnitPrice: 30 });
     const rec = await addUsage(ownerId, sub.id, ownerId, { date: today(), quantity: 1 });
     expect(isoDay(rec.date)).toBe(isoDay(today()));
+  });
+});
+
+describe("滑动窗判定（getRollingVerdict，ADR-0014）", () => {
+  it("计数型：窗口净盈亏装配 + 受益人份额切片；启用不足 30 天输出实际天数", async () => {
+    const sub = await gym(); // 217 元，2026-07-01 ~ 08-01（31 天，7/天）
+    await addBeneficiary(ownerId, sub.id, { kind: "USER", userId: otherId });
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次", altUnitPrice: 30 });
+    for (let i = 1; i <= 9; i++) {
+      await addUsage(ownerId, sub.id, ownerId, { date: d(`2026-07-0${i}`), quantity: 1 });
+    }
+    for (let i = 1; i <= 3; i++) {
+      await addUsage(ownerId, sub.id, otherId, { date: d(`2026-07-0${i}`), quantity: 1 });
+    }
+    const fresh = (await getSubscription(ownerId, sub.id))!;
+    const records = await listUsage(sub.id);
+    // today = 2026-07-18：订阅 07-01 启用仅 17 天 → 窗口收窄 [07-01, 07-18)，成本 17 × 7 = 119
+    const vOwner = getRollingVerdict(fresh, records, d("2026-07-18"), ownerId);
+    const vOther = getRollingVerdict(fresh, records, d("2026-07-18"), otherId);
+    if (vOwner?.kind !== "COUNT" || vOther?.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(vOwner.windowStart).toEqual(d("2026-07-01"));
+    expect(vOwner.windowDays).toBe(17);
+    // 权重 1:1 → 成本各摊 119/2；用量只计本人
+    expect(vOwner.cost).toBeCloseTo(119 / 2);
+    expect(vOwner.usage).toBe(9);
+    expect(vOwner.verdictAmount).toBeCloseTo(270 - 119 / 2);
+    expect(vOther.cost).toBeCloseTo(119 / 2);
+    expect(vOther.usage).toBe(3);
+    expect(vOther.verdictAmount).toBeCloseTo(90 - 119 / 2);
+  });
+
+  it("额度型 RESET：消耗按快照差 × 段净额折算单价（无显式用量周期回退成本段加权）", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "QUOTA", usageUnit: "GB", quotaTotal: 1000 });
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-05"), used: 300 });
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-15"), used: 700 });
+    const fresh = (await getSubscription(ownerId, sub.id))!;
+    const v = getRollingVerdict(fresh, await listUsage(sub.id), d("2026-07-18"));
+    if (v?.kind !== "QUOTA") throw new Error("expect QUOTA");
+    expect(v.consumed).toBe(400);
+    expect(v.unitCost).toBeCloseTo(0.217); // 217 / 1000
+    expect(v.value).toBeCloseTo(86.8);
+    expect(v.cost).toBeCloseTo(119); // 窗口 [07-01, 07-18) 17 天 × 7
+    expect(v.verdictAmount).toBeCloseTo(86.8 - 119);
+  });
+
+  it("STACKED：窗口内浪费事件由账本装配按日期过滤；手动模式按段内包量折算", async () => {
+    // 像素蛋糕：100 元 2026-07-01 ~ 2027-07-01（手动模式无 quotaTotal）；
+    // A 包 7/1 发 30 张 8/1 到期；快照 7/20 余 20、8/5 余 20 → 8/1 焚毁 20 张（单张 100/30）
+    // （浪费确认边界 = 最新快照日，故需 8/5 快照让 8/1 到期显形）
+    const sub = await cake();
+    await addPack(ownerId, sub.id, { grantedAt: d("2026-07-01"), quantity: 30, expiresAt: d("2026-08-01") });
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-07-20"), remaining: 20 });
+    await addQuotaSnapshot(ownerId, sub.id, ownerId, { date: d("2026-08-05"), remaining: 20 });
+    const fresh = (await getSubscription(ownerId, sub.id))!;
+    // today = 2026-08-10 → 窗口 [07-11, 08-10)
+    const v = getRollingVerdict(fresh, await listUsage(sub.id), d("2026-08-10"));
+    if (v?.kind !== "QUOTA") throw new Error("expect QUOTA");
+    expect(v.windowDays).toBe(30);
+    expect(v.wasteEvents).toHaveLength(1);
+    expect(v.wasteEvents![0].date).toEqual(d("2026-08-01"));
+    expect(v.wasteEvents![0].quantity).toBe(20);
+    expect(v.wasteEvents![0].amount).toBeCloseTo((100 / 30) * 20);
+    // 消耗：7/20 为窗口内首快照记 0，8/5 与 7/20 持平差值 0 → 0；成本 = 30 天 × 100/365
+    expect(v.consumed).toBe(0);
+    expect(v.unitCost).toBeCloseTo(100 / 30);
+    expect(v.cost).toBeCloseTo((100 / 365) * 30);
+  });
+
+  it("窗口无成本覆盖（订阅已到期出窗）：null，与周期 verdict 同语义", async () => {
+    const sub = await gym(); // 段止 2026-08-01
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次", altUnitPrice: 30 });
+    const fresh = (await getSubscription(ownerId, sub.id))!;
+    // today = 2026-09-15 → 窗口 [08-16, 09-15) 与段无交叠
+    expect(getRollingVerdict(fresh, await listUsage(sub.id), d("2026-09-15"))).toBeNull();
   });
 });

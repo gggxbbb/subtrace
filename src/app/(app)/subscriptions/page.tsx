@@ -226,8 +226,8 @@ export default async function SubscriptionsPage({
     const u = d.usageById.get(r.id);
     return {
       ...r,
-      pnl: u?.verdict?.verdictAmount ?? null,
-      pnlUnknown: u?.verdict?.costUnknown ?? false,
+      pnl: u?.rolling?.verdictAmount ?? null,
+      pnlUnknown: u?.rolling?.costUnknown ?? false,
       quickTuples:
         u && u.sub.usageKind === "COUNT" && r.status === "ACTIVE"
           // 快捷元组按人切片（ADR-0003）：只从我的历史记录提取，与详情页口径一致

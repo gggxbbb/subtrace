@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { dayStart, isoDay } from "@/lib/dates";
+import { DAY_MS, dayStart, isoDay } from "@/lib/dates";
 import { Kpi, Panel } from "@/components/te";
 import { fmtMoney } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -18,6 +18,7 @@ import {
 } from "@/lib/beneficiaries/service";
 import {
   currentVerdictPeriod,
+  getRollingVerdict,
   getUsageVerdict,
   getUsageVerdictForPeriod,
   listUsage,
@@ -26,6 +27,7 @@ import {
   usagePeriodsOf,
   type UsageVerdict,
 } from "@/lib/usage/service";
+import type { RollingVerdict } from "@/lib/usage/rolling";
 import { PaymentForm } from "./PaymentForm";
 import { PaymentHistory } from "./PaymentHistory";
 import type { PaymentRow } from "./payment-rows";
@@ -33,6 +35,7 @@ import { BeneficiariesPanel } from "./BeneficiariesPanel";
 import {
   UsageEntryPanel,
   UsageVerdictPanel,
+  type RollingVerdictData,
   type UsageRecordRow,
   type VerdictData,
 } from "./UsagePanel";
@@ -107,6 +110,38 @@ function toVerdictData(v: UsageVerdict | null): VerdictData | null {
     costPerUnit: v.costPerUnit,
     verdictAmount: v.verdictAmount,
     costUnknown: v.costUnknown,
+  };
+}
+
+/** RollingVerdict → RollingVerdictData 序列化（详情页 server 端构造；滑动窗 headline 用） */
+function toRollingData(r: RollingVerdict | null): RollingVerdictData | null {
+  if (!r) return null;
+  const windowBase = {
+    windowStart: isoDay(r.windowStart),
+    // 窗口止为排他的今天零点，展示用末日 = 昨天
+    windowEnd: isoDay(new Date(r.windowEnd.getTime() - DAY_MS)),
+    windowDays: r.windowDays,
+    cost: r.cost,
+    costUnknown: r.costUnknown,
+    verdictAmount: r.verdictAmount,
+  };
+  if (r.kind === "COUNT") {
+    return { ...windowBase, kind: "COUNT", usage: r.usage, value: r.value, costPerUse: r.costPerUse };
+  }
+  if (r.kind === "SAVINGS") {
+    return { ...windowBase, kind: "SAVINGS", saved: r.saved };
+  }
+  return {
+    ...windowBase,
+    kind: "QUOTA",
+    consumed: r.consumed,
+    unitCost: r.unitCost,
+    value: r.value,
+    wasteEvents: r.wasteEvents?.map((w) => ({
+      date: isoDay(w.date),
+      quantity: w.quantity,
+      amount: w.amount,
+    })),
   };
 }
 
@@ -212,6 +247,10 @@ export default async function SubscriptionDetailPage({
   const noEntry =
     v === null && sub.usageKind === "QUOTA" && (sub.grantMode ?? "RESET") === "RESET" && curPeriod !== null;
   const verdictData = toVerdictData(v);
+  // 滑动窗 headline（ADR-0014）：详情页主判定与红黑榜同口径；周期 verdict 序列保留供逐周期回看
+  const rollingData = sub.usageKind
+    ? toRollingData(getRollingVerdict(sub, usageRecords, today, user.id))
+    : null;
 
   return (
     <>
@@ -412,7 +451,7 @@ export default async function SubscriptionDetailPage({
             </Panel>
             <Panel
               index="04"
-              title="盈亏 · 当前区间"
+              title="用量盈亏 · 近30天"
               actions={
                 <a href={`/subscriptions/${sub.id}/usage/records`} className="text-[10px] uppercase tracking-wider text-muted f-mono hover:text-ink">
                   全部 →
@@ -428,6 +467,7 @@ export default async function SubscriptionDetailPage({
                 currency={cur}
                 records={usageRecordRows}
                 perUser={perUserVerdicts}
+                rolling={rollingData}
               />
             </Panel>
           </div>

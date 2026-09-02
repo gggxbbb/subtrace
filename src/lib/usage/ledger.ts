@@ -60,7 +60,7 @@ export interface PackVerdict {
   staleDays: number | null;
   /** 下一到期包预警：projectedBalance = FEFO 模拟余额 */
   nextExpiry: { date: Date; quantity: number; projectedBalance: number } | null;
-  /** 本区间已确认浪费（数量 + 金额）；verdictAmount = −amount */
+  /** 周期内已确认浪费（数量 + 金额）；verdictAmount = −amount */
   periodWaste: { quantity: number; amount: number };
   /** 累计已确认浪费 */
   totalWaste: { quantity: number; amount: number };
@@ -68,7 +68,7 @@ export interface PackVerdict {
   wasteEvents: { date: Date; quantity: number; amount: number }[];
   /** 累计推算消费（快照校准口径） */
   consumptionInferred: number;
-  /** = −本区间确认浪费金额（≤0） */
+  /** = −周期内确认浪费金额（≤0） */
   verdictAmount: number;
 }
 

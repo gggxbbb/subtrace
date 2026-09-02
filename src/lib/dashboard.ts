@@ -8,7 +8,8 @@ import {
 import { costOverPeriod, costView, paidInPeriod } from "./subscriptions/cost-view";
 import { DAY_MS, dayStart, fromWall, wallParts, isoDay } from "./dates";
 import { listPurchases, toEnginePurchase } from "./purchases/service";
-import { getUsageVerdict, listPacks, listUsage, reconcileAutoPacks, type UsageVerdict } from "./usage/service";
+import { getRollingVerdict, getUsageVerdict, listPacks, listUsage, reconcileAutoPacks, type UsageVerdict } from "./usage/service";
+import type { RollingVerdict } from "./usage/rolling";
 import { loggedToday } from "./usage/pending";
 import type { UsageRecord } from "@/generated/prisma/client";
 import { usageTuples, type UsageTuple } from "./usage/tuples";
@@ -53,12 +54,25 @@ export interface PurchaseRow {
 export interface UsageBoardRow {
   id: string;
   name: string;
-  detail: string;
-  /** 快照陈旧 ≥30 天（STACKED，story 12）：大盘原位变色提示 */
-  stale?: boolean;
+  /** 窗口标签（ADR-0014）：近30天；启用不足 30 天为实际天数（「近12天」） */
+  windowLabel: string;
+  /** 口径数量描述：COUNT「12 次」/ QUOTA「消耗 45 GB」/ SAVINGS 为 null */
+  quantityLabel: string | null;
+  /** 窗口内摊销成本（付了，我的份额口径） */
+  paid: number;
+  /** 窗口内用回价值（用回；SAVINGS = 已省金额） */
+  value: number;
+  /** 近 30 天净盈亏（用回 − 付了） */
   verdictAmount: number;
   /** 覆盖段金额未知（ticket 12）：盈亏不可信，UI 灰显 */
   costUnknown?: boolean;
+  /** 快照陈旧 ≥30 天（STACKED，story 12）：大盘原位变色提示 */
+  stale?: boolean;
+  /** 倒计时 chip（周期事实降级为附属信号）：RESET「距重置 N 天 · 本周期已用 P%」；
+   *  STACKED「M月D日到期 N 单位 · 预计剩 M」 */
+  countdown?: string;
+  /** 窗口内浪费事件标注（STACKED）：「9月1日到期焚毁 2GB」 */
+  wasteNote?: string;
 }
 
 /** 「记用量」录入台行（usage-shell ticket 01）：全部口径的活跃跟踪订阅平铺，日均成本降序。
@@ -82,14 +96,16 @@ export interface EntryHubRow {
   /** QUOTA 展开的总额度占位（订阅默认） */
   quotaTotal: number | null;
 }
-/** 用量装配结果（ui-wave-a ticket 03）：红黑榜 / 今日可记 / 订阅列表盈亏与快捷元组共用同一来源，
- *  保证全站同一数字不出两个版本。verdict 为 null = 当前无覆盖区间。 */
+/** 用量装配结果（ui-wave-a ticket 03）：红黑榜 / 录入台 / 订阅列表盈亏与快捷元组共用同一来源，
+ *  保证全站同一数字不出两个版本。verdict = 周期 verdict（倒计时数据源，null = 当前无覆盖区间）；
+ *  rolling = 滑动窗 headline（ADR-0014，红黑榜与列表盈亏列的对外判定）。 */
 export type DashboardUsageMap = Map<
   string,
   {
     sub: SubscriptionWithPayments;
     records: UsageRecord[];
     verdict: UsageVerdict | null;
+    rolling: RollingVerdict | null;
   }
 >;
 
@@ -115,6 +131,12 @@ const CYCLE_LABEL: Record<string, string> = {
   MONTH: "月付",
   YEAR: "年付",
 };
+
+/** 北京墙钟「M月D日」（浪费事件/到期 chip 用） */
+function mdLabel(dt: Date): string {
+  const p = wallParts(dt);
+  return `${p.month + 1}月${p.day}日`;
+}
 
 function cycleLabel(sub: SubscriptionWithPayments): string {
   if (sub.trackingMode !== "CYCLE") return "手动";
@@ -164,7 +186,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   const itemDailyCost = purchases.reduce((s, p) => s + p.dailyCost, 0);
   const totalDailyCost = active.reduce((s, r) => s + r.dailyCost, 0) + itemDailyCost;
 
-  // 用量红黑榜：启用用量追踪的订阅按当前区间盈亏排序（按人切片，ADR-0003）；用量并行拉取。
+  // 用量红黑榜：headline 为滑动窗判定（ADR-0014，[今天−30d, 今天) 固定 30 天），按窗口净盈亏排序（按人切片，ADR-0003）。
   // STACKED 先做 AUTO 包读时对账（ADR-0012）并刷新内存中的包列表，verdict 才看得到新生成的包
   await Promise.all(
     subs
@@ -180,28 +202,48 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     await Promise.all(
       usageSubs.map(async (sub) => {
         const records = await listUsage(sub.id);
-        return [sub.id, { sub, records, verdict: getUsageVerdict(sub, records, today, userId) }] as const;
+        return [sub.id, {
+          sub,
+          records,
+          verdict: getUsageVerdict(sub, records, today, userId),
+          rolling: getRollingVerdict(sub, records, today, userId),
+        }] as const;
       }),
     ),
   );
   const usageBoard: UsageBoardRow[] = usageSubs
     .map((sub) => {
-      const v = usageById.get(sub.id)!.verdict;
-      if (!v) return null;
+      const { verdict: v, rolling: r } = usageById.get(sub.id)!;
+      if (!r) return null;
+      const unit = sub.usageUnit ?? "";
+      // 倒计时 chip（周期 verdict 保留为倒计时数据源）：RESET 距重置 + 当前周期使用率；STACKED 下一到期 + 模拟余额
+      let countdown: string | undefined;
+      if (v?.kind === "QUOTA") {
+        countdown = `距重置 ${dayDiff(today, v.periodEnd)} 天 · 本周期已用 ${Math.round(v.usageRate * 100)}%`;
+      } else if (v?.kind === "PACK" && v.nextExpiry) {
+        countdown = `${mdLabel(v.nextExpiry.date)} 到期 ${v.nextExpiry.quantity} ${unit} · 预计剩 ${v.nextExpiry.projectedBalance} ${unit}`;
+      }
+      const wasteNote =
+        r.kind === "QUOTA" && r.wasteEvents?.length
+          ? r.wasteEvents.map((w) => `${mdLabel(w.date)}到期焚毁 ${Math.round(w.quantity * 100) / 100} ${unit}`.trimEnd()).join("；")
+          : undefined;
       return {
         id: sub.id,
         name: sub.name,
-        detail:
-          v.kind === "COUNT"
-            ? `${v.usage} ${sub.usageUnit ?? ""} × ${v.value > 0 && v.usage > 0 ? (v.value / v.usage).toFixed(2) : sub.altUnitPrice} − ${v.cost.toFixed(2)}`
-            : v.kind === "SAVINGS"
-              ? `已省 ${v.saved.toFixed(2)} − 成本 ${v.cost.toFixed(2)}`
-              : v.kind === "PACK"
-                ? `余额 ${v.balance} ${sub.usageUnit ?? ""} · 区间浪费 ${v.periodWaste.amount.toFixed(2)}`
-                : `已用 ${Math.round(v.usageRate * 100)}%（${v.used}/${v.total} ${sub.usageUnit ?? ""}）${v.hit100At ? " · 已用满" : ""}`,
-        verdictAmount: v.verdictAmount,
-        costUnknown: v.costUnknown,
-        ...(v.kind === "PACK" && v.staleDays != null && v.staleDays >= 30 ? { stale: true } : {}),
+        windowLabel: `近${r.windowDays}天`,
+        quantityLabel:
+          r.kind === "COUNT"
+            ? `${r.usage} ${unit || "次"}`
+            : r.kind === "QUOTA"
+              ? `消耗 ${Math.round(r.consumed * 100) / 100} ${unit}`.trimEnd()
+              : null,
+        paid: r.cost,
+        value: r.kind === "SAVINGS" ? r.saved : r.value,
+        verdictAmount: r.verdictAmount,
+        costUnknown: r.costUnknown,
+        countdown,
+        wasteNote,
+        ...(v?.kind === "PACK" && v.staleDays != null && v.staleDays >= 30 ? { stale: true } : {}),
       };
     })
     .filter((r) => r !== null)

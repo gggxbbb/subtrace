@@ -263,7 +263,7 @@ export function UsageWizard({
             {kind === "SAVINGS" ? (
               <div className="border border-ink p-4 text-[11px] leading-relaxed text-muted-strong">
                 无需配置字段。省钱型记录的就是<strong>省下的金额</strong>：盈亏 = Σ已省 − 已摊成本。
-                录入时可以逐笔记「本次已省」，也可以照抄平台「当期已省」累计值——系统自动与本区间已记求差，
+                录入时可以逐笔记「本次已省」，也可以照抄平台「当期已省」累计值——系统自动与当前服务区间已记求差，
                 会员期重置后重新累计即可。
               </div>
             ) : (

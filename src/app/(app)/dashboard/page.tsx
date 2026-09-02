@@ -135,7 +135,7 @@ export default async function DashboardPage({
             ))}
           </Panel>
 
-          <Panel index="05" title="用量盈亏红黑榜" action="本区间">
+          <Panel index="05" title="用量盈亏红黑榜" action="近30天">
             {d.usageBoard.length === 0 && (
               <div className="px-4 py-6 text-center text-[11px] uppercase text-faint f-mono">
                 还没有配置用量追踪的订阅
@@ -146,9 +146,19 @@ export default async function DashboardPage({
                 <div className="min-w-0">
                   <div className="truncate text-[13px] font-medium" title={u.name}>{u.name}</div>
                   <div className="truncate text-[9px] text-faint f-mono">
-                    {u.detail}
+                    <span className="text-muted">{u.windowLabel}</span>
+                    {u.quantityLabel && ` · ${u.quantityLabel}`}
+                    {` · 付了 ${fmtMoney(u.paid, cur)} · 用回 ${fmtMoney(u.value, cur)}`}
                     {u.stale && <span className="font-bold text-destructive"> · 快照陈旧</span>}
                   </div>
+                  {(u.countdown || u.wasteNote) && (
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[9px] f-mono">
+                      {u.countdown && (
+                        <span className="border border-line-strong px-1 py-px text-muted">{u.countdown}</span>
+                      )}
+                      {u.wasteNote && <span className="text-destructive">{u.wasteNote}</span>}
+                    </div>
+                  )}
                 </div>
                 {u.costUnknown ? (
                   <span className="shrink-0 text-sm font-bold text-faint f-mono">成本未知</span>
