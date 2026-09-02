@@ -1,7 +1,7 @@
 // 滑动窗判定引擎（ADR-0014）：用量盈亏对外 headline 的统一观察窗。
 // 窗口 = [北京墙钟今天−30d, 今天)，固定 30 天（今天为排他终点）；订阅启用不足 30 天收窄为实际天数。
 // 净盈亏 = 窗口内用回价值 − periodCost(窗口)，三口径仅价值计量不同：
-//   COUNT   = usageValue(窗口)（次数×替代单价，单价跟记录走）
+//   COUNT   = usageValuePriced(窗口)（次数×替代单价，单价跟记录走；可缺价：全无→价值未知，部分→仅计有单价部分）
 //   SAVINGS = Σ窗口内增量（已省金额本身）
 //   QUOTA   = 窗口内消耗 × 折算单价——消耗按相邻快照差归因（snapshotConsumptions，与热力图同粒度），
 //             折算单价 = 窗口与各用量周期重叠天数加权的（周期成本 ÷ 总额度）；
@@ -17,7 +17,7 @@ import {
   dayDiff,
   savingsVerdict,
   usageInPeriod,
-  usageValue,
+  usageValuePriced,
   type CostSegment,
   type CycleSpec,
 } from "../cost-engine";
@@ -102,9 +102,14 @@ interface RollingBase {
 export interface RollingCountVerdict extends RollingBase {
   kind: "COUNT";
   usage: number;
-  /** 窗口内用量价值（次数×替代单价，逐条记录级单价） */
+  /** 窗口内用量价值（次数×替代单价，逐条记录级单价）；valueUnknown 时恒 0 */
   value: number;
   costPerUse: number | null;
+  /** 窗口内有用量但全部记录无有效单价（记录与订阅替代单价均空，ticket 04）：
+   *  净盈亏不可信，UI 灰显「价值未知」，次数与成本照常显示 */
+  valueUnknown?: boolean;
+  /** 窗口内部分记录无单价：价值仅按有单价部分估值（UI 标注口径，净盈亏照常出数） */
+  valuePartial?: boolean;
 }
 
 export interface RollingSavingsVerdict extends RollingBase {
@@ -174,7 +179,7 @@ function weightedPackUnitCost(
 
 /**
  * 滑动窗判定：三口径统一净盈亏。窗口无成本覆盖（无相交段）为 null（与周期 verdict 无覆盖同语义）；
- * COUNT 无替代单价 / QUOTA 无总额度或无法折算单价时为 null。
+ * QUOTA 无总额度或无法折算单价时为 null；COUNT 无单价记录放行，输出 valueUnknown / valuePartial（ticket 04）。
  * 窗口为空（当日启用 / 尚未开始，days=0）出零值判定而非 null——行不消失，UI 标注「今日启用」。
  */
 export function rollingVerdict(input: RollingInput): RollingVerdict | null {
@@ -212,7 +217,8 @@ export function rollingVerdict(input: RollingInput): RollingVerdict | null {
   }
 
   if (input.kind === "COUNT") {
-    if (input.altUnitPrice == null) return null;
+    // 价值未知（ticket 04）：无替代单价不再拦截——记录无单价可先落库，窗口内全部记录无有效单价
+    // 时输出 valueUnknown（净盈亏不可信，UI 灰显「价值未知」）；部分无单价按有单价部分估值并标注。
     const entries = mine.map((r) => ({
       date: r.date,
       quantity: r.quantity,
@@ -220,7 +226,14 @@ export function rollingVerdict(input: RollingInput): RollingVerdict | null {
       unitPrice: r.unitPrice ?? undefined,
     }));
     const usage = usageInPeriod(entries, win.start, win.end);
-    const value = usageValue(entries, win.start, win.end, input.altUnitPrice);
+    const { value, pricedQty, unpricedQty } = usageValuePriced(
+      entries,
+      win.start,
+      win.end,
+      input.altUnitPrice ?? null,
+    );
+    const valueUnknown = usage > 0 && pricedQty === 0 && unpricedQty > 0;
+    const valuePartial = !valueUnknown && unpricedQty > 0;
     return {
       kind: "COUNT",
       ...baseFields,
@@ -228,6 +241,8 @@ export function rollingVerdict(input: RollingInput): RollingVerdict | null {
       value,
       verdictAmount: value - cost,
       costPerUse: actualCostPerUse(cost, usage),
+      ...(valueUnknown ? { valueUnknown: true } : {}),
+      ...(valuePartial ? { valuePartial: true } : {}),
     };
   }
 

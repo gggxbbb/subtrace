@@ -38,6 +38,10 @@ export type VerdictData =
       verdictAmount: number;
       costPerUse: number | null;
       costUnknown?: boolean;
+      /** 周期内全部记录无单价（ticket 04）：盈亏灰显「价值未知」，次数与成本照常 */
+      valueUnknown?: boolean;
+      /** 周期内部分记录无单价（ticket 04）：价值仅按有单价部分估值，标注口径 */
+      valuePartial?: boolean;
     }
   | {
       kind: "QUOTA";
@@ -94,6 +98,10 @@ export type RollingVerdictData =
       usage: number;
       value: number;
       costPerUse: number | null;
+      /** 窗口内全部记录无单价（ticket 04）：净盈亏不出数，灰显「价值未知」 */
+      valueUnknown?: boolean;
+      /** 窗口内部分记录无单价（ticket 04）：价值仅按有单价部分估值，标注口径 */
+      valuePartial?: boolean;
     }
   | {
       kind: "SAVINGS";
@@ -444,18 +452,19 @@ function CostCell({ v, currency }: { v: VerdictData; currency: string }) {
   );
 }
 
-/** 盈亏网格共用单元：盈亏行（含成本未知降级） */
+/** 盈亏网格共用单元：盈亏行（含成本未知 / 价值未知降级） */
 function PnlCell({
   v,
   currency,
 }: {
-  v: VerdictData & { verdictAmount: number; costUnknown?: boolean };
+  v: VerdictData & { verdictAmount: number; costUnknown?: boolean; valueUnknown?: boolean };
   currency: string;
 }) {
+  const unknown = v.costUnknown || v.valueUnknown;
   return (
     <div>
       <div className="text-[9px] uppercase text-faint f-mono">盈亏</div>
-      {v.costUnknown ? (
+      {unknown ? (
         <div className="text-lg font-bold text-faint">未知</div>
       ) : (
         <div className={`flex items-center gap-1.5 text-lg font-bold tabular-nums ${v.verdictAmount >= 0 ? "text-income" : "text-destructive"}`}>
@@ -465,6 +474,9 @@ function PnlCell({
       )}
       {v.costUnknown && (
         <div className="text-[9px] text-faint f-mono">成本未记录，盈亏不可信</div>
+      )}
+      {v.valueUnknown && (
+        <div className="text-[9px] text-faint f-mono">替代单价未填，价值未知，可边用边补</div>
       )}
     </div>
   );
@@ -490,6 +502,9 @@ function StreamVerdict({
             <div className="text-lg font-bold tabular-nums">
               {v.usage} <span className="text-[10px] text-faint">{usageUnit}</span>
             </div>
+            {v.valuePartial && (
+              <div className="text-[9px] text-faint f-mono">部分记录无单价，价值仅计有单价部分</div>
+            )}
           </div>
           <div>
             <div className="text-[9px] uppercase text-faint f-mono">每次实际成本</div>
@@ -698,15 +713,22 @@ function RollingHeadline({
             用回{r.kind === "SAVINGS" ? "（已省）" : ""}
           </div>
           <div className="text-lg font-bold tabular-nums">
-            {fmtMoney(value, currency)}
+            {r.kind === "COUNT" && r.valueUnknown ? (
+              <span className="text-faint">价值未知</span>
+            ) : (
+              fmtMoney(value, currency)
+            )}
             {quantityLabel && (
               <span className="ml-1 text-[10px] font-normal text-faint">{quantityLabel}</span>
             )}
           </div>
+          {r.kind === "COUNT" && r.valuePartial && (
+            <div className="text-[9px] text-faint f-mono">部分记录无单价，仅计有单价部分</div>
+          )}
         </div>
         <div>
           <div className="text-[9px] uppercase text-faint f-mono">净盈亏</div>
-          {r.costUnknown ? (
+          {r.costUnknown || (r.kind === "COUNT" && r.valueUnknown) ? (
             <div className="text-lg font-bold text-faint">未知</div>
           ) : (
             <div
@@ -719,6 +741,9 @@ function RollingHeadline({
           )}
           {r.costUnknown && (
             <div className="text-[9px] text-faint f-mono">成本未记录，盈亏不可信</div>
+          )}
+          {r.kind === "COUNT" && r.valueUnknown && (
+            <div className="text-[9px] text-faint f-mono">替代单价未填，价值未知，可边用边补</div>
           )}
         </div>
       </div>

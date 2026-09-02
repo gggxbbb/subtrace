@@ -148,7 +148,9 @@ export default async function DashboardPage({
                   <div className="truncate text-[9px] text-faint f-mono">
                     <span className="text-muted">{u.windowLabel}</span>
                     {u.quantityLabel && ` · ${u.quantityLabel}`}
-                    {` · 付了 ${fmtMoney(u.paid, cur)} · 用回 ${fmtMoney(u.value, cur)}`}
+                    {` · 付了 ${fmtMoney(u.paid, cur)} · 用回 `}
+                    {u.valueUnknown ? <span className="text-faint">价值未知</span> : fmtMoney(u.value, cur)}
+                    {u.valuePartial && <span className="text-faint">（仅计有单价部分）</span>}
                     {u.stale && <span className="font-bold text-destructive"> · 快照陈旧</span>}
                   </div>
                   {(u.countdown || u.wasteNote) && (
@@ -162,6 +164,8 @@ export default async function DashboardPage({
                 </div>
                 {u.costUnknown ? (
                   <span className="shrink-0 text-sm font-bold text-faint f-mono">成本未知</span>
+                ) : u.valueUnknown ? (
+                  <span className="shrink-0 text-sm font-bold text-faint f-mono">价值未知</span>
                 ) : (
                   <span className="flex shrink-0 items-center gap-1.5 text-sm font-bold tabular-nums f-mono">
                     {u.verdictAmount >= 0 ? "+" : "−"}{fmtMoney(Math.abs(u.verdictAmount), cur)}

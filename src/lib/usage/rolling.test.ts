@@ -146,8 +146,87 @@ describe("rollingVerdict COUNT（计数型）", () => {
     expect(v.verdictAmount).toBeCloseTo(-290);
   });
 
-  it("无替代单价：null（与周期 verdict 同语义）", () => {
-    expect(rollingVerdict(base({ segments, records: [rec("2026-08-10", 1)] }))).toBeNull();
+  it("无替代单价：不再为 null，输出 valueUnknown（ticket 04，详细口径见价值未知组）", () => {
+    const v = rollingVerdict(base({ segments, records: [rec("2026-08-10", 1)] }));
+    expect(v).not.toBeNull();
+    if (v?.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(v.valueUnknown).toBe(true);
+  });
+});
+
+describe("rollingVerdict COUNT 价值未知（ticket 04）", () => {
+  // 同 COUNT 组：段 [08-04, 09-04) 净 310（31 天 × 10/天）；窗口交叠 29 天 → 成本 290
+  const segments = [seg("2026-08-04", "2026-09-04", 310)];
+
+  it("窗口内全部记录无单价（订阅替代单价也空）：valueUnknown，次数与成本照常，不再返回 null", () => {
+    const v = rollingVerdict(
+      base({ segments, records: [rec("2026-08-10", 1), rec("2026-08-12", 2)] }),
+    );
+    expect(v).not.toBeNull();
+    if (v?.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(v.valueUnknown).toBe(true);
+    expect(v.valuePartial).toBeFalsy();
+    expect(v.usage).toBe(3);
+    expect(v.value).toBe(0);
+    expect(v.cost).toBeCloseTo(290);
+    expect(v.verdictAmount).toBeCloseTo(-290);
+    expect(v.costPerUse).toBeCloseTo(290 / 3);
+  });
+
+  it("部分记录有单价：按有单价部分估值并标注 valuePartial，净盈亏照常出数", () => {
+    const v = rollingVerdict(
+      base({
+        segments,
+        records: [rec("2026-08-10", 1, { unitPrice: 30 }), rec("2026-08-12", 2)],
+      }),
+    );
+    if (v?.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(v.valueUnknown).toBeFalsy();
+    expect(v.valuePartial).toBe(true);
+    expect(v.usage).toBe(3);
+    expect(v.value).toBe(30);
+    expect(v.verdictAmount).toBeCloseTo(-260);
+  });
+
+  it("订阅无替代单价但记录全带本次单价：正常出数，无价值未知标注", () => {
+    const v = rollingVerdict(
+      base({ segments, records: [rec("2026-08-10", 2, { unitPrice: 30 })] }),
+    );
+    if (v?.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(v.valueUnknown).toBeFalsy();
+    expect(v.valuePartial).toBeFalsy();
+    expect(v.value).toBe(60);
+    expect(v.verdictAmount).toBeCloseTo(-230);
+  });
+
+  it("窗口内无记录（usage=0）且无单价：正常零值，不标 valueUnknown", () => {
+    const v = rollingVerdict(base({ segments }));
+    if (v?.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(v.valueUnknown).toBeFalsy();
+    expect(v.usage).toBe(0);
+    expect(v.value).toBe(0);
+    expect(v.verdictAmount).toBeCloseTo(-290);
+  });
+
+  it("days=0 空窗口（当日启用）：零值判定优先，不标 valueUnknown", () => {
+    const v = rollingVerdict(base({ startDate: TODAY, segments: [seg("2026-09-02", "2026-10-02", 300)] }));
+    if (v?.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(v.windowDays).toBe(0);
+    expect(v.valueUnknown).toBeFalsy();
+    expect(v.verdictAmount).toBe(0);
+  });
+
+  it("受益人切片：本人记录全无单价（他人记录有单价不计入）→ 本人口径 valueUnknown", () => {
+    const v = rollingVerdict(
+      base({
+        segments,
+        records: [rec("2026-08-10", 1, { userId: "me" }), rec("2026-08-12", 1, { userId: "wife", unitPrice: 30 })],
+        forUserId: "me",
+      }),
+    );
+    if (v?.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(v.valueUnknown).toBe(true);
+    expect(v.usage).toBe(1);
   });
 });
 

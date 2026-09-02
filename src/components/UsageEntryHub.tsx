@@ -127,14 +127,16 @@ export function UsageEntryHub({
                       type="number"
                       step="0.01"
                       min="0"
-                      placeholder={r.altUnitPrice != null ? `继承 ${r.altUnitPrice}` : "继承默认"}
+                      placeholder={r.altUnitPrice != null ? `继承 ${r.altUnitPrice}` : "未设单价"}
                       className={`${inputCls} w-24`}
                     />
                   </div>
                   <button className={submitCls}>记录 →</button>
                 </div>
                 <div className="text-[9px] uppercase text-faint f-mono">
-                  日期默认今天，可改过去补记；单价留空继承订阅替代单价
+                  {r.altUnitPrice != null
+                    ? "日期默认今天，可改过去补记；单价留空继承订阅替代单价"
+                    : "日期默认今天，可改过去补记；订阅未设替代单价——先记次数，盈亏显示「价值未知」，单价可后补"}
                 </div>
               </form>
             )}

@@ -19,24 +19,38 @@ type Row = DashboardRow & {
   pnl: number | null;
   /** 覆盖段金额未知：盈亏不可信，灰显 */
   pnlUnknown: boolean;
+  /** COUNT 窗口内全部记录无单价（ticket 04）：盈亏灰显「价值未知」 */
+  pnlValueUnknown: boolean;
+  /** COUNT 窗口内部分记录无单价（ticket 04）：数字仅计有单价部分，title 注明口径 */
+  pnlValuePartial: boolean;
   /** 计数型活跃订阅的快捷录入元组（cap 3）；其余为空 */
   quickTuples: UsageTuple[];
   usageUnit: string | null;
 };
 
-/** 盈亏单元格：盈 income / 亏 destructive / 成本未知灰显注明 / 未跟踪 "—"（表格与卡片共用；四态见 lib/usage/pnl） */
+/** 盈亏单元格：盈 income / 亏 destructive / 未知灰显注明（成本未知或价值未知）/ 未跟踪 "—"（表格与卡片共用；四态见 lib/usage/pnl） */
 function PnlValue({ row, cur }: { row: Row; cur: string }) {
-  const tone = pnlTone(row.pnl === null ? null : { verdictAmount: row.pnl, costUnknown: row.pnlUnknown });
+  const tone = pnlTone(
+    row.pnl === null
+      ? null
+      : { verdictAmount: row.pnl, costUnknown: row.pnlUnknown, valueUnknown: row.pnlValueUnknown },
+  );
   if (tone === "none") return <span className="text-faint">—</span>;
   if (tone === "unknown") {
     return (
-      <span className="text-faint" title="成本未记录，盈亏不可信">
-        未知
+      <span
+        className="text-faint"
+        title={row.pnlValueUnknown && !row.pnlUnknown ? "替代单价未填，价值未知，可边用边补" : "成本未记录，盈亏不可信"}
+      >
+        {row.pnlValueUnknown && !row.pnlUnknown ? "价值未知" : "未知"}
       </span>
     );
   }
   return (
-    <span className={tone === "pos" ? "text-income" : "text-destructive"}>
+    <span
+      className={tone === "pos" ? "text-income" : "text-destructive"}
+      title={row.pnlValuePartial ? "部分记录无单价，仅计有单价部分" : undefined}
+    >
       {tone === "pos" ? "+" : "−"}
       {fmtMoney(Math.abs(row.pnl!), cur)}
     </span>
@@ -228,6 +242,8 @@ export default async function SubscriptionsPage({
       ...r,
       pnl: u?.rolling?.verdictAmount ?? null,
       pnlUnknown: u?.rolling?.costUnknown ?? false,
+      pnlValueUnknown: (u?.rolling?.kind === "COUNT" && u.rolling.valueUnknown) ?? false,
+      pnlValuePartial: (u?.rolling?.kind === "COUNT" && u.rolling.valuePartial) ?? false,
       quickTuples:
         u && u.sub.usageKind === "COUNT" && r.status === "ACTIVE"
           // 快捷元组按人切片（ADR-0003）：只从我的历史记录提取，与详情页口径一致

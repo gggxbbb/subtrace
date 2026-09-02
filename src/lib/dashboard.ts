@@ -66,6 +66,10 @@ export interface UsageBoardRow {
   verdictAmount: number;
   /** 覆盖段金额未知（ticket 12）：盈亏不可信，UI 灰显 */
   costUnknown?: boolean;
+  /** COUNT 窗口内全部记录无单价（ticket 04）：净盈亏不出数，灰显「价值未知」，次数与成本照常 */
+  valueUnknown?: boolean;
+  /** COUNT 窗口内部分记录无单价（ticket 04）：价值仅按有单价部分估值，UI 标注口径 */
+  valuePartial?: boolean;
   /** 快照陈旧 ≥30 天（STACKED，story 12）：大盘原位变色提示 */
   stale?: boolean;
   /** 倒计时 chip（周期事实降级为附属信号）：RESET「距重置 N 天 · 本周期已用 P%」；
@@ -241,6 +245,8 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
         value: r.kind === "SAVINGS" ? r.saved : r.value,
         verdictAmount: r.verdictAmount,
         costUnknown: r.costUnknown,
+        ...(r.kind === "COUNT" && r.valueUnknown ? { valueUnknown: true } : {}),
+        ...(r.kind === "COUNT" && r.valuePartial ? { valuePartial: true } : {}),
         countdown,
         wasteNote,
         ...(v?.kind === "PACK" && v.staleDays != null && v.staleDays >= 30 ? { stale: true } : {}),

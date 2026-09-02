@@ -55,6 +55,8 @@ function toVerdictData(v: UsageVerdict | null): VerdictData | null {
       verdictAmount: v.verdictAmount,
       costPerUse: v.costPerUse,
       costUnknown: v.costUnknown,
+      valueUnknown: v.valueUnknown,
+      valuePartial: v.valuePartial,
     };
   }
   if (v.kind === "SAVINGS") {
@@ -126,7 +128,7 @@ function toRollingData(r: RollingVerdict | null): RollingVerdictData | null {
     verdictAmount: r.verdictAmount,
   };
   if (r.kind === "COUNT") {
-    return { ...windowBase, kind: "COUNT", usage: r.usage, value: r.value, costPerUse: r.costPerUse };
+    return { ...windowBase, kind: "COUNT", usage: r.usage, value: r.value, costPerUse: r.costPerUse, valueUnknown: r.valueUnknown, valuePartial: r.valuePartial };
   }
   if (r.kind === "SAVINGS") {
     return { ...windowBase, kind: "SAVINGS", saved: r.saved };

@@ -1633,3 +1633,83 @@ describe("滑动窗判定（getRollingVerdict，ADR-0014）", () => {
     expect(getRollingVerdict(fresh, await listUsage(sub.id), d("2026-09-15"))).toBeNull();
   });
 });
+
+describe("计数型价值未知（usage-shell ticket 04）", () => {
+  it("守卫放宽：订阅与记录均无单价时 COUNT 记录可落库", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次" });
+    const rec = await addUsage(ownerId, sub.id, ownerId, { date: d("2026-07-05"), quantity: 2 });
+    expect(rec.unitPrice).toBeNull();
+    const fresh = await getSubscription(ownerId, sub.id);
+    expect(fresh!.altUnitPrice).toBeNull();
+    expect(await listUsage(sub.id)).toHaveLength(1);
+  });
+
+  it("周期 verdict：窗口内全部记录无单价 → valueUnknown，次数与成本照常、不再返回 null", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次" });
+    for (let i = 1; i <= 3; i++) {
+      await addUsage(ownerId, sub.id, ownerId, { date: d(`2026-07-0${i}`), quantity: 1 });
+    }
+    const fresh = (await getSubscription(ownerId, sub.id))!;
+    const v = getUsageVerdict(fresh, await listUsage(sub.id), d("2026-07-18"));
+    expect(v).not.toBeNull();
+    if (v!.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(v!.valueUnknown).toBe(true);
+    expect(v!.usage).toBe(3);
+    expect(v!.value).toBe(0);
+    expect(v!.cost).toBe(217);
+    expect(v!.verdictAmount).toBeCloseTo(-217);
+  });
+
+  it("滑动窗 verdict：全无单价 → valueUnknown；部分有单价 → 按有单价部分估值并标注 valuePartial", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次" });
+    await addUsage(ownerId, sub.id, ownerId, { date: d("2026-07-05"), quantity: 1 });
+    await addUsage(ownerId, sub.id, ownerId, { date: d("2026-07-06"), quantity: 2 });
+    let fresh = (await getSubscription(ownerId, sub.id))!;
+    // today = 2026-07-18 → 窗口 [07-01, 07-18) 17 天 × 7 = 119
+    const r = getRollingVerdict(fresh, await listUsage(sub.id), d("2026-07-18"));
+    expect(r).not.toBeNull();
+    if (r!.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(r!.valueUnknown).toBe(true);
+    expect(r!.usage).toBe(3);
+    expect(r!.cost).toBeCloseTo(119);
+
+    // 后补一笔记录单价：转为部分估值口径
+    const recs = await listUsage(sub.id);
+    await updateUsage(ownerId, recs[0].id, { unitPrice: 30 });
+    fresh = (await getSubscription(ownerId, sub.id))!;
+    const r2 = getRollingVerdict(fresh, await listUsage(sub.id), d("2026-07-18"));
+    if (r2!.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(r2!.valueUnknown).toBeFalsy();
+    expect(r2!.valuePartial).toBe(true);
+    expect(r2!.value).toBe(30);
+    expect(r2!.usage).toBe(3);
+    expect(r2!.verdictAmount).toBeCloseTo(30 - 119);
+  });
+
+  it("后补订阅替代单价：verdict 转正常（价值未知消失，净盈亏正常出数）", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次" });
+    for (let i = 1; i <= 9; i++) {
+      await addUsage(ownerId, sub.id, ownerId, { date: d(`2026-07-0${i}`), quantity: 1 });
+    }
+    let fresh = (await getSubscription(ownerId, sub.id))!;
+    const before = getUsageVerdict(fresh, await listUsage(sub.id), d("2026-07-18"));
+    if (before!.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(before!.valueUnknown).toBe(true);
+
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次", altUnitPrice: 30 });
+    fresh = (await getSubscription(ownerId, sub.id))!;
+    const after = getUsageVerdict(fresh, await listUsage(sub.id), d("2026-07-18"));
+    if (after!.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(after!.valueUnknown).toBeFalsy();
+    expect(after!.valuePartial).toBeFalsy();
+    expect(after!.value).toBe(270);
+    expect(after!.verdictAmount).toBeCloseTo(53);
+    const afterRolling = getRollingVerdict(fresh, await listUsage(sub.id), d("2026-07-18"));
+    if (afterRolling!.kind !== "COUNT") throw new Error("expect COUNT");
+    expect(afterRolling!.valueUnknown).toBeFalsy();
+  });
+});

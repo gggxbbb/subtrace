@@ -448,7 +448,7 @@ export function UsageWizard({
                     : []),
                   ...(kind !== "SAVINGS" ? [["单位", unit || "（未填）"]] : []),
                   ...(kind === "COUNT"
-                    ? [["替代单价", altUnitPrice ? `${fmtMoney(Number(altUnitPrice), currency)} / ${unit || "次"}` : "（未填）"]]
+                    ? [["替代单价", altUnitPrice ? `${fmtMoney(Number(altUnitPrice), currency)} / ${unit || "次"}` : "（未填 · 盈亏显示「价值未知」，可边用边补）"]]
                     : kind === "QUOTA" && stackedManual
                       ? [["额度包", "详情页手动录入"]]
                       : kind === "QUOTA" && grantMode === "STACKED"

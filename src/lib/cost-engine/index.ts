@@ -264,23 +264,40 @@ export function usageInPeriod(records: UsageEntry[], start: Date, end: Date): nu
   return inRange.reduce((s, r) => s + r.quantity, 0);
 }
 
+
 /**
- * 区间 [start, end) 内的用量价值 = Σ 用量 × 单价。
- * 单价跟记录走：记录上的本次单价优先，空则回退默认替代单价（ADR 货币快照哲学：记录即事实）。
+ * 区间 [start, end) 内用量价值的可缺价口径（usage-shell ticket 04）：与 usageValue 同语义，
+ * 但默认替代单价可为 null——记录本次单价空且默认空时该记录不计价，回报 pricedQty / unpricedQty
+ * 供调用方判定「全部无单价 → 价值未知」「部分无单价 → 按有单价部分估值」。
  */
-export function usageValue(
+export function usageValuePriced(
   records: (UsageEntry & { unitPrice?: number })[],
   start: Date,
   end: Date,
-  defaultUnitPrice: number,
-): number {
+  defaultUnitPrice: number | null,
+): { value: number; pricedQty: number; unpricedQty: number } {
   const inRange = records.filter(
     (r) => dayDiff(start, r.date) >= 0 && dayDiff(r.date, end) > 0,
   );
+  const priceOf = (r: { unitPrice?: number }) => r.unitPrice ?? defaultUnitPrice;
   const snapshots = inRange.filter((r) => r.kind === "TOTAL");
+  const priced: { quantity: number; price: number }[] = [];
+  let unpricedQty = 0;
   if (snapshots.length > 0) {
     const latest = snapshots.reduce((l, r) => (r.date > l.date ? r : l));
-    return latest.quantity * (latest.unitPrice ?? defaultUnitPrice);
+    const p = priceOf(latest);
+    if (p == null) unpricedQty = latest.quantity;
+    else priced.push({ quantity: latest.quantity, price: p });
+  } else {
+    for (const r of inRange) {
+      const p = priceOf(r);
+      if (p == null) unpricedQty += r.quantity;
+      else priced.push({ quantity: r.quantity, price: p });
+    }
   }
-  return inRange.reduce((s, r) => s + r.quantity * (r.unitPrice ?? defaultUnitPrice), 0);
+  return {
+    value: priced.reduce((s, r) => s + r.quantity * r.price, 0),
+    pricedQty: priced.reduce((s, r) => s + r.quantity, 0),
+    unpricedQty,
+  };
 }
