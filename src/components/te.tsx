@@ -129,14 +129,19 @@ export function Panel({
         </span>
         <div className="shrink-0">
           {actions ??
-            (action && (
-            <a
-              href={href}
-              className="flex shrink-0 items-center gap-1 text-[10px] uppercase tracking-wider text-muted f-mono hover:text-ink"
-            >
-              {action} <ArrowRight className="h-3 w-3" />
-            </a>
-          ))}
+            (action &&
+              (href ? (
+                <a
+                  href={href}
+                  className="flex shrink-0 items-center gap-1 text-[10px] uppercase tracking-wider text-muted f-mono hover:text-ink"
+                >
+                  {action} <ArrowRight className="h-3 w-3" />
+                </a>
+              ) : (
+                <span className="flex shrink-0 items-center gap-1 text-[10px] uppercase tracking-wider text-faint f-mono">
+                  {action}
+                </span>
+              )))}
         </div>
       </header>
       <div className="flex-1">{children}</div>

@@ -32,8 +32,10 @@ export interface ReportItem {
   id: string;
   name: string;
   category: string;
-  cost: number;
-  share: number; // 0–1（占摊销总额）
+ cost: number;
+ share: number; // 0–1（占摊销总额）
+ /** 区间日均 = cost / 区间天数（装配层统一出口，页面明细表与 CSV 同口径） */
+ daily: number;
 }
 
 /** 双口径趋势桶：逐日/逐周桶 label = 桶起日 YYYY-MM-DD；逐月桶 label = YYYY-MM */
@@ -238,7 +240,7 @@ export async function getReportData(
     .sort((a, b) => b.cost - a.cost);
 
   const items = period.byItem
-    .map((it) => ({ ...it, share: totalAmortized > 0 ? it.cost / totalAmortized : 0 }))
+    .map((it) => ({ ...it, share: totalAmortized > 0 ? it.cost / totalAmortized : 0, daily: it.cost / numDays }))
     .sort((a, b) => b.cost - a.cost);
 
   // 订阅/物品拆分（byItem 已按视角份额切片，两列之和 = 总额）
