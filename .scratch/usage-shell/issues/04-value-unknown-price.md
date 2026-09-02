@@ -6,7 +6,7 @@ Type: task
 
 **Blocked by:** 01, 02
 
-**Status:** ready-for-agent（二期，01/02 resolved 后开工）
+**Status:** resolved（review 后补：usageValue cutover、列表 valuePartial 标注）
 
 - [ ] COUNT 无单价记录可落库，守卫放宽有测试
 - [ ] rollingVerdict / streamVerdict 输出 valueUnknown，净盈亏不出数
