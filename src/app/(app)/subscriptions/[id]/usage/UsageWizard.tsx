@@ -69,14 +69,25 @@ export function UsageWizard({
   );
   const [usageCycleCount, setUsageCycleCount] = useState(initialUsageCycleCount?.toString() ?? "1");
   const [usageCycleAnchor, setUsageCycleAnchor] = useState(initialUsageCycleAnchor ?? "");
+  // 决策树首问选中某口径时的预填单位；SAVINGS 无单位概念
+  const PRESET_UNIT: Record<Kind, string | null> = { COUNT: "次", QUOTA: "GB", SAVINGS: null };
+  const chooseKind = (k: Kind) => {
+    setKind(k);
+    const preset = PRESET_UNIT[k];
+    // 用户未自填（为空或仍是上一口径的预填值）时回填；手改过的单位不覆盖
+    if (preset != null && (unit === "" || Object.values(PRESET_UNIT).includes(unit))) setUnit(preset);
+  };
 
-  // 额度型多一步发放形态选择（周期重置 / 包叠加）
-  const steps = kind === "QUOTA" ? ["概念", "类型", "形态", "字段", "确认"] : ["概念", "类型", "字段", "确认"];
+  // 编辑已有配置（initialKind 存在）跳过决策树（概念/类型/形态），直接进参数步；
+  // 新开通走完整决策树，额度型多一步发放形态追问（每期重置 / 逐期累积）
+  const steps = initialKind
+    ? ["字段", "确认"]
+    : kind === "QUOTA"
+      ? ["概念", "类型", "形态", "字段", "确认"]
+      : ["概念", "类型", "字段", "确认"];
   const cur = steps[Math.min(step, steps.length - 1)];
   const stackedCycle = kind === "QUOTA" && grantMode === "STACKED" && trackingMode === "CYCLE";
   const stackedManual = kind === "QUOTA" && grantMode === "STACKED" && trackingMode !== "CYCLE";
-  // 形态切换警告（与类型切换同款：警告不禁止）
-  const modeSwitched = initialKind === "QUOTA" && recordCount > 0 && grantMode !== (initialGrantMode ?? "RESET");
 
   if (!acknowledged) {
     return (
@@ -174,46 +185,9 @@ export function UsageWizard({
           <div className="space-y-4">
             <h2 className="text-sm font-bold">用量跟踪回答一个问题：这钱花得值不值？</h2>
             <p className="text-[12px] leading-relaxed text-muted-strong">
-              订阅的成本系统已经在算了（实付金额按服务天数摊销）。用量跟踪在此基础上记录你<strong>实际用了多少</strong>，
-              两相对比得出盈亏。按订阅的性质，有三种追踪方式：
+              订阅的成本系统已经在算了（实付金额按服务天数摊销）；用量跟踪再记录你<strong>实际用了多少</strong>，
+              两相对比得出盈亏。下一步先用几个问题弄清这个订阅怎么给你价值，再按口径填参数。
             </p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="border border-ink p-3">
-                <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase f-mono">
-                  <Led color="var(--accent)" /> 计数型
-                </div>
-                <p className="text-[11px] leading-relaxed text-muted-strong">
-                  适合<strong>按次消费、单次有明确市场价</strong>的订阅：健身房（单次卡 ¥30）、按摩、洗车、私教课。
-                </p>
-                <p className="mt-1.5 text-[11px] leading-relaxed text-muted-strong">
-                  每用一次记一笔，系统拿「次数 × 市场价」对比已摊成本，回答<strong>“再去几次回本”</strong>。
-                </p>
-              </div>
-              <div className="border border-ink p-3">
-                <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase f-mono">
-                  <Led color="#0ea5e9" /> 额度型
-                </div>
-                <p className="text-[11px] leading-relaxed text-muted-strong">
-                  适合<strong>每月给固定额度</strong>的订阅：流量机场（1000GB）、iCloud（2TB）、API 点数包。
-                </p>
-                <p className="mt-1.5 text-[11px] leading-relaxed text-muted-strong">
-                  不定期同步一下“已用多少”，系统只看<strong>使用率</strong>：有没有用到 100%、什么时候用满；
-                  没用完的部分按比例折算成浪费的钱。
-                </p>
-              </div>
-              <div className="border border-ink p-3">
-                <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase f-mono">
-                  <Led color="#22c55e" /> 省钱型
-                </div>
-                <p className="text-[11px] leading-relaxed text-muted-strong">
-                  适合<strong>提供消费折扣</strong>的会员：京东 Plus、88VIP、盒马 X——平台会直接告诉你“当期已省”。
-                </p>
-                <p className="mt-1.5 text-[11px] leading-relaxed text-muted-strong">
-                  记下的就是<strong>省下的金额</strong>本身（逐笔记或照抄平台累计值），
-                  系统拿「Σ已省 − 已摊成本」回答<strong>“回本没有”</strong>。
-                </p>
-              </div>
-            </div>
             <p className="text-[11px] text-faint">
               不启用也可以——用量跟踪是可选项，纯看成本的订阅不用开。
             </p>
@@ -222,29 +196,30 @@ export function UsageWizard({
 
         {cur === "类型" && (
           <div className="space-y-4">
-            <h2 className="text-sm font-bold">这个订阅属于哪一种？</h2>
+            <h2 className="text-sm font-bold">这个订阅怎么给你价值？</h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {(
                 [
-                  ["COUNT", "计数型", "按次使用，单次有市场价", "健身房 · 按摩 · 洗车 · 私教课", "var(--accent)"],
-                  ["QUOTA", "额度型", "每月固定额度，看使用率", "流量机场 · iCloud · API 点数", "#0ea5e9"],
-                  ["SAVINGS", "省钱型", "消费折扣，记省下的金额", "京东 Plus · 88VIP · 盒马 X", "#22c55e"],
+                  ["COUNT", "按次使用", "每用一次值一次的钱，系统算“再去几次回本”", "健身房 · 按摩 · 洗车", "计数型", "var(--accent)"],
+                  ["QUOTA", "每月给定量", "每期发一份固定额度，系统看使用率与浪费", "流量机场 · iCloud · API 点数", "额度型", "#0ea5e9"],
+                  ["SAVINGS", "消费折扣", "会员帮你省钱，记下的就是省下的金额", "京东 Plus · 88VIP · 盒马 X", "省钱型", "#22c55e"],
                 ] as const
-              ).map(([k, title, desc, examples, color]) => (
+              ).map(([k, title, desc, examples, term, color]) => (
                 <button
                   key={k}
                   type="button"
-                  onClick={() => setKind(k)}
+                  onClick={() => chooseKind(k)}
                   className={`border p-4 text-left transition-colors ${
                     kind === k ? "border-ink bg-base" : "border-line-strong bg-surface hover:border-ink"
                   }`}
                 >
-                  <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase f-mono">
+                  <div className="mb-1 flex items-center gap-1.5 text-[12px] font-bold">
                     <Led color={color} /> {title}
                     {kind === k && <span className="ml-auto">✓</span>}
                   </div>
                   <div className="text-[11px] text-muted-strong">{desc}</div>
                   <div className="mt-1 text-[10px] text-faint f-mono">{examples}</div>
+                  <div className="mt-1 text-[9px] uppercase tracking-wider text-faint f-mono">{term}</div>
                 </button>
               ))}
             </div>
@@ -257,10 +232,10 @@ export function UsageWizard({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {(
                 [
-                  ["RESET", "周期重置", "每个服务区间一份额度，区间末未用即浪费", "流量机场 · iCloud · 月度配额", "#0ea5e9"],
-                  ["STACKED", "包叠加", "每期下发一个包，多包共存各自到期，停订全焚；只录剩余总量，系统 FEFO 推演浪费", "像素蛋糕 · API 点数包", "var(--accent)"],
+                  ["RESET", "每期重置", "到期没用完就清零，下期重新发一份", "流量机场 · iCloud · 月度配额", "周期重置", "#0ea5e9"],
+                  ["STACKED", "逐期累积", "多包共存、各自到期，停订全焚；只录剩余总量，系统 FEFO 推演浪费", "像素蛋糕 · API 点数包", "包叠加", "var(--accent)"],
                 ] as const
-              ).map(([m, title, desc, examples, color]) => (
+              ).map(([m, title, desc, examples, term, color]) => (
                 <button
                   key={m}
                   type="button"
@@ -269,20 +244,16 @@ export function UsageWizard({
                     grantMode === m ? "border-ink bg-base" : "border-line-strong bg-surface hover:border-ink"
                   }`}
                 >
-                  <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase f-mono">
+                  <div className="mb-1 flex items-center gap-1.5 text-[12px] font-bold">
                     <Led color={color} /> {title}
                     {grantMode === m && <span className="ml-auto">✓</span>}
                   </div>
                   <div className="text-[11px] text-muted-strong">{desc}</div>
                   <div className="mt-1 text-[10px] text-faint f-mono">{examples}</div>
+                  <div className="mt-1 text-[9px] uppercase tracking-wider text-faint f-mono">{term}</div>
                 </button>
               ))}
             </div>
-            {modeSwitched && (
-              <div className="border border-ink bg-surface p-3 text-[11px] leading-relaxed text-muted-strong">
-                <strong>注意：</strong>切换发放形态不影响已有记录：每条快照自带语义（已用/剩余），按录入时口径解读。
-              </div>
-            )}
           </div>
         )}
 
@@ -307,7 +278,8 @@ export function UsageWizard({
                     className={inputCls}
                   />
                   <p className="mt-1 text-[10px] leading-relaxed text-faint">
-                    展示用，比如“9 次”“800 GB”。
+                    展示用，比如“9 次”“800 GB”。默认按上一步所选口径预填（{kind === "COUNT" ? "次" : "GB"}）；
+                    不填不影响盈亏计算，仅展示处缺少单位。
                   </p>
                 </div>
                 {kind === "COUNT" ? (
@@ -325,6 +297,7 @@ export function UsageWizard({
                     <p className="mt-1 text-[10px] leading-relaxed text-faint">
                       不买这个订阅、按次单买要花多少钱一次（如健身房单次卡 ¥30）。
                       盈亏 = 次数 × 这个价 − 已摊成本。每次录入时还能临时改“本次单价”（涨价、不同项目）。
+                      不填则只记次数、算不出盈亏（价值未知），单价可以边用边补。
                     </p>
                   </div>
                 ) : stackedManual ? (
@@ -346,7 +319,7 @@ export function UsageWizard({
                         className={inputCls}
                       />
                       <p className="mt-1 text-[10px] leading-relaxed text-faint">
-                        每个周期下发一个包的数量（如像素蛋糕每月 30 张）。
+                        每个周期下发一个包的数量（如像素蛋糕每月 30 张）。必填——不填无法生成发放计划，向导不放行。
                       </p>
                     </div>
                     <div>
@@ -361,7 +334,8 @@ export function UsageWizard({
                         className={inputCls}
                       />
                       <p className="mt-1 text-[10px] leading-relaxed text-faint">
-                        每个包从下发日起几个月有效（如 12 = 一年）。到期日排他，当天起不可用。
+                        每个包从下发日起几个月有效（默认 12 = 一年）。到期日排他，当天起不可用。
+                        必填——不填无法推每个包的到期日，向导不放行。
                       </p>
                     </div>
                   </>
@@ -378,7 +352,8 @@ export function UsageWizard({
                       className={inputCls}
                     />
                     <p className="mt-1 text-[10px] leading-relaxed text-faint">
-                      套餐每月给的总量（如 1000 GB）。录入时每次还能改（运营商偷偷加量减量都接得住）。
+                      套餐每月给的总量（如 1000 GB）。必填——不填算不出使用率，向导不放行；
+                      录入时每次还能改（运营商偷偷加量减量都接得住）。
                     </p>
                   </div>
                 )}
@@ -400,7 +375,7 @@ export function UsageWizard({
                         <option value="CUSTOM">独立周期</option>
                       </select>
                       <p className="mt-1 text-[10px] leading-relaxed text-faint">
-                        额度默认随订阅计费周期重置；若套餐按独立周期重置（如季度包、年包），选「独立周期」。
+                        默认「跟随计费周期」：额度随订阅计费周期重置；若套餐按独立周期重置（如季度包、年包），选「独立周期」。
                       </p>
                     </div>
                   </div>
