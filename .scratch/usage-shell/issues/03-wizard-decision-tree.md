@@ -6,7 +6,7 @@ Type: task
 
 **Blocked by:** 无
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] 决策树首问三选映射口径并预填，示例语料沿用现有文案
 - [ ] 额度形态追问映射 RESET / STACKED

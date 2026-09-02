@@ -6,7 +6,7 @@ Type: task
 
 **Blocked by:** 无
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] 录入台列出全部口径的活跃跟踪订阅，按日均成本降序
 - [ ] COUNT：tuple 一键 + 自定义展开（数量/单价/日期）
