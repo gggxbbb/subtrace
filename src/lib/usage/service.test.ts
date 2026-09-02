@@ -2,7 +2,7 @@
 
 import { beforeEach, describe, expect, it } from "vitest";
 import { prisma } from "../db";
-import { isoDay } from "../dates";
+import { isoDay, today } from "../dates";
 import { addBeneficiary } from "../beneficiaries/service";
 import { createSubscription, getSubscription, recordPayment } from "../subscriptions/service";
 import {
@@ -1495,5 +1495,65 @@ describe("录入守卫（ticket 03）", () => {
     await setUsageConfig(ownerId, savingsSub.id, { usageKind: "SAVINGS", usageUnit: "" });
     const srec = await addSavings(ownerId, savingsSub.id, ownerId, { date: d("2026-07-05"), amount: 6 });
     await expect(updateUsage(ownerId, srec.id, { quotaTotal: 1 })).rejects.toThrow(/quota_total_not_allowed/);
+  });
+});
+
+describe("带日期写路径（usage-shell ticket 01：录入台补记）", () => {
+  it("计数型：过去日期补记落库，日期原样保留", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次", altUnitPrice: 30 });
+    const rec = await addUsage(ownerId, sub.id, ownerId, {
+      date: d("2026-07-20"),
+      quantity: 2,
+      unitPrice: 25,
+    });
+    expect(isoDay(rec.date)).toBe("2026-07-20");
+    const rows = await listUsage(sub.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].kind).toBe("DELTA");
+    expect(rows[0].quantity).toBe(2);
+    expect(rows[0].unitPrice).toBe(25);
+  });
+
+  it("额度型：过去日期补记快照落库（RESET 已用 / 剩余两姿势）", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, {
+      usageKind: "QUOTA",
+      usageUnit: "GB",
+      altUnitPrice: 0.12,
+      quotaTotal: 1000,
+    });
+    const used = await addQuotaSnapshot(ownerId, sub.id, ownerId, {
+      date: d("2026-07-20"),
+      used: 300,
+    });
+    expect(isoDay(used.date)).toBe("2026-07-20");
+    expect(used.semantic).toBe("USED");
+    const remaining = await addQuotaSnapshot(ownerId, sub.id, ownerId, {
+      date: d("2026-07-21"),
+      remaining: 650,
+    });
+    expect(isoDay(remaining.date)).toBe("2026-07-21");
+    expect(remaining.semantic).toBe("REMAINING");
+    expect(await listUsage(sub.id)).toHaveLength(2);
+  });
+
+  it("省钱型：过去日期补记落库（累计求差按补记日所在区间取基准）", async () => {
+    const sub = await jd();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "SAVINGS", usageUnit: "" });
+    await addSavings(ownerId, sub.id, ownerId, { date: d("2026-07-10"), amount: 6 });
+    const rec = await addSavings(ownerId, sub.id, ownerId, {
+      date: d("2026-07-12"),
+      cumulative: 20,
+    });
+    expect(isoDay(rec.date)).toBe("2026-07-12");
+    expect(rec.quantity).toBe(14); // 20 − 本区间已记 6
+  });
+
+  it("北京墙钟今日允许（边界非未来）", async () => {
+    const sub = await gym();
+    await setUsageConfig(ownerId, sub.id, { usageKind: "COUNT", usageUnit: "次", altUnitPrice: 30 });
+    const rec = await addUsage(ownerId, sub.id, ownerId, { date: today(), quantity: 1 });
+    expect(isoDay(rec.date)).toBe(isoDay(today()));
   });
 });

@@ -9,7 +9,7 @@ import { costOverPeriod, costView, paidInPeriod } from "./subscriptions/cost-vie
 import { DAY_MS, dayStart, fromWall, wallParts, isoDay } from "./dates";
 import { listPurchases, toEnginePurchase } from "./purchases/service";
 import { getUsageVerdict, listPacks, listUsage, reconcileAutoPacks, type UsageVerdict } from "./usage/service";
-import { pendingQuickLog } from "./usage/pending";
+import { loggedToday } from "./usage/pending";
 import type { UsageRecord } from "@/generated/prisma/client";
 import { usageTuples, type UsageTuple } from "./usage/tuples";
 
@@ -61,12 +61,26 @@ export interface UsageBoardRow {
   costUnknown?: boolean;
 }
 
-/** 「今日可记」行（ui-wave-a ticket 02）：今日尚无 DELTA 记录的计数型活跃订阅 + ≤3 快捷元组 */
-export interface PendingQuickLogRow {
+/** 「记用量」录入台行（usage-shell ticket 01）：全部口径的活跃跟踪订阅平铺，日均成本降序。
+ *  COUNT 带 tuple 快捷元组（cap 3）与「已记」标记；QUOTA 带形态（STACKED 只收剩余）；数据与
+ *  红黑榜/详情页同一 usageById 装配，录入后全站数字一致。 */
+export interface EntryHubRow {
   id: string;
   name: string;
+  usageKind: string;
+  /** 额度发放形态：STACKED 只收剩余快照 */
+  grantMode: string | null;
   usageUnit: string | null;
+  /** 日均成本（我的份额口径）：仅排序用 */
+  dailyCost: number;
+  /** COUNT 快捷元组（我的历史，cap 3）；其他口径为空 */
   tuples: UsageTuple[];
+  /** COUNT：今日（北京墙钟）本人已有 DELTA 记录 */
+  loggedToday: boolean;
+  /** COUNT 自定义展开的单价占位（订阅替代单价） */
+  altUnitPrice: number | null;
+  /** QUOTA 展开的总额度占位（订阅默认） */
+  quotaTotal: number | null;
 }
 /** 用量装配结果（ui-wave-a ticket 03）：红黑榜 / 今日可记 / 订阅列表盈亏与快捷元组共用同一来源，
  *  保证全站同一数字不出两个版本。verdict 为 null = 当前无覆盖区间。 */
@@ -89,7 +103,7 @@ export interface DashboardData {
   upcoming: UpcomingItem[];
   purchases: PurchaseRow[];
   usageBoard: UsageBoardRow[];
-  pendingQuickLogs: PendingQuickLogRow[];
+  entryRows: EntryHubRow[];
   usageById: DashboardUsageMap;
   itemDailyCost: number;
   trend: number[];
@@ -160,7 +174,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
         s.quotaPacks = await listPacks(s.id);
       }),
   );
-  // 用量装配一次完成、三处复用（红黑榜 verdict + 今日可记元组 + 订阅列表盈亏/快捷录入），避免 N+1 与重复流水线
+  // 用量装配一次完成、三处复用（红黑榜 verdict + 录入台元组与已记判定 + 订阅列表盈亏/快捷录入），避免 N+1 与重复流水线
   const usageSubs = subs.filter((s) => s.usageKind);
   const usageById: DashboardUsageMap = new Map(
     await Promise.all(
@@ -193,29 +207,27 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     .filter((r) => r !== null)
     .sort((a, b) => b.verdictAmount - a.verdictAmount);
 
-  // 今日可记窄条：今日（北京墙钟）当前用户尚无 DELTA 记录的计数型活跃订阅，日均降序 cap 5
-  const pendingQuickLogs: PendingQuickLogRow[] = pendingQuickLog(
-    subs.map((s) => ({
-      id: s.id,
-      name: s.name,
-      usageUnit: s.usageUnit,
-      usageKind: s.usageKind,
-      status: s.status,
-      dailyCost: views.get(s.id)!.myDailyRate,
-    })),
-    new Map([...usageById].map(([id, u]) => [id, u.records])),
-    isoDay(today),
-    userId,
-  ).map((s) => ({
-    id: s.id,
-    name: s.name,
-    usageUnit: s.usageUnit,
-    // 快捷元组按人切片（ADR-0003）：只从我的历史记录提取，与详情页口径一致
-    tuples: usageTuples(
-      (usageById.get(s.id)?.records ?? []).filter((r) => r.userId === userId),
-      3,
-    ),
-  }));
+  // 「记用量」录入台：全部口径的活跃跟踪订阅平铺，日均成本降序（取代 COUNT-only「今日可记」窄条）。
+  // 「已记」判定沿用窄条的按人切片逻辑（今日 + 本人 + DELTA）；快捷元组同样只从我的历史提取（ADR-0003）。
+  const entryRows: EntryHubRow[] = usageSubs
+    .filter((s) => s.status === "ACTIVE")
+    .map((s): EntryHubRow => {
+      const records = usageById.get(s.id)?.records ?? [];
+      const mine = records.filter((r) => r.userId === userId);
+      return {
+        id: s.id,
+        name: s.name,
+        usageKind: s.usageKind!,
+        grantMode: s.grantMode,
+        usageUnit: s.usageUnit,
+        dailyCost: views.get(s.id)!.myDailyRate,
+        tuples: s.usageKind === "COUNT" ? usageTuples(mine, 3) : [],
+        loggedToday: s.usageKind === "COUNT" ? loggedToday(records, isoDay(today), userId) : false,
+        altUnitPrice: s.altUnitPrice,
+        quotaTotal: s.quotaTotal,
+      };
+    })
+    .sort((a, b) => b.dailyCost - a.dailyCost);
 
   const upcoming: UpcomingItem[] = subs
     .filter((s) => s.status === "ACTIVE")
@@ -268,7 +280,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     upcoming,
     purchases,
     usageBoard,
-    pendingQuickLogs,
+    entryRows,
     itemDailyCost,
     trend,
   };

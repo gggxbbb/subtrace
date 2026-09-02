@@ -2,7 +2,7 @@ import { AlertTriangle, Plus } from "lucide-react";
 import Link from "next/link";
 import { ErrorBanner, Kpi, Led, LedMatrix, ORANGE, Panel } from "@/components/te";
 import { LedTrendChart } from "@/components/LedTrendChart";
-import { QuickLogButtons } from "@/components/QuickLogButtons";
+import { UsageEntryHub } from "@/components/UsageEntryHub";
 import { isoDay } from "@/lib/dates";
 import { fmtMoney } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -19,9 +19,7 @@ export default async function DashboardPage({
   const cur = user.baseCurrency;
   const d = await getDashboardData(user.id);
   const avg = d.trend.reduce((s, v) => s + v, 0) / d.trend.length;
-  // 面板编号随「今日可记」显隐连续（空态不渲染时后续编号前移，不断档）
-  const hasPending = d.pendingQuickLogs.length > 0;
-  const pn = (n: number) => String(hasPending ? n : n - 1).padStart(2, "0");
+  // 录入台常驻（usage-shell ticket 01）：面板编号固定，不再随窄条显隐前移
 
   return (
     <>
@@ -77,27 +75,11 @@ export default async function DashboardPage({
           <Kpi index="A4" label="30 天日均" value={fmtMoney(avg, cur)} sub="近 30 天摊销均值" />
         </div>
 
-        {d.pendingQuickLogs.length > 0 && (
-          <Panel index="02" title="今日可记">
-            {d.pendingQuickLogs.map((s) => (
-              <div
-                key={s.id}
-                className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2 last:border-0"
-              >
-                <Link
-                  href={`/subscriptions/${s.id}`}
-                  className="min-w-0 truncate text-[13px] font-medium hover:underline"
-                  title={s.name}
-                >
-                  {s.name}
-                </Link>
-                <QuickLogButtons subscriptionId={s.id} tuples={s.tuples} unit={s.usageUnit} back="/dashboard" />
-              </div>
-            ))}
-          </Panel>
-        )}
+        <Panel index="02" title="记用量">
+          <UsageEntryHub rows={d.entryRows} todayIso={isoDay(new Date())} />
+        </Panel>
 
-        <Panel index={pn(3)} title="每日支出 / 30D">
+        <Panel index="03" title="每日支出 / 30D">
           <div>
             <LedTrendChart data={d.trend} />
             <div className="mx-4 mb-3 mt-3 flex justify-between border-t border-dashed border-line-strong py-1.5 text-[9px] uppercase text-faint f-mono">
@@ -109,7 +91,7 @@ export default async function DashboardPage({
         </Panel>
 
         <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
-          <Panel index={pn(4)} title="即将到期" action="全部" href="/subscriptions">            {d.upcoming.length === 0 && (
+          <Panel index="04" title="即将到期" action="全部" href="/subscriptions">            {d.upcoming.length === 0 && (
               <div className="px-4 py-6 text-center text-[11px] uppercase text-faint f-mono">
                 未来 30 天没有到期订阅
               </div>
@@ -153,7 +135,7 @@ export default async function DashboardPage({
             ))}
           </Panel>
 
-          <Panel index={pn(5)} title="用量盈亏红黑榜" action="本区间">
+          <Panel index="05" title="用量盈亏红黑榜" action="本区间">
             {d.usageBoard.length === 0 && (
               <div className="px-4 py-6 text-center text-[11px] uppercase text-faint f-mono">
                 还没有配置用量追踪的订阅
@@ -181,7 +163,7 @@ export default async function DashboardPage({
           </Panel>
         </div>
 
-        <Panel index={pn(6)} title="物品回本进度" action="物品" href="/purchases">
+        <Panel index="06" title="物品回本进度" action="物品" href="/purchases">
           {d.purchases.length === 0 && (
             <div className="px-4 py-6 text-center text-[11px] uppercase text-faint f-mono">
               还没有登记物品
@@ -214,7 +196,7 @@ export default async function DashboardPage({
           </div>
         </Panel>
 
-        <Panel index={pn(7)} title="订阅明细" action="管理" href="/subscriptions">
+        <Panel index="07" title="订阅明细" action="管理" href="/subscriptions">
           <div className="overflow-x-auto no-scrollbar">
           <table className="w-full min-w-[640px] text-[13px]">
             <thead>

@@ -62,7 +62,7 @@ export async function quickAddUsageAction(
 ) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const safeBack = back.startsWith("/") && !back.startsWith("//") ? back : "/dashboard";
+  const safeBack = safeSitePath(back) ?? "/dashboard";
   try {
     await quickAddUsage(user.id, subscriptionId, { quantity, unitPrice: unitPrice ?? undefined });
   } catch {
@@ -73,16 +73,38 @@ export async function quickAddUsageAction(
   revalidatePath(`/subscriptions/${subscriptionId}`);
 }
 
+/** 站内路径校验（防开放重定向）：以 "/" 开头且非 "//" 才认。 */
+function safeSitePath(raw: unknown): string | null {
+  return typeof raw === "string" && raw.startsWith("/") && !raw.startsWith("//") ? raw : null;
+}
+
+/** 录入台回跳（usage-shell ticket 01）：back 为站内路径时进入 hub 模式——失败回跳 back?error=quick
+ *  （固定码先例），成功由调用方 revalidate 后回跳 back；非站内 back（记录页 querystring）返回 null 走原逻辑。 */
+async function tryHub(formData: FormData, fn: () => Promise<unknown>): Promise<string | null> {
+  const hub = safeSitePath(formData.get("back"));
+  try {
+    await fn();
+  } catch (e) {
+    if (hub) redirect(`${hub}${hub.includes("?") ? "&" : "?"}error=quick`);
+    throw e;
+  }
+  return hub;
+}
+
 export async function addUsageAction(subscriptionId: string, formData: FormData) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const unitPrice = formData.get("unitPrice");
-  await addUsage(user.id, subscriptionId, user.id, {
-    date: dayField(formData.get("date")),
-    quantity: Number(formData.get("quantity")),
-    unitPrice: unitPrice && String(unitPrice).trim() !== "" ? Number(unitPrice) : undefined,
-  });
+  const hub = await tryHub(formData, () =>
+    addUsage(user.id, subscriptionId, user.id, {
+      date: dayField(formData.get("date")),
+      quantity: Number(formData.get("quantity")),
+      unitPrice: unitPrice && String(unitPrice).trim() !== "" ? Number(unitPrice) : undefined,
+    }),
+  );
   revalidatePath(`/subscriptions/${subscriptionId}`);
+  revalidatePath("/dashboard");
+  if (hub) redirect(hub);
   const back = formData.get("back");
   redirect(back ? `/subscriptions/${subscriptionId}/usage/records?${back}` : `/subscriptions/${subscriptionId}`);
 }
@@ -95,16 +117,19 @@ export async function addQuotaSnapshotAction(subscriptionId: string, formData: F
   const remaining = formData.get("remaining");
   const unitPrice = formData.get("unitPrice");
   const quotaTotal = formData.get("quotaTotal");
-  await addQuotaSnapshot(user.id, subscriptionId, user.id, {
-    date: dayField(formData.get("date")),
-    percent: percent && String(percent).trim() !== "" ? Number(percent) : undefined,
-    used: used && String(used).trim() !== "" ? Number(used) : undefined,
-    remaining: remaining && String(remaining).trim() !== "" ? Number(remaining) : undefined,
-    unitPrice: unitPrice && String(unitPrice).trim() !== "" ? Number(unitPrice) : undefined,
-    quotaTotal: quotaTotal && String(quotaTotal).trim() !== "" ? Number(quotaTotal) : undefined,
-  });
+  const hub = await tryHub(formData, () =>
+    addQuotaSnapshot(user.id, subscriptionId, user.id, {
+      date: dayField(formData.get("date")),
+      percent: percent && String(percent).trim() !== "" ? Number(percent) : undefined,
+      used: used && String(used).trim() !== "" ? Number(used) : undefined,
+      remaining: remaining && String(remaining).trim() !== "" ? Number(remaining) : undefined,
+      unitPrice: unitPrice && String(unitPrice).trim() !== "" ? Number(unitPrice) : undefined,
+      quotaTotal: quotaTotal && String(quotaTotal).trim() !== "" ? Number(quotaTotal) : undefined,
+    }),
+  );
   revalidatePath(`/subscriptions/${subscriptionId}`);
-  redirect(`/subscriptions/${subscriptionId}`);
+  revalidatePath("/dashboard");
+  redirect(hub ?? `/subscriptions/${subscriptionId}`);
 }
 
 // ===== 额度包（ADR-0012）：手动包增删改（AUTO 只读，由生成器维护） =====
@@ -148,12 +173,16 @@ export async function addSavingsAction(subscriptionId: string, formData: FormDat
   if (!user) redirect("/login");
   const amount = formData.get("amount");
   const cumulative = formData.get("cumulative");
-  await addSavings(user.id, subscriptionId, user.id, {
-    date: dayField(formData.get("date")),
-    amount: amount && String(amount).trim() !== "" ? Number(amount) : undefined,
-    cumulative: cumulative && String(cumulative).trim() !== "" ? Number(cumulative) : undefined,
-  });
+  const hub = await tryHub(formData, () =>
+    addSavings(user.id, subscriptionId, user.id, {
+      date: dayField(formData.get("date")),
+      amount: amount && String(amount).trim() !== "" ? Number(amount) : undefined,
+      cumulative: cumulative && String(cumulative).trim() !== "" ? Number(cumulative) : undefined,
+    }),
+  );
   revalidatePath(`/subscriptions/${subscriptionId}`);
+  revalidatePath("/dashboard");
+  if (hub) redirect(hub);
   const back = formData.get("back");
   redirect(back ? `/subscriptions/${subscriptionId}/usage/records?${back}` : `/subscriptions/${subscriptionId}`);
 }
