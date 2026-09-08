@@ -1,13 +1,17 @@
-import { AlertTriangle, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { ErrorBanner, Kpi, Led, LedMatrix, ORANGE, Panel } from "@/components/te";
 import { LedTrendChart } from "@/components/LedTrendChart";
 import { UsageEntryHub } from "@/components/UsageEntryHub";
+import { DigestBanner } from "@/components/DigestBanner";
 import { isoDay } from "@/lib/dates";
 import { fmtMoney } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getDashboardData } from "@/lib/dashboard";
+import { prisma } from "@/lib/db";
+import { llmConfigured } from "@/lib/digest/llm";
+import { buildDigestPayload, digestFingerprint } from "@/lib/digest/payload";
 import { logoutAction } from "@/lib/auth/actions";
 
 export default async function DashboardPage({
@@ -21,6 +25,27 @@ export default async function DashboardPage({
   const d = await getDashboardData(user.id);
   const avg = d.trend.reduce((s, v) => s + v, 0) / d.trend.length;
   // 录入台常驻（usage-shell ticket 01）：面板编号固定，不再随窄条显隐前移
+  // AI 摘要 banner（ADR-0016）：配 LLM 且有到期项时先查指纹缓存，命中非 failed 直出摘要文案
+  let banner:
+    | { mode: "digest"; line: string; detail: string }
+    | { mode: "template"; text: string; enabled: boolean }
+    | null = null;
+  if (d.upcoming.length > 0) {
+    const templateText = `${d.upcoming.length} 个订阅将在 30 天内到期，${
+      d.upcoming[0].auto
+        ? `${d.upcoming[0].name} 将于 ${d.upcoming[0].daysLeft} 天后自动扣费`
+        : `${d.upcoming[0].name} 需手动续费`
+    }`;
+    const enabled = llmConfigured();
+    banner = { mode: "template", text: templateText, enabled };
+    if (enabled) {
+      const fingerprint = digestFingerprint(buildDigestPayload(d), user.id);
+      const cached = await prisma.digestCache.findUnique({ where: { fingerprint } });
+      if (cached && !cached.failed) {
+        banner = { mode: "digest", line: cached.line, detail: cached.detail };
+      }
+    }
+  }
 
   return (
     <>
@@ -46,26 +71,7 @@ export default async function DashboardPage({
 
       <div className="space-y-4 px-4 py-5 md:px-6">
         <ErrorBanner error={error ?? null} defaultMessage="记录失败：请重试" />
-        {d.upcoming.length > 0 && (
-          <div className="flex items-center justify-between border border-ink bg-surface px-4 py-2.5">
-            <div className="flex min-w-0 items-center gap-3">
-              <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: ORANGE }} />
-              <span className="truncate text-[13px]">
-                <span className="mr-2 border border-ink bg-base px-1.5 py-0.5 text-[9px] uppercase tracking-wider f-mono">
-                  待续费
-                </span>
-                {d.upcoming.length} 个订阅将在 30 天内到期，
-                {d.upcoming[0].auto ? `${d.upcoming[0].name} 将于 ${d.upcoming[0].daysLeft} 天后自动扣费` : `${d.upcoming[0].name} 需手动续费`}
-              </span>
-            </div>
-            <Link
-              href="/subscriptions"
-              className="shrink-0 text-[10px] uppercase tracking-wider underline underline-offset-2 f-mono"
-            >
-              查看全部 →
-            </Link>
-          </div>
-        )}
+        {banner && <DigestBanner initial={banner} />}
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Kpi index="A1" label="当日总日均" value={fmtMoney(d.totalDailyCost, cur)} sub={`订阅 ${fmtMoney(d.subDailyCost, cur)} · 物品 ${fmtMoney(d.itemDailyCost, cur)}`} title={`≈ 每月 ${fmtMoney(d.totalMonthlyCost, cur)}`} led={ORANGE} />
