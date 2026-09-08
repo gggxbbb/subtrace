@@ -331,3 +331,14 @@ model PurchaseIncome {
   note       String?
   createdAt  DateTime @default(now())
 }
+
+/// AI 摘要指纹缓存（ADR-0016）：指纹（含用户 ID）为 key，单行版/详细版同条落库；
+/// 成功条目随指纹变化自然淘汰，failed=true 为负缓存（服务层按 createdAt + 30 分钟 TTL 放行重试）
+model DigestCache {
+  fingerprint String   @id
+  userId      String
+  line        String
+  detail      String
+  failed      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
