@@ -24,6 +24,10 @@ services:
       # - PORT=3000
       # 可选：置 off 关闭内置调度（多实例时只留一个实例开）
       # - REMINDER_SCHEDULER=off
+      # 可选：AI 摘要（OpenAI 兼容端点三件套，配齐即开启，详见 README「AI 摘要」）
+      # - LLM_BASE_URL=https://api.deepseek.com/v1
+      # - LLM_API_KEY=sk-xxx
+      # - LLM_MODEL=deepseek-chat
     volumes:
       - subtrace-data:/app/data
     restart: unless-stopped
