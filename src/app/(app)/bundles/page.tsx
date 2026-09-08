@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -9,7 +10,8 @@ import { listArchivedBundles, listBundles } from "@/lib/bundles/service";
 import { BundleRowActions } from "./BundleRowActions";
 
 export default async function BundlesPage() {
-  const user = (await getCurrentUser())!;
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   const cur = user.baseCurrency;
   const [bundles, archived] = await Promise.all([listBundles(user.id), listArchivedBundles(user.id)]);
 

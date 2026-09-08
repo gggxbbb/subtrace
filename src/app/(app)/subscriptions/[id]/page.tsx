@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { DAY_MS, dayStart, isoDay } from "@/lib/dates";
 import { Kpi, Panel } from "@/components/te";
 import { PageHeader } from "@/components/PageHeader";
@@ -157,7 +157,8 @@ export default async function SubscriptionDetailPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const user = (await getCurrentUser())!;
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   const cur = user.baseCurrency;
   const today = new Date();
   // AUTO 包读时对齐（ADR-0012）：展示前对账，周期模式 STACKED 以外的订阅内部无操作

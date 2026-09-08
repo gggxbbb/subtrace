@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { isoDay } from "@/lib/dates";
 import { Kpi, Panel } from "@/components/te";
 import { PageHeader } from "@/components/PageHeader";
@@ -23,7 +23,8 @@ export default async function PurchaseDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const user = (await getCurrentUser())!;
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   const cur = user.baseCurrency;
   const purchase = await getPurchase(user.id, id);
   if (!purchase) notFound();

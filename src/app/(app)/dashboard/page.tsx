@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
@@ -19,7 +20,8 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const user = (await getCurrentUser())!;
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   const { error } = await searchParams;
   const cur = user.baseCurrency;
   const d = await getDashboardData(user.id);

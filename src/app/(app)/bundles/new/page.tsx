@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { isoDay } from "@/lib/dates";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -10,7 +11,8 @@ import {
 import { BundleWizard } from "./BundleWizard";
 
 export default async function NewBundlePage() {
-  const user = (await getCurrentUser())!;
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   // 联合会员只能打包自己拥有的订阅（共享来的不能转包）
   const subs = (await listSubscriptions(user.id)).filter((s) => s.ownerId === user.id);
   const today = new Date();

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { isoDay } from "@/lib/dates";
 import { Plus } from "lucide-react";
@@ -137,7 +138,8 @@ export default async function PurchasesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const user = (await getCurrentUser())!;
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
   const cur = user.baseCurrency;
   const all = await buildRows(user.id);
   const archived = await listArchivedPurchases(user.id);
