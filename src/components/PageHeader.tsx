@@ -21,7 +21,7 @@ export function PageHeader({
           <h1 className="truncate text-xl font-bold uppercase tracking-tight">{title}</h1>
         </div>
         {actions ? (
-          <div className="flex flex-wrap items-center gap-2.5 [&_a]:whitespace-nowrap [&_button]:whitespace-nowrap">
+          <div className="flex flex-wrap items-center gap-2.5 [&_a]:inline-flex [&_a]:items-center [&_a]:whitespace-nowrap [&_button]:inline-flex [&_button]:items-center [&_button]:whitespace-nowrap">
             {actions}
           </div>
         ) : null}
