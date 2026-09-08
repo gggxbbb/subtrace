@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { isoDay } from "@/lib/dates";
+import { PageHeader } from "@/components/PageHeader";
 import { getCurrentUser } from "@/lib/auth/session";
 import { listRates } from "@/lib/exchange/service";
 import { prisma } from "@/lib/db";
@@ -22,14 +23,10 @@ export default async function RatesPage({
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
-        <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
-            settings / rates
-          </div>
-          <h1 className="text-xl font-bold uppercase tracking-tight">汇率</h1>
-        </div>
-      </header>
+      <PageHeader
+        crumb={<>settings / rates</>}
+        title={<>汇率</>}
+      />
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-3xl">
           {error && (

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { PageHeader } from "@/components/PageHeader";
 import { getCurrentUser } from "@/lib/auth/session";
 import { listChannels } from "@/lib/notifications/service";
 import { ChannelsPanel } from "./ChannelsPanel";
@@ -12,14 +13,10 @@ export default async function ChannelsPage() {
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
-        <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
-            settings / channels
-          </div>
-          <h1 className="text-xl font-bold uppercase tracking-tight">通知渠道</h1>
-        </div>
-      </header>
+      <PageHeader
+        crumb={<>settings / channels</>}
+        title={<>通知渠道</>}
+      />
       <div className="flex-1 overflow-y-auto p-6">
       <div className="mx-auto max-w-3xl">
         <p className="mb-4 text-[10px] uppercase leading-relaxed tracking-wider text-muted f-mono">

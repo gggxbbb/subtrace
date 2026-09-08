@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { Panel } from "@/components/te";
 import { isoDay } from "@/lib/dates";
 import { fmtMoney } from "@/lib/format";
@@ -14,20 +15,20 @@ export default async function BundlesPage() {
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
-        <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
-            04 / bundles
-          </div>
-          <h1 className="text-xl font-bold uppercase tracking-tight">联合会员</h1>
-        </div>
-        <Link
-          href="/bundles/new"
-          className="flex items-center gap-1.5 bg-ink px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover"
-        >
-          <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> 新建联合会员
-        </Link>
-      </header>
+      <PageHeader
+        crumb={<>04 / bundles</>}
+        title={<>联合会员</>}
+        actions={
+          <>
+            <Link
+              href="/bundles/new"
+              className="flex items-center gap-1.5 bg-ink px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover"
+            >
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> 新建联合会员
+            </Link>
+          </>
+        }
+      />
 
       <div className="space-y-4 px-4 py-5 md:px-6">
         {bundles.length === 0 && (

@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { isoDay } from "@/lib/dates";
+import { PageHeader } from "@/components/PageHeader";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getSubscription } from "@/lib/subscriptions/service";
 import { parseRemindDays } from "@/lib/reminders";
@@ -26,14 +27,10 @@ export default async function EditSubscriptionPage({
 
   return (
     <>
-      <header className="flex h-16 items-center border-b border-ink bg-base px-4 md:px-6">
-        <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
-            subscriptions / {sub.name} / edit
-          </div>
-          <h1 className="text-xl font-bold uppercase tracking-tight">编辑订阅</h1>
-        </div>
-      </header>
+      <PageHeader
+        crumb={<>subscriptions / {sub.name} / edit</>}
+        title={<>编辑订阅</>}
+      />
       <main className="mx-auto max-w-xl px-4 py-8 md:px-6">
         <ErrorBanner error={error ?? null} defaultMessage="保存失败：请检查必填项" className="mb-4" />
         <SubscriptionEditForm

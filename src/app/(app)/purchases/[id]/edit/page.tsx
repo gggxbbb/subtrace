@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { isoDay } from "@/lib/dates";
 import { MoneyFields } from "@/components/MoneyFields";
+import { PageHeader } from "@/components/PageHeader";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getPurchase } from "@/lib/purchases/service";
 import { updatePurchaseAction } from "@/lib/purchases/actions";
@@ -25,14 +26,10 @@ export default async function EditPurchasePage({
 
   return (
     <>
-      <header className="flex h-16 items-center border-b border-ink bg-base px-4 md:px-6">
-        <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
-            purchases / {purchase.name} / edit
-          </div>
-          <h1 className="text-xl font-bold uppercase tracking-tight">编辑物品</h1>
-        </div>
-      </header>
+      <PageHeader
+        crumb={<>purchases / {purchase.name} / edit</>}
+        title={<>编辑物品</>}
+      />
       <main className="mx-auto max-w-xl px-4 py-8 md:px-6">
         <ErrorBanner error={error ?? null} defaultMessage="保存失败：请检查必填项" className="mb-4" />
         <form action={updatePurchaseAction.bind(null, purchase.id)} className="space-y-4 border border-ink bg-surface p-5">

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { isoDay } from "@/lib/dates";
 import { Kpi, Panel } from "@/components/te";
+import { PageHeader } from "@/components/PageHeader";
 import { fmtMoney } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth/session";
 import {
@@ -46,15 +47,15 @@ export default async function PurchaseDetailPage({
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
-        <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
-            purchases / {purchase.category ?? "uncategorized"}
-          </div>
-          <h1 className="text-xl font-bold uppercase tracking-tight">{purchase.name}</h1>
-        </div>
-        <PurchaseHeaderActions purchaseId={purchase.id} archived={purchase.archived} />
-      </header>
+      <PageHeader
+        crumb={<>purchases / {purchase.category ?? "uncategorized"}</>}
+        title={<>{purchase.name}</>}
+        actions={
+          <>
+            <PurchaseHeaderActions purchaseId={purchase.id} archived={purchase.archived} />
+          </>
+        }
+      />
 
       <div className="space-y-4 px-4 py-5 md:px-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">

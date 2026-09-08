@@ -6,6 +6,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Kpi, Led, Panel } from "@/components/te";
 import { TrendChart } from "@/components/reports/TrendChart";
+import { PageHeader } from "@/components/PageHeader";
 import { fmtMoney } from "@/lib/format";
 import { DAY_MS, isoDay, wallParts } from "@/lib/dates";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -171,15 +172,11 @@ export default async function ReportsPage({
 
   return (
     <>
-      <header className="border-b border-ink bg-base px-4 md:px-6">
-        <div className="flex min-h-16 flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2">
-          <div>
-            <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
-              05 / reports
-            </div>
-            <h1 className="text-xl font-bold uppercase tracking-tight">报表</h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-2.5">
+      <PageHeader
+        crumb={<>05 / reports</>}
+        title={<>报表</>}
+        actions={
+          <>
             <div className="grid grid-cols-3 gap-px border border-ink bg-ink">
               <Link href={monthHref} className={tabCls(p.kind === "month")}>月</Link>
               <Link href={yearHref} className={tabCls(p.kind === "year")}>年</Link>
@@ -192,9 +189,11 @@ export default async function ReportsPage({
             {nextHref && (
               <Link href={nextHref} className="border border-ink bg-surface px-3 py-2 text-[10px] f-mono hover:bg-ink hover:text-surface">→</Link>
             )}
-          </div>
-        </div>
-        {p.kind === "custom" && (
+          </>
+        }
+      />
+      {p.kind === "custom" && (
+        <div className="border-b border-ink bg-base px-4 md:px-6">
           <form action="/reports" method="get" className="flex flex-wrap items-end gap-2 pb-3">
             <label className="text-[10px] uppercase tracking-[0.15em] text-muted f-mono">
               起
@@ -225,8 +224,8 @@ export default async function ReportsPage({
               应用
             </button>
           </form>
-        )}
-      </header>
+        </div>
+      )}
 
       <div className="space-y-4 px-4 py-5 md:px-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">

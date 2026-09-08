@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { isoDay } from "@/lib/dates";
+import { PageHeader } from "@/components/PageHeader";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getSubscription } from "@/lib/subscriptions/service";
 import { planRechain } from "@/lib/subscriptions/service";
@@ -52,20 +53,20 @@ export default async function PaymentsPage({
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
-        <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
-            subscriptions / {sub.name} / payments
-          </div>
-          <h1 className="text-xl font-bold uppercase tracking-tight">付费记录管理</h1>
-        </div>
-        <a
-          href={`/subscriptions/${sub.id}`}
-          className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface"
-        >
-          ← 返回订阅
-        </a>
-      </header>
+      <PageHeader
+        crumb={<>subscriptions / {sub.name} / payments</>}
+        title={<>付费记录管理</>}
+        actions={
+          <>
+            <a
+              href={`/subscriptions/${sub.id}`}
+              className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface"
+            >
+              ← 返回订阅
+            </a>
+          </>
+        }
+      />
       <main className="mx-auto max-w-4xl space-y-4 p-6">
         {sp.rechain === "1" && (() => {
           const plan = planRechain(sub.payments);

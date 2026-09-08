@@ -5,6 +5,7 @@ import { Panel, ORANGE } from "@/components/te";
 import { fmtMoney } from "@/lib/format";
 import { ViewSwitcher } from "@/components/ViewSwitcher";
 import { ListToolbar } from "@/components/ListToolbar";
+import { PageHeader } from "@/components/PageHeader";
 import { matchesKeyword, parseListQuery, sortBy } from "@/lib/list-query";
 import { getCurrentUser } from "@/lib/auth/session";
 import { breakevenProgress, dayDiff, purchaseCurrentDailyRate } from "@/lib/cost-engine";
@@ -156,20 +157,20 @@ export default async function PurchasesPage({
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
-        <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
-            03 / purchases
-          </div>
-          <h1 className="text-xl font-bold uppercase tracking-tight">物品</h1>
-        </div>
-        <Link
-          href="/purchases/new"
-          className="flex items-center gap-1.5 bg-ink px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover"
-        >
-          <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> 登记物品
-        </Link>
-      </header>
+      <PageHeader
+        crumb={<>03 / purchases</>}
+        title={<>物品</>}
+        actions={
+          <>
+            <Link
+              href="/purchases/new"
+              className="flex items-center gap-1.5 bg-ink px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover"
+            >
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> 登记物品
+            </Link>
+          </>
+        }
+      />
 
       <div className="px-4 py-5 md:px-6">
         <ViewSwitcher

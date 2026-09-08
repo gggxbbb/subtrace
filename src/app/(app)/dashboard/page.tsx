@@ -1,5 +1,6 @@
 import { AlertTriangle, Plus } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/PageHeader";
 import { ErrorBanner, Kpi, Led, LedMatrix, ORANGE, Panel } from "@/components/te";
 import { LedTrendChart } from "@/components/LedTrendChart";
 import { UsageEntryHub } from "@/components/UsageEntryHub";
@@ -23,27 +24,25 @@ export default async function DashboardPage({
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
-        <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
-            01 / overview
-          </div>
-          <h1 className="text-xl font-bold uppercase tracking-tight">控制台</h1>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <Link
-            href="/subscriptions/new"
-            className="flex items-center gap-1.5 bg-ink px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover"
-          >
-            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> 新建订阅
-          </Link>
-          <form action={logoutAction}>
-            <button className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface">
-              登出
-            </button>
-          </form>
-        </div>
-      </header>
+      <PageHeader
+        crumb={<>01 / overview</>}
+        title={<>控制台</>}
+        actions={
+          <>
+            <Link
+              href="/subscriptions/new"
+              className="flex items-center gap-1.5 bg-ink px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-surface hover:bg-ink-hover"
+            >
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> 新建订阅
+            </Link>
+            <form action={logoutAction}>
+              <button className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface">
+                登出
+              </button>
+            </form>
+          </>
+        }
+      />
 
       <div className="space-y-4 px-4 py-5 md:px-6">
         <ErrorBanner error={error ?? null} defaultMessage="记录失败：请重试" />

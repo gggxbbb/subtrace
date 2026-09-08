@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { PageHeader } from "@/components/PageHeader";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getSubscription } from "@/lib/subscriptions/service";
 import { prisma } from "@/lib/db";
@@ -19,14 +20,10 @@ export default async function UsageWizardPage({ params }: { params: Promise<{ id
 
   return (
     <>
-      <header className="flex h-16 items-center border-b border-ink bg-base px-4 md:px-6">
-        <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
-            subscriptions / {sub.name} / usage
-          </div>
-          <h1 className="text-xl font-bold uppercase tracking-tight">用量跟踪向导</h1>
-        </div>
-      </header>
+      <PageHeader
+        crumb={<>subscriptions / {sub.name} / usage</>}
+        title={<>用量跟踪向导</>}
+      />
       <main className="mx-auto max-w-2xl space-y-4 p-6">
         <UsageWizard
           subscriptionId={sub.id}

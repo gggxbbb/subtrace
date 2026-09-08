@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { Panel } from "@/components/te";
+import { PageHeader } from "@/components/PageHeader";
 import { getCurrentUser } from "@/lib/auth/session";
 import { fmtDateTime } from "@/lib/dates";
 import { prisma } from "@/lib/db";
@@ -38,14 +39,10 @@ export default async function ScriptsPage({
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
-        <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
-            settings / scripts
-          </div>
-          <h1 className="text-xl font-bold uppercase tracking-tight">用量脚本</h1>
-        </div>
-      </header>
+      <PageHeader
+        crumb={<>settings / scripts</>}
+        title={<>用量脚本</>}
+      />
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-3xl space-y-4">
           {error && (

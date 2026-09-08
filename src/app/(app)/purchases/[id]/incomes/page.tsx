@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { isoDay } from "@/lib/dates";
+import { PageHeader } from "@/components/PageHeader";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getPurchase, listPurchaseIncomes } from "@/lib/purchases/service";
 import { IncomesManager, type IncomeRow } from "./IncomesManager";
@@ -43,20 +44,20 @@ export default async function IncomesPage({
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
-        <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
-            purchases / {purchase.name} / incomes
-          </div>
-          <h1 className="text-xl font-bold uppercase tracking-tight">收益记录管理</h1>
-        </div>
-        <a
-          href={`/purchases/${purchase.id}`}
-          className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface"
-        >
-          ← 返回物品
-        </a>
-      </header>
+      <PageHeader
+        crumb={<>purchases / {purchase.name} / incomes</>}
+        title={<>收益记录管理</>}
+        actions={
+          <>
+            <a
+              href={`/purchases/${purchase.id}`}
+              className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface"
+            >
+              ← 返回物品
+            </a>
+          </>
+        }
+      />
       <main className="mx-auto max-w-3xl space-y-4 p-6">
         <IncomesManager
           purchaseId={purchase.id}

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { DAY_MS, dayStart, isoDay } from "@/lib/dates";
 import { Kpi, Panel } from "@/components/te";
+import { PageHeader } from "@/components/PageHeader";
 import { fmtMoney } from "@/lib/format";
 import { getCurrentUser } from "@/lib/auth/session";
 import { dayDiff } from "@/lib/cost-engine";
@@ -256,50 +257,48 @@ export default async function SubscriptionDetailPage({
 
   return (
     <>
-      <header className="flex h-16 items-center justify-between border-b border-ink bg-base px-4 md:px-6">
-        <div>
-          <div className="text-[9px] uppercase tracking-[0.25em] text-muted f-mono">
-            subscriptions / {sub.category ?? "uncategorized"}
-          </div>
-          <h1 className="text-xl font-bold uppercase tracking-tight">{sub.name}</h1>
-        </div>
-        <div className="flex items-center gap-2.5">
-          {isOwner && (
+      <PageHeader
+        crumb={<>subscriptions / {sub.category ?? "uncategorized"}</>}
+        title={<>{sub.name}</>}
+        actions={
+          <>
+            {isOwner && (
+              <a
+                href={`/subscriptions/${sub.id}/edit`}
+                className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface"
+              >
+                编辑 →
+              </a>
+            )}
             <a
-              href={`/subscriptions/${sub.id}/edit`}
+              href={`/subscriptions/${sub.id}/usage`}
               className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface"
             >
-              编辑 →
+              用量跟踪{sub.usageKind ? "" : "（未启用）"} →
             </a>
-          )}
-          <a
-            href={`/subscriptions/${sub.id}/usage`}
-            className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface"
-          >
-            用量跟踪{sub.usageKind ? "" : "（未启用）"} →
-          </a>
-          {isOwner && (sub.status === "ACTIVE" ? (
-            <form action={setStatusAction.bind(null, sub.id, "CANCELLED")}>
-              <button className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface">
-                标记取消（到期即止）
-              </button>
-            </form>
-          ) : (
-            <form action={setStatusAction.bind(null, sub.id, "ACTIVE")}>
-              <button className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface">
-                恢复活跃
-              </button>
-            </form>
-          ))}
-          {isOwner && (
-            <form action={setStatusAction.bind(null, sub.id, "ARCHIVED")}>
-              <button className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider text-muted f-mono hover:bg-ink hover:text-surface">
-                归档
-              </button>
-            </form>
-          )}
-        </div>
-      </header>
+            {isOwner && (sub.status === "ACTIVE" ? (
+              <form action={setStatusAction.bind(null, sub.id, "CANCELLED")}>
+                <button className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface">
+                  标记取消（到期即止）
+                </button>
+              </form>
+            ) : (
+              <form action={setStatusAction.bind(null, sub.id, "ACTIVE")}>
+                <button className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider f-mono hover:bg-ink hover:text-surface">
+                  恢复活跃
+                </button>
+              </form>
+            ))}
+            {isOwner && (
+              <form action={setStatusAction.bind(null, sub.id, "ARCHIVED")}>
+                <button className="border border-ink bg-surface px-3 py-2 text-[10px] uppercase tracking-wider text-muted f-mono hover:bg-ink hover:text-surface">
+                  归档
+                </button>
+              </form>
+            )}
+          </>
+        }
+      />
 
       <div className="space-y-4 px-4 py-5 md:px-6">
         {sp.rechain === "1" && (() => {
