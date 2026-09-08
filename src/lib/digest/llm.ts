@@ -6,7 +6,8 @@ import type { DigestPayload } from "./payload";
 
 export type LlmCaller = (payload: DigestPayload) => Promise<{ line: string; detail: string }>;
 
-const TIMEOUT_MS = 10_000;
+// 推理模型（deepseek 思考链）完整载荷首响应实测 7s+，10s 误杀；模板先行架构下 30s 延迟用户无感
+const TIMEOUT_MS = 30_000;
 
 /** env 三件套齐全才 true（配置即开启） */
 export function llmConfigured(): boolean {
